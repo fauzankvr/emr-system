@@ -36,7 +36,7 @@ export class DoctorService {
         const doctor = await DoctorModel.findOne({ email });
         if (!doctor) throw new Error("Invalid credentials");
 
-        const isMatch = await comparePassword(password, doctor.password);
+        const isMatch = password === doctor.password;
         if (!isMatch) throw new Error("Invalid credentials");
 
         const token = generateToken({ id: doctor._id, email: doctor.email });

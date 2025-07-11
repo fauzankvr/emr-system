@@ -95,7 +95,7 @@ export default function MedicinePage() {
           <thead className="bg-gray-100 text-left text-sm font-semibold text-gray-700">
             <tr>
               <th className="px-4 py-3 border-b">Name</th>
-              <th className="px-4 py-3 border-b">Dosage Form</th>
+              <th className="px-4 py-3 border-b">Type</th>
               <th className="px-4 py-3 border-b">Strength</th>
               <th className="px-4 py-3 border-b">Actions</th>
             </tr>

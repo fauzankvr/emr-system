@@ -1,11 +1,5 @@
 import React, { useState, useEffect } from "react";
-import {
-  Search,
-  Plus,
-  Trash2,
-  FileText,
-  Download,
-} from "lucide-react";
+import { Search, Plus, Trash2, FileText, Download } from "lucide-react";
 import { axiosInstance } from "../../API/axiosInstance";
 import { useLocation } from "react-router-dom";
 import { ToastContainer, toast } from "react-toastify";
@@ -15,19 +9,19 @@ import { PDFDownloadLink, PDFViewer } from "@react-pdf/renderer";
 const styles = StyleSheet.create({
   page: {
     padding: 15,
-    fontFamily: 'Helvetica',
+    fontFamily: "Helvetica",
     fontSize: 12,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: "#FFFFFF",
   },
   header: {
-    backgroundColor: '#009688',
+    backgroundColor: "#009688",
     padding: 10,
-    textAlign: 'center',
-    color: '#FFFFFF',
+    textAlign: "center",
+    color: "#FFFFFF",
   },
   headerText: {
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
   subHeaderText: {
     fontSize: 10,
@@ -38,95 +32,88 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   sectionTitle: {
-    fontWeight: 'bold',
+    fontWeight: "bold",
     fontSize: 13,
     marginBottom: 2,
   },
   row: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    justifyContent: "space-between",
   },
   table: {
     borderWidth: 0.4,
-    borderColor: '#787878',
+    borderColor: "#787878",
   },
   tableRow: {
-    flexDirection: 'row',
+    flexDirection: "row",
     borderBottomWidth: 0.4,
-    borderColor: '#787878',
+    borderColor: "#787878",
   },
   tableColHeader: {
-    backgroundColor: '#F0F0F0',
+    backgroundColor: "#F0F0F0",
     padding: 5,
     borderRightWidth: 0.4,
-    borderColor: '#787878',
-    textAlign: 'center',
+    borderColor: "#787878",
+    textAlign: "center",
   },
   tableCol: {
     padding: 5,
     borderRightWidth: 0.4,
-    borderColor: '#787878',
-    textAlign: 'center',
+    borderColor: "#787878",
+    textAlign: "center",
   },
   tableCellHeader: {
-    fontWeight: 'bold',
+    fontWeight: "bold",
     fontSize: 11,
   },
   tableCell: {
     fontSize: 11,
   },
+  TapringHed: {
+    fontSize: 10,
+  },
+  TapringP: {
+    fontSize: 10,
+  },
   label: {
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
   hr: {
     borderBottomWidth: 0.4,
-    borderColor: '#787878',
+    borderColor: "#787878",
     marginVertical: 6,
   },
   footer: {
-    position: 'absolute',
+    position: "absolute",
     bottom: 20,
     left: 15,
     right: 15,
-    backgroundColor: '#FAFAFA',
+    backgroundColor: "#FAFAFA",
     padding: 5,
     fontSize: 10,
   },
   signature: {
-    position: 'absolute',
+    position: "absolute",
     bottom: 40,
     right: 15,
-    textAlign: 'right',
+    textAlign: "right",
   },
 });
+
 const PrescriptionPDF = ({
-  doctor = { name: "MANSOOR ALI.VP", regNo: "35083", contact: "9895353078" },
+  doctor = { name: "Dr MANSOOR ALI.VP", regNo: "35083", contact: "9895353078" },
   patient = { name: "John Doe", mobile: "1234567890", age: "30" },
   diagnosis = "Fever",
-  medicines = [
-    {
-      name: "Paracetamol",
-      type: "Tablet",
-      dosage: "500mg",
-      quantity: "5",
-      remark: "As needed",
-      content: "Take after food",
-    },
-    {
-      name: "Ibuprofen",
-      type: "Tablet",
-      dosage: "400mg",
-      quantity: "3",
-      remark: "As needed",
-      tapering: [{ dosage: "200mg", days: "2" }],
-    },
-  ],
-  labReports = [
-    {
-      reportType: "Blood Test",
-      findings: "Normal results with slightly elevated WBC count",
-    },
-  ],
+  medicines = [],
+  labReports = [],
+  labTest = [],
+  vitals = {
+    spo2: "98%",
+    bp: "120/80",
+    pulse: "72",
+    temp: "37.5°C",
+    weight: "70kg",
+  },
 }) => {
   const today = new Date();
   const formattedDate = today.toLocaleString("en-GB", {
@@ -137,13 +124,15 @@ const PrescriptionPDF = ({
     minute: "2-digit",
     hour12: true,
   });
-console.log(medicines);
+
   return (
     <Document>
       <Page size="A4" style={styles.page}>
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.headerText}>{doctor.name}, MD (PHYSICIAN)</Text>
+          <Text style={styles.headerText}>
+            Dr.{doctor.name}, MD (PHYSICIAN)
+          </Text>
           <Text style={styles.subHeaderText}>
             General Practitioner | Reg No: 35083 | +91 9895353078
           </Text>
@@ -161,7 +150,8 @@ console.log(medicines);
                 <Text style={styles.label}>Name:</Text> {patient.name}
               </Text>
               <Text>
-                <Text style={styles.label}>Phone:</Text> {patient.phone}
+                <Text style={styles.label}>Phone:</Text>{" "}
+                {patient.mobile || patient.contact}
               </Text>
               <Text>
                 <Text style={styles.label}>Age:</Text> {patient.age}
@@ -176,25 +166,23 @@ console.log(medicines);
             </View>
             <View style={{ width: "30%" }}>
               <Text>
-                <Text style={styles.label}>SpO2:</Text> 98%
+                <Text style={styles.label}>SpO2:</Text> {vitals.spo2}
               </Text>
               <Text>
-                <Text style={styles.label}>BP:</Text> 120/80
+                <Text style={styles.label}>BP:</Text> {vitals.bp}
               </Text>
               <Text>
-                <Text style={styles.label}>Pulse:</Text> 72
+                <Text style={styles.label}>Pulse:</Text> {vitals.pulse}
               </Text>
               <Text>
-                <Text style={styles.label}>Temp:</Text> 37.5°C
+                <Text style={styles.label}>Temp:</Text> {vitals.temp}
               </Text>
               <Text>
-                <Text style={styles.label}>Weight:</Text> 70kg
+                <Text style={styles.label}>Weight:</Text> {vitals.weight}
               </Text>
             </View>
           </View>
         </View>
-
-        <View style={styles.hr} />
 
         {/* Lab Report */}
         <View style={styles.section}>
@@ -219,48 +207,100 @@ console.log(medicines);
 
         <View style={styles.hr} />
 
-        {/* Medicines Table */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Medicines</Text>
           <View style={styles.table}>
+            {/* Table Header */}
             <View style={styles.tableRow}>
               <View style={[styles.tableColHeader, { width: "10%" }]}>
                 <Text style={styles.tableCellHeader}>Sl</Text>
               </View>
-              <View style={[styles.tableColHeader, { width: "30%" }]}>
+              <View style={[styles.tableColHeader, { width: "35%" }]}>
                 <Text style={styles.tableCellHeader}>Medicine</Text>
               </View>
-              <View style={[styles.tableColHeader, { width: "20%" }]}>
+              <View style={[styles.tableColHeader, { width: "15%" }]}>
                 <Text style={styles.tableCellHeader}>Type</Text>
               </View>
-              <View style={[styles.tableColHeader, { width: "20%" }]}>
+              <View style={[styles.tableColHeader, { width: "15%" }]}>
                 <Text style={styles.tableCellHeader}>Dosage</Text>
               </View>
               <View style={[styles.tableColHeader, { width: "10%" }]}>
-                <Text style={styles.tableCellHeader}>Days</Text>
+                <Text style={styles.tableCellHeader}>Duration</Text>
               </View>
-              <View style={[styles.tableColHeader, { width: "20%" }]}>
-                <Text style={styles.tableCellHeader}>Remarks</Text>
+              <View style={[styles.tableColHeader, { width: "15%" }]}>
+                <Text style={styles.tableCellHeader}>Instructions</Text>
               </View>
             </View>
+
+            {/* Table Rows */}
             {medicines.length > 0 ? (
               medicines.map((med, index) => (
                 <View key={index}>
+                  {/* Main Row */}
                   <View style={styles.tableRow}>
                     <View style={[styles.tableCol, { width: "10%" }]}>
                       <Text style={styles.tableCell}>{index + 1}</Text>
                     </View>
-                    <View style={[styles.tableCol, { width: "30%" }]}>
+
+                    {/* Medicine Name + Content + Tapering */}
+                    <View style={[styles.tableCol, { width: "35%" }]}>
                       <Text style={styles.tableCell}>
-                        {med.medicine.name || "-"}
+                        {med.medicine?.name || "-"}
+                      </Text>
+
+                      {/* Content (Note) */}
+                      {med.medicine?.content && (
+                        <Text
+                          style={[
+                            styles.TapringHed,
+                            {
+                              fontStyle: "italic",
+                              color: "#4B5563",
+                              marginTop: 2,
+                            },
+                          ]}
+                        >
+                          Note: {med.medicine.content}
+                        </Text>
+                      )}
+
+                      {/* Tapering Schedule */}
+                      {med.isTapering && med.tapering?.length > 0 && (
+                        <>
+                          <Text
+                            style={[
+                              styles.TapringP,
+                              {
+                                fontWeight: "bold",
+                                marginTop: 4,
+                                color: "#374151",
+                              },
+                            ]}
+                          >
+                            Tapering:
+                          </Text>
+                          {med.tapering.map((taper, tIndex) => (
+                            <Text
+                              key={tIndex}
+                              style={[
+                                styles.TapringP,
+                                { color: "#6B7280", marginLeft: 6 },
+                              ]}
+                            >
+                              - {taper.dosage || "-"} for {taper.days || "-"}
+                            </Text>
+                          ))}
+                        </>
+                      )}
+                    </View>
+
+                    {/* Other Columns */}
+                    <View style={[styles.tableCol, { width: "15%" }]}>
+                      <Text style={styles.tableCell}>
+                        {med.medicine?.dosageForm || "-"}
                       </Text>
                     </View>
-                    <View style={[styles.tableCol, { width: "20%" }]}>
-                      <Text style={styles.tableCell}>
-                        {med.medicine.dosageForm || "-"}
-                      </Text>
-                    </View>
-                    <View style={[styles.tableCol, { width: "20%" }]}>
+                    <View style={[styles.tableCol, { width: "15%" }]}>
                       <Text style={styles.tableCell}>{med.dosage || "-"}</Text>
                     </View>
                     <View style={[styles.tableCol, { width: "10%" }]}>
@@ -268,58 +308,18 @@ console.log(medicines);
                         {med.duration || "-"}
                       </Text>
                     </View>
-                    <View style={[styles.tableCol, { width: "20%" }]}>
+                    <View style={[styles.tableCol, { width: "15%" }]}>
                       <Text style={styles.tableCell}>
                         {med.instructions || "-"}
                       </Text>
                     </View>
                   </View>
-                  {med.content && (
-                    <View
-                      style={[styles.tableRow, { backgroundColor: "#FAFAFA" }]}
-                    >
-                      <View style={[styles.tableCol, { width: "100%" }]}>
-                        <Text
-                          style={[styles.tableCell, { fontStyle: "italic" }]}
-                        >
-                          ({med.content})
-                        </Text>
-                      </View>
-                    </View>
-                  )}
-                  {med.tapering &&
-                    med.tapering.map((taper, tIndex) => (
-                      <View
-                        key={tIndex}
-                        style={[
-                          styles.tableRow,
-                          { backgroundColor: "#FAFAFA" },
-                        ]}
-                      >
-                        <View style={[styles.tableCol, { width: "60%" }]} />
-                        <View style={[styles.tableCol, { width: "20%" }]}>
-                          <Text
-                            style={[styles.tableCell, { color: "#646464" }]}
-                          >
-                            {taper.dosage || "-"}
-                          </Text>
-                        </View>
-                        <View style={[styles.tableCol, { width: "10%" }]}>
-                          <Text
-                            style={[styles.tableCell, { color: "#646464" }]}
-                          >
-                            {taper.days || "-"}
-                          </Text>
-                        </View>
-                        <View style={[styles.tableCol, { width: "20%" }]} />
-                      </View>
-                    ))}
                 </View>
               ))
             ) : (
               <View style={styles.tableRow}>
                 <View style={[styles.tableCol, { width: "100%" }]}>
-                  <Text style={styles.tableCell}>-</Text>
+                  <Text style={styles.tableCell}>No Medicines</Text>
                 </View>
               </View>
             )}
@@ -329,7 +329,9 @@ console.log(medicines);
         {/* Lab Tests for Next Visit */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Lab Tests On Next Visit</Text>
-          <Text>{labReports[0]?.reportType || "-"}</Text>
+          {labTest.map((val) => (
+            <Text key={val}>{val}</Text>
+          ))}
         </View>
 
         {/* Signature Placeholder */}
@@ -356,23 +358,31 @@ const Prescription = () => {
   const [doctor, setDoctor] = useState(null);
   const [patient, setPatient] = useState(null);
   const [diagnosis, setDiagnosis] = useState("");
+  const [customDiagnosis, setCustomDiagnosis] = useState("");
   const [notes, setNotes] = useState("");
   const [medicines, setMedicines] = useState([]);
   const [labReports, setLabReports] = useState([]);
+  const [vitals, setVitals] = useState({
+    spo2: "",
+    bp: "",
+    pulse: "",
+    temp: "",
+    weight: "",
+  });
   const [availableMedicines, setAvailableMedicines] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [searchResults, setSearchResults] = useState([]);
   const [showMedicineDropdown, setShowMedicineDropdown] = useState(false);
   const [showPDFModal, setShowPDFModal] = useState(false);
   const location = useLocation();
+  const [labTest,setLabTest] = useState([""])
 
   const [newMedicine, setNewMedicine] = useState({
     medicine: "",
     dosage: "",
-    isTapering: false,
     duration: "",
     instructions: "",
-    timing: "",
+    isTapering: false,
     tapering: [{ dosage: "", days: "" }],
   });
 
@@ -382,6 +392,54 @@ const Prescription = () => {
     values: [{ name: "", value: "" }],
     reportDate: "",
   });
+
+  const diagnosisOptions = [
+    "Abdominal Pain",
+    "Acne Vulgaris",
+    "Acute Bronchitis",
+    "Acute Gastritis",
+    "Allergic Rhinitis",
+    "Anemia",
+    "Anxiety Disorder",
+    "Asthma",
+    "Back Pain",
+    "Bacterial Infection",
+    "Bipolar Disorder",
+    "Bronchial Asthma",
+    "BPH (Benign Prostatic Hyperplasia)",
+    "Burns",
+    "Cancer",
+    "Chickenpox",
+    "Chronic Kidney Disease",
+    "COPD (Chronic Obstructive Pulmonary Disease)",
+    "Common Cold",
+    "Conjunctivitis",
+    "Constipation",
+    "COVID-19",
+    "Dengue Fever",
+    "Depression",
+    "Diabetes Mellitus (Type 1 / Type 2)",
+    "Diarrhea",
+    "Dizziness",
+    "Dyspepsia",
+    "Ear Infection",
+    "Eczema",
+    "Epilepsy",
+    "Erectile Dysfunction",
+    "Eye Strain",
+    "Fatty Liver",
+    "Febrile Illness",
+    "Fibromyalgia",
+    "Food Poisoning",
+    "Fracture",
+    "Fungal Infection",
+    "Gallstones",
+    "Gastric Ulcer",
+    "Gastroenteritis",
+    "GERD (Gastroesophageal Reflux Disease)",
+    "Glaucoma",
+    "Custom",
+  ];
 
   const queryParams = new URLSearchParams(location.search);
   const patientId = queryParams.get("patientId");
@@ -393,12 +451,16 @@ const Prescription = () => {
       setLoading(true);
       try {
         if (doctorId) {
-          const doctorResponse = await axiosInstance.get(`/api/doctor/${doctorId}`);
+          const doctorResponse = await axiosInstance.get(
+            `/api/doctor/${doctorId}`
+          );
           setDoctor(doctorResponse.data.data);
         }
 
         if (patientId) {
-          const patientResponse = await axiosInstance.get(`/api/patient/${patientId}`);
+          const patientResponse = await axiosInstance.get(
+            `/api/patient/${patientId}`
+          );
           setPatient(patientResponse.data.data);
         }
 
@@ -406,20 +468,35 @@ const Prescription = () => {
         setAvailableMedicines(medicinesResponse.data);
 
         const urlParams = new URLSearchParams(window.location.search);
-        const prescId = urlParams.get("id") || localStorage.getItem("currentPrescriptionId");
+        const prescId =
+          urlParams.get("id") || localStorage.getItem("currentPrescriptionId");
 
         if (prescId) {
-          setPrescriptionId(prescId);
-          const prescriptionResponse = await axiosInstance.get(`/api/prescription/${prescId}`);
+          const prescriptionResponse = await axiosInstance.get(
+            `/api/prescription/${prescId}`
+          );
           const prescData = prescriptionResponse.data;
           setDiagnosis(prescData.diagnosis || "");
+          if (!diagnosisOptions.includes(prescData.diagnosis)) {
+            setCustomDiagnosis(prescData.diagnosis);
+            setDiagnosis("Custom");
+          }
           setNotes(prescData.notes || "");
           setMedicines(prescData.medicines || []);
           setLabReports(prescData.labReports || []);
+          setVitals(
+            prescData.vitals || {
+              spo2: "",
+              bp: "",
+              pulse: "",
+              temp: "",
+              weight: "",
+            }
+          );
         }
       } catch (error) {
         console.error("Error fetching initial data:", error);
-        toast.error("Failed to load initial data");
+        // toast.error("Failed to load initial data");
       } finally {
         setLoading(false);
       }
@@ -443,14 +520,21 @@ const Prescription = () => {
   const handleMedicineSelect = (medicine) => {
     setNewMedicine({
       ...newMedicine,
-      medicine: medicine._id,
+      medicine: {
+        _id: medicine._id,
+        name: medicine.name,
+        content: medicine.content,
+        dosageForm: medicine.dosageForm,
+        strength: medicine.strength,
+      },
+      dosage: medicine.strength || "",
     });
     setSearchTerm(medicine.name);
     setShowMedicineDropdown(false);
   };
 
   const handleAddMedicine = async () => {
-    if (!newMedicine.medicine) {
+    if (!newMedicine.medicine._id) {
       toast.error("Please select a medicine");
       return;
     }
@@ -460,48 +544,53 @@ const Prescription = () => {
       return;
     }
 
+    if (!newMedicine.duration) {
+      toast.error("Please select a duration");
+      return;
+    }
+
+    if (!newMedicine.instructions) {
+      toast.error("Please select instructions");
+      return;
+    }
+
     if (newMedicine.isTapering) {
       const invalidSchedule = newMedicine.tapering.some(
         (schedule) => !schedule.dosage || !schedule.days
       );
       if (invalidSchedule) {
-        toast.error("Please fill all tapering schedule fields (dosage and days)");
+        toast.error(
+          "Please fill all tapering schedule fields (dosage and days)"
+        );
         return;
       }
     }
 
-    try {
-      const medicineResponse = await axiosInstance.get(`/api/medicine/${newMedicine.medicine}`);
-      const selectedMedicine = medicineResponse.data;
+    const medicineToAdd = {
+      medicine: {
+        _id: newMedicine.medicine._id,
+        name: newMedicine.medicine.name,
+        content: newMedicine.medicine.content,
+        dosageForm: newMedicine.medicine.dosageForm,
+        strength: newMedicine.medicine.strength,
+      },
+      dosage: newMedicine.dosage,
+      duration: newMedicine.duration,
+      instructions: newMedicine.instructions,
+      isTapering: newMedicine.isTapering, // Explicitly set isTapering
+      ...(newMedicine.isTapering && { tapering: newMedicine.tapering }), // Include tapering only if isTapering is true
+    };
 
-      const medicineToAdd = {
-        medicine: selectedMedicine,
-        dosage: newMedicine.dosage,
-        isTapering: newMedicine.isTapering,
-        ...(newMedicine.isTapering
-          ? { tapering: newMedicine.tapering }
-          : {
-              duration: newMedicine.duration,
-              instructions: newMedicine.instructions,
-              timing: newMedicine.timing,
-            }),
-      };
-
-      setMedicines([...medicines, medicineToAdd]);
-      setNewMedicine({
-        medicine: "",
-        dosage: "",
-        isTapering: false,
-        duration: "",
-        instructions: "",
-        timing: "",
-        tapering: [{ dosage: "", days: "" }],
-      });
-      setSearchTerm("");
-    } catch (error) {
-      console.error("Error adding medicine:", error);
-      toast.error("Failed to add medicine");
-    }
+    setMedicines([...medicines, medicineToAdd]);
+    setNewMedicine({
+      medicine: "",
+      dosage: "",
+      duration: "",
+      instructions: "",
+      isTapering: false,
+      tapering: [{ dosage: "", days: "" }],
+    });
+    setSearchTerm("");
   };
 
   const handleRemoveMedicine = (index) => {
@@ -585,8 +674,8 @@ const Prescription = () => {
       return;
     }
 
-    if (!diagnosis) {
-      toast.error("Please enter a diagnosis");
+    if (!diagnosis || (diagnosis === "Custom" && !customDiagnosis)) {
+      toast.error("Please select or enter a diagnosis");
       return;
     }
 
@@ -595,35 +684,41 @@ const Prescription = () => {
       return;
     }
 
+    const finalDiagnosis = diagnosis === "Custom" ? customDiagnosis : diagnosis;
+
     const prescriptionData = {
       doctor: doctorId,
       patient: patientId,
-      diagnosis,
+      diagnosis: finalDiagnosis,
       notes,
+      vitals,
       medicines: medicines.map((med) => ({
         medicine: med.medicine._id,
-        isTapering: med.isTapering,
         dosage: med.dosage,
-        ...(med.isTapering
-          ? { tapering: med.tapering }
-          : {
-              duration: med.duration,
-              instructions: med.instructions,
-              timing: med.timing,
-            }),
+        duration: med.duration,
+        instructions: med.instructions,
+        isTapering: med.isTapering,
+        ...(med.isTapering && { tapering: med.tapering }),
       })),
       labReports,
+      labTest
     };
 
     try {
       let response;
       if (prescriptionId) {
-        response = await axiosInstance.put(`/api/prescription/${prescriptionId}`, prescriptionData);
+        response = await axiosInstance.put(
+          `/api/prescription/${prescriptionId}`,
+          prescriptionData
+        );
         toast.success("Prescription updated successfully");
       } else {
-        response = await axiosInstance.post("/api/prescription", prescriptionData);
+        response = await axiosInstance.post(
+          "/api/prescription",
+          prescriptionData
+        );
         await axiosInstance.patch(`/api/booking/complete/${appointmentId}`);
-        setPrescriptionId(response.data._id);
+        // setPrescriptionId(response.data._id);
         localStorage.setItem("currentPrescriptionId", response.data._id);
         toast.success("Prescription saved successfully");
       }
@@ -652,7 +747,9 @@ const Prescription = () => {
               <div>
                 <h1 className="text-2xl font-bold">Medical Prescription</h1>
                 <p className="text-blue-100 mt-1">
-                  {prescriptionId ? "Edit Prescription" : "Create New Prescription"}
+                  {prescriptionId
+                    ? "Edit Prescription"
+                    : "Create New Prescription"}
                 </p>
               </div>
               <div className="flex space-x-2 mt-4 md:mt-0">
@@ -677,7 +774,9 @@ const Prescription = () => {
           {/* Doctor and Patient Information */}
           <div className="p-4 md:p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="border rounded-lg p-4 bg-gray-50">
-              <h2 className="text-lg font-semibold text-gray-700 mb-3">Doctor</h2>
+              <h2 className="text-lg font-semibold text-gray-700 mb-3">
+                Doctor
+              </h2>
               {doctor ? (
                 <div className="space-y-2">
                   <p className="text-gray-800">
@@ -688,12 +787,14 @@ const Prescription = () => {
                   </p>
                   {doctor.specialization && (
                     <p className="text-gray-800">
-                      <span className="font-medium">Specialization:</span> {doctor.specialization}
+                      <span className="font-medium">Specialization:</span>{" "}
+                      {doctor.specialization}
                     </p>
                   )}
                   {doctor.contact && (
                     <p className="text-gray-800">
-                      <span className="font-medium">Contact:</span> {doctor.contact}
+                      <span className="font-medium">Contact:</span>{" "}
+                      {doctor.contact}
                     </p>
                   )}
                 </div>
@@ -702,7 +803,9 @@ const Prescription = () => {
               )}
             </div>
             <div className="border rounded-lg p-4 bg-gray-50">
-              <h2 className="text-lg font-semibold text-gray-700 mb-3">Patient</h2>
+              <h2 className="text-lg font-semibold text-gray-700 mb-3">
+                Patient
+              </h2>
               {patient ? (
                 <div className="space-y-2">
                   <p className="text-gray-800">
@@ -716,18 +819,115 @@ const Prescription = () => {
                   </p>
                   {patient.gender && (
                     <p className="text-gray-800">
-                      <span className="font-medium">Gender:</span> {patient.gender}
+                      <span className="font-medium">Gender:</span>{" "}
+                      {patient.gender}
                     </p>
                   )}
                   {patient.contact && (
                     <p className="text-gray-800">
-                      <span className="font-medium">Contact:</span> {patient.contact}
+                      <span className="font-medium">Contact:</span>{" "}
+                      {patient.contact}
                     </p>
                   )}
                 </div>
               ) : (
                 <p className="text-gray-500">Loading patient details...</p>
               )}
+            </div>
+          </div>
+
+          {/* Vitals */}
+          <div className="p-4 md:p-6 border-t">
+            <h2 className="text-lg font-semibold text-gray-700 mb-4">Vitals</h2>
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-4">
+              <div>
+                <label
+                  htmlFor="spo2"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
+                  SpO2 (%)
+                </label>
+                <input
+                  type="text"
+                  id="spo2"
+                  value={vitals.spo2}
+                  onChange={(e) =>
+                    setVitals({ ...vitals, spo2: e.target.value })
+                  }
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="e.g. 98%"
+                />
+              </div>
+              <div>
+                <label
+                  htmlFor="bp"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
+                  BP (mmHg)
+                </label>
+                <input
+                  type="text"
+                  id="bp"
+                  value={vitals.bp}
+                  onChange={(e) => setVitals({ ...vitals, bp: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="e.g. 120/80"
+                />
+              </div>
+              <div>
+                <label
+                  htmlFor="pulse"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
+                  Pulse (bpm)
+                </label>
+                <input
+                  type="text"
+                  id="pulse"
+                  value={vitals.pulse}
+                  onChange={(e) =>
+                    setVitals({ ...vitals, pulse: e.target.value })
+                  }
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="e.g. 72"
+                />
+              </div>
+              <div>
+                <label
+                  htmlFor="temp"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
+                  Temp (°C)
+                </label>
+                <input
+                  type="text"
+                  id="temp"
+                  value={vitals.temp}
+                  onChange={(e) =>
+                    setVitals({ ...vitals, temp: e.target.value })
+                  }
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="e.g. 37.5°C"
+                />
+              </div>
+              <div>
+                <label
+                  htmlFor="weight"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
+                  Weight (kg)
+                </label>
+                <input
+                  type="text"
+                  id="weight"
+                  value={vitals.weight}
+                  onChange={(e) =>
+                    setVitals({ ...vitals, weight: e.target.value })
+                  }
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="e.g. 70kg"
+                />
+              </div>
             </div>
           </div>
 
@@ -741,14 +941,28 @@ const Prescription = () => {
                 >
                   Diagnosis
                 </label>
-                <input
-                  type="text"
+                <select
                   id="diagnosis"
                   value={diagnosis}
                   onChange={(e) => setDiagnosis(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Enter diagnosis"
-                />
+                >
+                  <option value="">-- Select Diagnosis --</option>
+                  {diagnosisOptions.map((option) => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </select>
+                {diagnosis === "Custom" && (
+                  <input
+                    type="text"
+                    value={customDiagnosis}
+                    onChange={(e) => setCustomDiagnosis(e.target.value)}
+                    className="w-full mt-2 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Enter custom diagnosis"
+                  />
+                )}
               </div>
               <div>
                 <label
@@ -771,14 +985,19 @@ const Prescription = () => {
 
           {/* Medicines */}
           <div className="p-4 md:p-6 border-t">
-            <h2 className="text-lg font-semibold text-gray-700 mb-4">Medicines</h2>
+            <h2 className="text-lg font-semibold text-gray-700 mb-4">
+              Medicines
+            </h2>
             <div className="mb-4">
               <label className="flex items-center">
                 <input
                   type="checkbox"
                   checked={newMedicine.isTapering}
                   onChange={(e) =>
-                    setNewMedicine({ ...newMedicine, isTapering: e.target.checked })
+                    setNewMedicine({
+                      ...newMedicine,
+                      isTapering: e.target.checked,
+                    })
                   }
                   className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                 />
@@ -786,7 +1005,7 @@ const Prescription = () => {
               </label>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
               <div className="md:col-span-1 relative">
                 <label
                   htmlFor="medicine"
@@ -807,7 +1026,10 @@ const Prescription = () => {
                     className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     placeholder="Search medicine"
                   />
-                  <Search size={16} className="absolute left-3 top-2.5 text-gray-400" />
+                  <Search
+                    size={16}
+                    className="absolute left-3 top-2.5 text-gray-400"
+                  />
                   {showMedicineDropdown && searchResults.length > 0 && (
                     <div className="absolute z-10 mt-1 w-full bg-white shadow-lg rounded-md max-h-48 overflow-auto">
                       {searchResults.map((medicine) => (
@@ -817,7 +1039,9 @@ const Prescription = () => {
                           className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
                         >
                           <div className="font-medium">{medicine.name}</div>
-                          <div className="text-xs text-gray-500">{medicine.type}</div>
+                          <div className="text-xs text-gray-500">
+                            {medicine.dosageForm} | {medicine.content}
+                          </div>
                         </div>
                       ))}
                     </div>
@@ -835,7 +1059,12 @@ const Prescription = () => {
                 <select
                   id="dosage"
                   value={newMedicine.dosage}
-                  onChange={(e) => setNewMedicine({ ...newMedicine, dosage: e.target.value })}
+                  onChange={(e) =>
+                    setNewMedicine({
+                      ...newMedicine,
+                      dosage: e.target.value,
+                    })
+                  }
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="">Select dosage</option>
@@ -849,80 +1078,89 @@ const Prescription = () => {
                   <option value="2-0-0">2-0-0 (Two in morning)</option>
                   <option value="0-2-0">0-2-0 (Two in afternoon)</option>
                   <option value="0-0-2">0-0-2 (Two at night)</option>
-                  <option value="2-1-1">2-1-1 (Two morning, one afternoon & night)</option>
-                  <option value="1-2-1">1-2-1 (One morning, two afternoon, one night)</option>
-                  <option value="1-1-2">1-1-2 (One morning & afternoon, two night)</option>
-                  <option value="2-2-2">2-2-2 (Two tablets three times daily)</option>
+                  <option value="2-1-1">
+                    2-1-1 (Two morning, one afternoon & night)
+                  </option>
+                  <option value="1-2-1">
+                    1-2-1 (One morning, two afternoon, one night)
+                  </option>
+                  <option value="1-1-2">
+                    1-1-2 (One morning & afternoon, two night)
+                  </option>
+                  <option value="2-2-2">
+                    2-2-2 (Two tablets three times daily)
+                  </option>
                   <option value="SOS">SOS (As needed)</option>
                   <option value="STAT">STAT (Immediately)</option>
                 </select>
               </div>
 
-              {!newMedicine.isTapering && (
-                <>
-                  <div>
-                    <label
-                      htmlFor="duration"
-                      className="block text-sm font-medium text-gray-700 mb-1"
-                    >
-                      Duration
-                    </label>
-                    <input
-                      type="text"
-                      id="duration"
-                      value={newMedicine.duration}
-                      onChange={(e) =>
-                        setNewMedicine({ ...newMedicine, duration: e.target.value })
-                      }
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="e.g. 5 days"
-                    />
-                  </div>
-                  <div>
-                    <label
-                      htmlFor="instructions"
-                      className="block text-sm font-medium text-gray-700 mb-1"
-                    >
-                      Instructions
-                    </label>
-                    <input
-                      type="text"
-                      id="instructions"
-                      value={newMedicine.instructions}
-                      onChange={(e) =>
-                        setNewMedicine({ ...newMedicine, instructions: e.target.value })
-                      }
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="e.g. After food"
-                    />
-                  </div>
-                  <div>
-                    <label
-                      htmlFor="timing"
-                      className="block text-sm font-medium text-gray-700 mb-1"
-                    >
-                      Timing
-                    </label>
-                    <input
-                      type="text"
-                      id="timing"
-                      value={newMedicine.timing}
-                      onChange={(e) =>
-                        setNewMedicine({ ...newMedicine, timing: e.target.value })
-                      }
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="e.g. Morning, Evening"
-                    />
-                  </div>
-                </>
-              )}
+              <div>
+                <label
+                  htmlFor="duration"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
+                  Duration
+                </label>
+                <select
+                  id="duration"
+                  value={newMedicine.duration}
+                  onChange={(e) =>
+                    setNewMedicine({
+                      ...newMedicine,
+                      duration: e.target.value,
+                    })
+                  }
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">Select duration</option>
+                  <option value="1 day">1 day</option>
+                  <option value="3 days">3 days</option>
+                  <option value="5 days">5 days</option>
+                  <option value="7 days">7 days</option>
+                  <option value="14 days">14 days</option>
+                  <option value="30 days">30 days</option>
+                </select>
+              </div>
+
+              <div>
+                <label
+                  htmlFor="instructions"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
+                  Instructions
+                </label>
+                <select
+                  id="instructions"
+                  value={newMedicine.instructions}
+                  onChange={(e) =>
+                    setNewMedicine({
+                      ...newMedicine,
+                      instructions: e.target.value,
+                    })
+                  }
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">Select instructions</option>
+                  <option value="Before food">Before food</option>
+                  <option value="After food">After food</option>
+                  <option value="With food">With food</option>
+                  <option value="Empty stomach">Empty stomach</option>
+                  <option value="As needed">As needed</option>
+                </select>
+              </div>
             </div>
 
             {newMedicine.isTapering && (
               <div className="mt-4">
-                <h3 className="text-sm font-medium text-gray-700 mb-2">Tapering Schedule</h3>
+                <h3 className="text-sm font-medium text-gray-700 mb-2">
+                  Tapering Schedule
+                </h3>
                 {newMedicine.tapering.map((schedule, index) => (
-                  <div key={index} className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                  <div
+                    key={index}
+                    className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4"
+                  >
                     <div>
                       <label
                         htmlFor={`tapering-dosage-${index}`}
@@ -930,16 +1168,26 @@ const Prescription = () => {
                       >
                         Dosage
                       </label>
-                      <input
-                        type="text"
+                      <select
                         id={`tapering-dosage-${index}`}
                         value={schedule.dosage}
                         onChange={(e) =>
-                          handleUpdateTaperingSchedule(index, "dosage", e.target.value)
+                          handleUpdateTaperingSchedule(
+                            index,
+                            "dosage",
+                            e.target.value
+                          )
                         }
                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="e.g. 10 mg"
-                      />
+                      >
+                        <option value="">Select dosage</option>
+                        <option value="5 mg">5 mg</option>
+                        <option value="10 mg">10 mg</option>
+                        <option value="15 mg">15 mg</option>
+                        <option value="20 mg">20 mg</option>
+                        <option value="25 mg">25 mg</option>
+                        <option value="30 mg">30 mg</option>
+                      </select>
                     </div>
                     <div>
                       <label
@@ -948,16 +1196,25 @@ const Prescription = () => {
                       >
                         Days
                       </label>
-                      <input
-                        type="text"
+                      <select
                         id={`tapering-days-${index}`}
                         value={schedule.days}
                         onChange={(e) =>
-                          handleUpdateTaperingSchedule(index, "days", e.target.value)
+                          handleUpdateTaperingSchedule(
+                            index,
+                            "days",
+                            e.target.value
+                          )
                         }
                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="e.g. 7 days"
-                      />
+                      >
+                        <option value="">Select days</option>
+                        <option value="3 days">3 days</option>
+                        <option value="5 days">5 days</option>
+                        <option value="7 days">7 days</option>
+                        <option value="10 days">10 days</option>
+                        <option value="14 days">14 days</option>
+                      </select>
                     </div>
                     <div className="flex items-end">
                       <button
@@ -997,6 +1254,9 @@ const Prescription = () => {
                       Medicine
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Content
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Dosage
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -1004,9 +1264,6 @@ const Prescription = () => {
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Instructions
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Timing
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Tapering
@@ -1019,7 +1276,10 @@ const Prescription = () => {
                 <tbody className="bg-white divide-y divide-gray-200">
                   {medicines.length === 0 ? (
                     <tr>
-                      <td colSpan={7} className="px-6 py-4 text-center text-gray-500">
+                      <td
+                        colSpan={7}
+                        className="px-6 py-4 text-center text-gray-500"
+                      >
                         No medicines added yet
                       </td>
                     </tr>
@@ -1030,24 +1290,29 @@ const Prescription = () => {
                           <div className="text-sm font-medium text-gray-900">
                             {medicine.medicine.name}
                           </div>
-                          <div className="text-xs text-gray-500">{medicine.medicine.type}</div>
+                          <div className="text-xs text-gray-500">
+                            {medicine.medicine.dosageForm}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {medicine.medicine.content || "-"}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                           {medicine.dosage}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {medicine.isTapering ? "-" : medicine.duration || "-"}
+                          {medicine.duration || "-"}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {medicine.isTapering ? "-" : medicine.instructions || "-"}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {medicine.isTapering ? "-" : medicine.timing || "-"}
+                          {medicine.instructions || "-"}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                           {medicine.isTapering && medicine.tapering?.length > 0
                             ? medicine.tapering
-                                .map((schedule) => `${schedule.dosage} for ${schedule.days}`)
+                                .map(
+                                  (schedule) =>
+                                    `${schedule.dosage} for ${schedule.days}`
+                                )
                                 .join(", ")
                             : "No"}
                         </td>
@@ -1069,7 +1334,9 @@ const Prescription = () => {
 
           {/* Lab Reports */}
           <div className="p-4 md:p-6 border-t">
-            <h2 className="text-lg font-semibold text-gray-700 mb-4">Lab Reports</h2>
+            <h2 className="text-lg font-semibold text-gray-700 mb-4">
+              Lab Reports
+            </h2>
             <div className="mb-6">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                 <div>
@@ -1084,7 +1351,10 @@ const Prescription = () => {
                     id="reportType"
                     value={newLabReport.reportType}
                     onChange={(e) =>
-                      setNewLabReport({ ...newLabReport, reportType: e.target.value })
+                      setNewLabReport({
+                        ...newLabReport,
+                        reportType: e.target.value,
+                      })
                     }
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     placeholder="e.g. Blood Test"
@@ -1102,7 +1372,10 @@ const Prescription = () => {
                     id="findings"
                     value={newLabReport.findings}
                     onChange={(e) =>
-                      setNewLabReport({ ...newLabReport, findings: e.target.value })
+                      setNewLabReport({
+                        ...newLabReport,
+                        findings: e.target.value,
+                      })
                     }
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     placeholder="e.g. Cholesterol levels slightly elevated"
@@ -1120,15 +1393,23 @@ const Prescription = () => {
                     id="reportDate"
                     value={newLabReport.reportDate}
                     onChange={(e) =>
-                      setNewLabReport({ ...newLabReport, reportDate: e.target.value })
+                      setNewLabReport({
+                        ...newLabReport,
+                        reportDate: e.target.value,
+                      })
                     }
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
               </div>
-              <h3 className="text-sm font-medium text-gray-700 mb-2">Lab Values</h3>
+              <h3 className="text-sm font-medium text-gray-700 mb-2">
+                Lab Values
+              </h3>
               {newLabReport.values.map((val, index) => (
-                <div key={index} className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                <div
+                  key={index}
+                  className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4"
+                >
                   <div>
                     <label
                       htmlFor={`value-name-${index}`}
@@ -1141,7 +1422,11 @@ const Prescription = () => {
                       id={`value-name-${index}`}
                       value={val.name}
                       onChange={(e) =>
-                        handleUpdateLabReportValue(index, "name", e.target.value)
+                        handleUpdateLabReportValue(
+                          index,
+                          "name",
+                          e.target.value
+                        )
                       }
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                       placeholder="e.g. Total Cholesterol"
@@ -1159,7 +1444,11 @@ const Prescription = () => {
                       id={`value-value-${index}`}
                       value={val.value}
                       onChange={(e) =>
-                        handleUpdateLabReportValue(index, "value", e.target.value)
+                        handleUpdateLabReportValue(
+                          index,
+                          "value",
+                          e.target.value
+                        )
                       }
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                       placeholder="e.g. 220 mg/dL"
@@ -1217,7 +1506,10 @@ const Prescription = () => {
                 <tbody className="bg-white divide-y divide-gray-200">
                   {labReports.length === 0 ? (
                     <tr>
-                      <td colSpan={5} className="px-6 py-4 text-center text-gray-500">
+                      <td
+                        colSpan={5}
+                        className="px-6 py-4 text-center text-gray-500"
+                      >
                         No lab reports added yet
                       </td>
                     </tr>
@@ -1238,7 +1530,8 @@ const Prescription = () => {
                             : "-"}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {new Date(report.reportDate).toLocaleDateString("en-GB") || "-"}
+                          {new Date(report.reportDate).toLocaleDateString() ||
+                            "-"}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                           <button
@@ -1254,6 +1547,48 @@ const Prescription = () => {
                 </tbody>
               </table>
             </div>
+          </div>
+
+          {/* Lab Test Advised */}
+          <div className="p-4 md:p-6 border-t">
+            <h2 className="text-lg font-semibold text-gray-700 mb-4">
+              Lab Test Advised
+            </h2>
+
+            {labTest.map((test, index) => (
+              <div key={index} className="flex items-center gap-4 mb-4">
+                <input
+                  type="text"
+                  value={test}
+                  onChange={(e) => {
+                    const updated = [...labTest];
+                    updated[index] = e.target.value;
+                    setLabTest(updated);
+                  }}
+                  placeholder={`Test ${index + 1}`}
+                  className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <button
+                  onClick={() => {
+                    const updated = [...labTest];
+                    updated.splice(index, 1);
+                    setLabTest(updated);
+                  }}
+                  className="text-red-600 hover:text-red-800"
+                  title="Remove"
+                >
+                  <Trash2 size={16} />
+                </button>
+              </div>
+            ))}
+
+            <button
+              onClick={() => setLabTest([...labTest, ""])}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md flex items-center"
+            >
+              <Plus size={16} className="mr-2" />
+              Add Test
+            </button>
           </div>
 
           {/* Footer */}
@@ -1283,9 +1618,13 @@ const Prescription = () => {
                     <PrescriptionPDF
                       doctor={doctor}
                       patient={patient}
-                      diagnosis={diagnosis}
+                      diagnosis={
+                        diagnosis === "Custom" ? customDiagnosis : diagnosis
+                      }
                       medicines={medicines}
                       labReports={labReports}
+                      labTest={labTest}
+                      vitals={vitals}
                     />
                   }
                   fileName="prescription.pdf"
@@ -1314,9 +1653,13 @@ const Prescription = () => {
                 <PrescriptionPDF
                   doctor={doctor}
                   patient={patient}
-                  diagnosis={diagnosis}
+                  diagnosis={
+                    diagnosis === "Custom" ? customDiagnosis : diagnosis
+                  }
                   medicines={medicines}
                   labReports={labReports}
+                  labTest={labTest}
+                  vitals={vitals}
                 />
               </PDFViewer>
             </div>
@@ -1326,9 +1669,12 @@ const Prescription = () => {
                   <PrescriptionPDF
                     doctor={doctor}
                     patient={patient}
-                    diagnosis={diagnosis}
+                    diagnosis={
+                      diagnosis === "Custom" ? customDiagnosis : diagnosis
+                    }
                     medicines={medicines}
                     labReports={labReports}
+                    vitals={vitals}
                   />
                 }
                 fileName="prescription.pdf"

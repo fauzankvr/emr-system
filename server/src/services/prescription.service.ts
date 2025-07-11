@@ -34,7 +34,16 @@ export class PrescriptionService {
         diagnosis: data.diagnosis || "",
         notes: data.notes || "",
         labReports: data.labReports || [],
+        labTest: data.labTest || "",
+        vitals: data.vitals || {
+          spo2: "",
+          bp: "",
+          pulse: "",
+          temp: "",
+          weight: "",
+        },
       });
+      
 
       await newPrescription.save();
 

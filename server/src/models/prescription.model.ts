@@ -8,6 +8,14 @@ interface ILabReport {
   reportDate?: Date;
 }
 
+interface IVitals {
+  spo2?: string;
+  bp?: string;
+  pulse?: string;
+  temp?: string;
+  weight?: string;
+}
+
 interface ITaperingSchedule {
   dosage: string;
   days: string;
@@ -30,6 +38,8 @@ export interface IPrescription extends Document {
   diagnosis?: string;
   notes?: string;
   labReports?: ILabReport[];
+  vitals?: IVitals;
+  labTest?: string[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -55,24 +65,37 @@ const LabReportSchema = new Schema<ILabReport>(
 
 const PrescriptionSchema = new Schema<IPrescription>(
   {
-    doctor: { type: Schema.Types.ObjectId, ref: 'Doctor', required: true },
-    patient: { type: Schema.Types.ObjectId, ref: 'Patient', required: true },
+    doctor: { type: Schema.Types.ObjectId, ref: "Doctor", required: true },
+    patient: { type: Schema.Types.ObjectId, ref: "Patient", required: true },
     medicines: [
       {
-        medicine: { type: Schema.Types.ObjectId, ref: 'Medicine', required: true },
+        medicine: {
+          type: Schema.Types.ObjectId,
+          ref: "Medicine",
+          required: true,
+        },
         isTapering: { type: Boolean, default: false },
         dosage: { type: String, required: true },
         duration: { type: String },
         instructions: { type: String },
         timing: { type: String },
-        tapering: [TaperingScheduleSchema]
-      }
+        tapering: [TaperingScheduleSchema],
+      },
     ],
     diagnosis: { type: String },
     notes: { type: String },
     labReports: [LabReportSchema],
+    vitals: {
+      spo2: { type: String },
+      bp: { type: String },
+      pulse: { type: String },
+      temp: { type: String },
+      weight: { type: String },
+    },
+    labTest: { type: [String], default: [] },
   },
   { timestamps: true }
 );
+
 
 export const Prescription = model<IPrescription>('Prescription', PrescriptionSchema);

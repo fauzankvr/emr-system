@@ -10,23 +10,29 @@ function PatientHistoryPage() {
   const [dashboardData, setDashboardData] = useState({
     appointments: [],
   });
+  const [filteredAppointments, setFilteredAppointments] = useState([]);
+  const [searchQuery, setSearchQuery] = useState("");
   const [selectedAppointment, setSelectedAppointment] = useState(null);
   const [showPatientModal, setShowPatientModal] = useState(false);
   const [showPrescriptionModal, setShowPrescriptionModal] = useState(false);
   const [selectedPatientId, setSelectedPatientId] = useState(null);
+  const [prescriptionDate, setDate] = useState("");
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
         const response = await axiosInstance.get("/api/booking");
-        console.log(response.data.data);
         const appointmentsData =
-          response.data?.data.filter((item) => item.status === "completed") ||
+          response.data?.data
+            .filter((item) => item.status === "completed")
+            .sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt)) ||
           [];
+
         setDashboardData({
           appointments: appointmentsData,
         });
+        setFilteredAppointments(appointmentsData);
         setLoading(false);
       } catch (error) {
         console.error("Error fetching dashboard data", error);
@@ -37,19 +43,50 @@ function PatientHistoryPage() {
     fetchData();
   }, []);
 
+  useEffect(() => {
+    // Filter appointments based on search query
+    const filtered = dashboardData.appointments.filter((appt) => {
+      const patient = appt.patientId;
+      const searchLower = searchQuery.toLowerCase();
+      return (
+        patient.name.toLowerCase().includes(searchLower) ||
+        patient.email.toLowerCase().includes(searchLower) ||
+        patient.phone.includes(searchLower)
+      );
+    });
+    setFilteredAppointments(filtered);
+  }, [searchQuery, dashboardData.appointments]);
+
   const handleViewDetails = (appointment) => {
     setSelectedAppointment(appointment);
     setShowPatientModal(true);
   };
 
-  const handleViewPrescription = (patientId) => {
+  const handleViewPrescription = (patientId, date) => {
     setSelectedPatientId(patientId);
+    setDate(date);
     setShowPrescriptionModal(true);
+  };
+
+  const handleSearchChange = (e) => {
+    setSearchQuery(e.target.value);
   };
 
   return (
     <div className="p-6">
       <h1 className="text-2xl font-bold mb-6">Patients History</h1>
+
+      {/* Search Input */}
+      <div className="mb-4">
+        <input
+          type="text"
+          placeholder="Search by patient name, email, or phone"
+          value={searchQuery}
+          onChange={handleSearchChange}
+          className="w-full max-w-md p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+      </div>
+
       <div className="bg-white p-4 rounded-lg shadow">
         <div className="bg-white rounded-lg shadow p-4">
           {loading ? (
@@ -58,7 +95,7 @@ function PatientHistoryPage() {
             </div>
           ) : error ? (
             <div className="bg-red-100 text-red-700 p-3 rounded">{error}</div>
-          ) : dashboardData.appointments.length > 0 ? (
+          ) : filteredAppointments.length > 0 ? (
             <div className="overflow-x-auto">
               <table className="min-w-full bg-white">
                 <thead>
@@ -72,7 +109,7 @@ function PatientHistoryPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
-                  {dashboardData.appointments.map((appt) => (
+                  {filteredAppointments.map((appt) => (
                     <tr
                       key={appt._id}
                       className="hover:bg-gray-50 cursor-pointer"
@@ -93,9 +130,7 @@ function PatientHistoryPage() {
                         </div>
                       </td>
                       <td className="py-3 px-3">
-                        {new Date(appt.appointmentDate).toLocaleDateString(
-                          "en-GB"
-                        )}
+                        {new Date(appt.updatedAt).toLocaleDateString("en-GB")}
                       </td>
                       <td className="py-3 px-3">{appt.timeSlot}</td>
                       <td className="py-3 px-3">
@@ -117,7 +152,10 @@ function PatientHistoryPage() {
                           </button>
                           <button
                             onClick={() =>
-                              handleViewPrescription(appt.patientId._id)
+                              handleViewPrescription(
+                                appt.patientId._id,
+                                appt.updatedAt
+                              )
                             }
                             className="text-blue-600 hover:text-blue-800"
                             title="View Prescription"
@@ -152,6 +190,7 @@ function PatientHistoryPage() {
         <PrescriptionModal
           patientId={selectedPatientId}
           onClose={() => setShowPrescriptionModal(false)}
+          date={prescriptionDate}
         />
       )}
     </div>
