@@ -1,17 +1,19 @@
-import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { 
-  FaUsers, 
-  FaCalendarAlt, 
-  FaStethoscope, 
-  FaEye, 
-  FaTrash, 
-  FaBell 
-} from 'react-icons/fa';
-import InfoCard from '../../Components/doctor/common/InfoCard';
-import PatientDetailsModal from '../../Components/doctor/models/PatientDetails';
-import { formatDate } from '../../util/formatters';
-import { axiosInstance } from '../../API/axiosInstance';
+import React, { useState, useEffect } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import {
+  FaUsers,
+  FaCalendarAlt,
+  FaStethoscope,
+  FaEye,
+  FaTrash,
+  FaBell,
+} from "react-icons/fa";
+import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css"; // Added for toast styling
+import InfoCard from "../../Components/doctor/common/InfoCard";
+import PatientDetailsModal from "../../Components/doctor/models/PatientDetails";
+import { formatDate } from "../../util/formatters";
+import { axiosInstance } from "../../API/axiosInstance";
 
 function DashboardPage() {
   const [dashboardData, setDashboardData] = useState({
@@ -24,29 +26,38 @@ function DashboardPage() {
   const [error, setError] = useState(null);
   const [selectedAppointment, setSelectedAppointment] = useState(null);
   const [showModal, setShowModal] = useState(false);
-  const navigate = useNavigate()
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
         const bookingResponse = await axiosInstance.get("/api/booking");
-        const appointmentsData = bookingResponse.data?.data.filter((item)=>item.status=="booked") || [];
+        const appointmentsData =
+          bookingResponse.data?.data?.filter(
+            (item) => item.status === "booked"
+          ) || [];
 
-        // Get today's date in YYYY-MM-DD format
+        if (!appointmentsData.length) {
+          setDashboardData({
+            totalPatients: 0,
+            todayAppointments: 0,
+            consultations: 0,
+            appointments: [],
+          });
+          setLoading(false);
+          return;
+        }
+
         const today = new Date().toISOString().split("T")[0];
-
-        // Count today's appointments
         const todayAppointmentsCount = appointmentsData.filter(
-          (appt) => appt.appointmentDate.split("T")[0] === today
+          (appt) => appt.appointmentDate?.split("T")[0] === today
         ).length;
 
-        // Count unique patients
         const uniquePatients = new Set(
-          appointmentsData.map((appt) => {
-            console.log("appt.patientId._id",appt.patientId._id);
-            return appt.patientId._id;
-          })
+          appointmentsData
+            .filter((appt) => appt.patientId && appt.patientId._id)
+            .map((appt) => appt.patientId._id)
         ).size;
 
         setDashboardData({
@@ -68,7 +79,7 @@ function DashboardPage() {
         setLoading(false);
       }
     };
-    
+
     fetchData();
   }, []);
 
@@ -77,29 +88,61 @@ function DashboardPage() {
     setShowModal(true);
   };
 
-  const handleDeleteAppointment = async (appointmentId) => {
-    if (window.confirm("Are you sure you want to cancel this appointment?")) {
-      try {
-        await axiosInstance.delete(`/api/booking/${appointmentId}`);
-        // Refresh data after deletion
-        const updatedAppointments = dashboardData.appointments.filter(
-          (appt) => appt._id !== appointmentId
-        );
-        setDashboardData({
-          ...dashboardData,
-          appointments: updatedAppointments,
-          consultations: updatedAppointments.length,
-        });
-      } catch (error) {
-        console.error("Error deleting appointment", error);
-        alert("Failed to cancel appointment. Please try again.");
-      }
-    }
+  const handleDeleteAppointment = (appointmentId) => {
+    const ConfirmToast = ({ closeToast }) => (
+      <div>
+        <p>Are you sure you want to cancel this appointment?</p>
+        <div className="mt-2 flex justify-end gap-2">
+          <button
+            className="px-3 py-1 bg-gray-300 rounded"
+            onClick={closeToast}
+          >
+            No
+          </button>
+          <button
+            className="px-3 py-1 bg-red-600 text-white rounded"
+            onClick={async () => {
+              closeToast();
+              try {
+                await axiosInstance.delete(`/api/booking/${appointmentId}`);
+                const updatedAppointments = dashboardData.appointments.filter(
+                  (appt) => appt._id !== appointmentId
+                );
+                setDashboardData({
+                  ...dashboardData,
+                  appointments: updatedAppointments,
+                  consultations: updatedAppointments.length,
+                  todayAppointments: updatedAppointments.filter(
+                    (appt) =>
+                      appt.appointmentDate.split("T")[0] ===
+                      new Date().toISOString().split("T")[0]
+                  ).length,
+                });
+                toast.success("Appointment cancelled successfully");
+              } catch (error) {
+                console.error("Error deleting appointment", error);
+                toast.error("Failed to cancel appointment");
+              }
+            }}
+          >
+            Yes, Cancel
+          </button>
+        </div>
+      </div>
+    );
+
+    toast.info(<ConfirmToast />, {
+      position: "top-center",
+      autoClose: false,
+      closeOnClick: false,
+      closeButton: false,
+      draggable: false,
+    });
   };
-  console.log(dashboardData);
+
   return (
     <main className="p-6 w-full">
-      {/* Header */}
+      <ToastContainer position="top-center" />
       <div className="flex flex-col md:flex-row justify-between items-center mb-6">
         <h1 className="text-2xl font-bold mb-4 md:mb-0">Doctor Dashboard</h1>
         <div className="flex gap-3 items-center">
@@ -119,7 +162,6 @@ function DashboardPage() {
         </div>
       </div>
 
-      {/* Dashboard Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         <InfoCard
           icon={<FaUsers />}
@@ -141,7 +183,6 @@ function DashboardPage() {
         />
       </div>
 
-      {/* Upcoming Appointments */}
       <div className="bg-white rounded-lg shadow p-4">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-lg font-bold">Appointment Schedule</h2>
@@ -162,46 +203,58 @@ function DashboardPage() {
               <thead className="bg-gray-100">
                 <tr>
                   <th className="py-2 px-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Patient
+                  </th>
+                  <th className="py-2 px-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Date
+                  </th>
+                  <th className="py-2 px-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Time
+                  </th>
+                  <th className="py-2 px-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Status
+                  </th>
+                  <th className="py-2 px-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Actions
                   </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
                 {dashboardData.appointments.map((appt) => (
-                  <tr
-                    key={appt._id}
-                    className="hover:bg-gray-50 cursor-pointer"
-                    onClick={() =>
-                      navigate(
-                        `/doctor/prescription?patientId=${appt.patientId._id}&doctorId=${appt.doctorId._id}&appointmentId=${appt._id}`
-                      )
-                    }
-                  >
-                    <td className="py-3 px-3">
+                  <tr key={appt._id} className="hover:bg-gray-50">
+                    <td
+                      className="py-3 px-3 cursor-pointer"
+                      onClick={() => {
+                        if (appt.patientId?._id && appt.doctorId?._id) {
+                          navigate(
+                            `/doctor/prescription?patientId=${appt.patientId._id}&doctorId=${appt.doctorId._id}&appointmentId=${appt._id}`
+                          );
+                        } else {
+                          toast.error("Invalid patient or doctor data");
+                        }
+                      }}
+                    >
                       <div className="flex items-center">
                         <div className="h-8 w-8 rounded-full bg-blue-500 text-white flex items-center justify-center mr-3">
-                          {appt.patientId.name[0]?.toUpperCase() || "P"}
+                          {appt.patientId?.name?.[0]?.toUpperCase() || "?"}
                         </div>
                         <div>
                           <div className="font-medium">
-                            {appt.patientId.name}
+                            {appt.patientId?.name || "Unknown"}
                           </div>
                           <div className="text-xs text-gray-500">
-                            {appt.patientId.phone}
+                            {appt.patientId?.phone || "N/A"}
                           </div>
                         </div>
                       </div>
                     </td>
                     <td className="py-3 px-3">
-                      {formatDate(appt.appointmentDate)}
+                      {formatDate(appt.appointmentDate) || "Invalid Date"}
                     </td>
-                    <td className="py-3 px-3">{appt.timeSlot}</td>
-                    <td className="py-3 px-3">
-                      <div className="truncate max-w-xs">{appt.reason}</div>
-                    </td>
+                    <td className="py-3 px-3">{appt.timeSlot || "N/A"}</td>
                     <td className="py-3 px-3">
                       <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
-                        {appt.status}
+                        {appt.status || "Unknown"}
                       </span>
                     </td>
                     <td className="py-3 px-3">
@@ -232,7 +285,6 @@ function DashboardPage() {
         )}
       </div>
 
-      {/* Patient Details Modal */}
       {showModal && selectedAppointment && (
         <PatientDetailsModal
           selectedAppointment={selectedAppointment}
@@ -242,6 +294,5 @@ function DashboardPage() {
     </main>
   );
 }
-
 
 export default DashboardPage;

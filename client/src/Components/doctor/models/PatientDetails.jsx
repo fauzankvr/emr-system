@@ -75,25 +75,6 @@ function PatientDetailsModal({ selectedAppointment, onClose }) {
             )}
           </div>
 
-          <div className="mb-4">
-            <h5 className="font-medium text-gray-700 mb-2 flex items-center">
-              <FaNotesMedical className="mr-2" /> Reason for Visit
-            </h5>
-            <p className="text-gray-600 bg-gray-50 p-3 rounded">
-              {selectedAppointment.reason || "No reason provided"}
-            </p>
-          </div>
-
-          {selectedAppointment.notes && (
-            <div className="mb-4">
-              <h5 className="font-medium text-gray-700 mb-2 flex items-center">
-                <FaNotesMedical className="mr-2" /> Doctor's Notes
-              </h5>
-              <p className="text-gray-600 bg-gray-50 p-3 rounded">
-                {selectedAppointment.notes}
-              </p>
-            </div>
-          )}
 
           <div className="flex justify-end space-x-2 mt-4">
             <button

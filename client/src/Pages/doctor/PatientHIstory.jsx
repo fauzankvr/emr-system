@@ -103,7 +103,6 @@ function PatientHistoryPage() {
                     <th className="py-3 px-3 text-left">Patient</th>
                     <th className="py-3 px-3 text-left">Date</th>
                     <th className="py-3 px-3 text-left">Time</th>
-                    <th className="py-3 px-3 text-left">Reason</th>
                     <th className="py-3 px-3 text-left">Status</th>
                     <th className="py-3 px-3 text-left">Actions</th>
                   </tr>
@@ -133,9 +132,7 @@ function PatientHistoryPage() {
                         {new Date(appt.updatedAt).toLocaleDateString("en-GB")}
                       </td>
                       <td className="py-3 px-3">{appt.timeSlot}</td>
-                      <td className="py-3 px-3">
-                        <div className="truncate max-w-xs">{appt.reason}</div>
-                      </td>
+                 
                       <td className="py-3 px-3">
                         <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
                           {appt.status}
