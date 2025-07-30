@@ -6,6 +6,8 @@ import { ToastContainer, toast } from "react-toastify";
 import { Document, Page, Text, View, StyleSheet } from "@react-pdf/renderer";
 import { PDFDownloadLink, PDFViewer } from "@react-pdf/renderer";
 import TemplateModal from "../../Components/doctor/models/TemplateModal";
+const backendUrl = import.meta.env.VITE_BACKEND_URL;
+console.log(backendUrl  )
 
 const styles = StyleSheet.create({
   page: {
@@ -203,7 +205,7 @@ const PrescriptionPDF = ({
                   {report.reportDate || "-"}
                 </Text>
                 {report.reportImageUrl && (
-                  <a href={report.reportImageUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline ml-2">View File</a>
+                  <a href={`${backendUrl}${report.reportImageUrl}`} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline ml-2">View File</a>
                 )}
               </View>
             ))
@@ -1884,8 +1886,8 @@ const Prescription = () => {
                             ? new Date(report.reportDate).toLocaleDateString()
                             : "-"}
                           {report.reportImageUrl && (
-                            <a href={report.reportImageUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline ml-2">View File</a>
-                          )}
+                  <a href={`${backendUrl}${report.reportImageUrl}`} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline ml-2">View File</a>
+                        )}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
                           <button

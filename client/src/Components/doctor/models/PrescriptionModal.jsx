@@ -223,26 +223,31 @@ const PrescriptionPDF = memo(
             </View>
           </View>
 
-          {/* Lab Report */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Lab Report</Text>
-            {labReports.length > 0 ? (
-              labReports.map((report, index) => (
-                <View key={index} style={{ marginBottom: 10 }}>
-                  <Text>
-                    <Text style={styles.label}>Report Type:</Text>{" "}
-                    {report.reportType}
-                  </Text>
-                  <Text>
-                    <Text style={styles.label}>Findings:</Text>{" "}
-                    {report.findings || "-"}
-                  </Text>
-                </View>
-              ))
-            ) : (
-              <Text>-</Text>
-            )}
-          </View>
+          <Text style={styles.sectionTitle}>Lab Report</Text>
+          {labReports.length > 0 ? (
+            labReports.map((report, index) => (
+              <View key={index} style={{ marginBottom: 10 }}>
+                <Text>
+                  <Text style={styles.label}>Report Name:</Text> {report.name}
+                </Text>
+                <Text>
+                  <Text style={styles.label}>Value:</Text>{" "}
+                  {report.values || "-"}
+                </Text>
+                <Text>
+                  <Text style={styles.label}>Report Date:</Text>{" "}
+                  {report.reportDate || "-"}
+                </Text>
+                {/* {report?.reportImageUrl && (
+                  <a href={`${backendUrl}${report.reportImageUrl}`} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline ml-2">View File</a>
+                )} */}
+              </View>
+            ))
+          ) : (
+            <Text>-</Text>
+          )}
+        </View>
 
           <View style={styles.hr} />
 
@@ -509,7 +514,7 @@ const PrescriptionModal = ({ prescriptionId, onClose }) => {
                 medicines={prescription.medicines}
                 labReports={prescription.labReports}
                 labTest={prescription.labTest}
-                vitals={prescription.vitals}
+                vitals={prescription.patient.vitals}
               />
             </PDFViewer>
           </div>
