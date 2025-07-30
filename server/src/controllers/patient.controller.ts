@@ -1,7 +1,6 @@
 import { Request, Response } from "express";
 import { PatientService } from "../services/patient.service";
 import { HttpStatusCode } from "../constants/statusCodes";
-import asyncHandler from 'express-async-handler';
 
 export class PatientController {
   static async create(req: Request, res: Response) {
@@ -55,22 +54,20 @@ export class PatientController {
     }
   }
 
-  static updateVitals = asyncHandler(async (req, res) => {
-    const request = req as Request;
-    const response = res as Response;
-    const { id } = request.params;
-    const { vitals } = request.body;
+  static async updateVitals (req: Request, res: Response) {
+    const { id } = req.params;
+    const { vitals } = req.body;
     if (!vitals) {
-      response.status(HttpStatusCode.BAD_REQUEST).json({ message: 'Vitals data required' });
+      res.status(HttpStatusCode.BAD_REQUEST).json({ message: 'Vitals data required' });
       return;
     }
     const updated = await PatientService.updatePatientVitals(id, vitals);
     if (!updated) {
-      response.status(HttpStatusCode.NOT_FOUND).json({ message: 'Patient not found' });
+      res.status(HttpStatusCode.NOT_FOUND).json({ message: 'Patient not found' });
       return;
     }
-    response.json({ message: 'Vitals updated', data: updated });
-  });
+    res.json({ message: 'Vitals updated', data: updated });
+  };
 
   static async delete(req: Request, res: Response) {
     try {

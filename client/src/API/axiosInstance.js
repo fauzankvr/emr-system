@@ -1,8 +1,9 @@
 // axiosInstance.ts
 import axios from "axios";
+const backendUrl = import.meta.env.VITE_BACKEND_URL;
 
 export const axiosInstance = axios.create({
-  baseURL: "http://localhost:5000/",
+  baseURL: backendUrl,
   headers: {
     "Content-Type": "application/json",
   },
