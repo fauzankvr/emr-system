@@ -1,13 +1,6 @@
-// import { defineConfig } from 'vite'
-// export default defineConfig({
-  //   plugins: [
-    //     tailwindcss(),
-    //   ],
-    // })
-    
-    import { defineConfig } from "vite";
-    import { VitePWA } from "vite-plugin-pwa";
-    import tailwindcss from '@tailwindcss/vite'
+import { defineConfig } from "vite";
+import { VitePWA } from "vite-plugin-pwa";
+import tailwindcss from "@tailwindcss/vite";
 
 export default defineConfig({
   plugins: [
@@ -15,14 +8,13 @@ export default defineConfig({
     VitePWA({
       registerType: "autoUpdate",
       devOptions: {
-        enabled: true, // Enable service worker in development mode
+        enabled: true, // Enable service worker in dev
       },
       includeAssets: ["favicon.ico", "apple-touch-icon.png", "mask-icon.svg"],
       manifest: {
         name: "Doctor Dashboard",
         short_name: "DocDash",
-        description:
-          "A dashboard for doctors to manage appointments and patient history",
+        description: "A dashboard for doctors to manage appointments and patient history",
         theme_color: "#ffffff",
         background_color: "#ffffff",
         display: "standalone",
@@ -49,7 +41,18 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ["**/*.{js,css,html,ico,png,svg,webmanifest}"],
+        maximumFileSizeToCacheInBytes: 5 * 1024 * 1024, // ✅ Fix: increase cache size to 5 MB
       },
     }),
   ],
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ["react", "react-dom"], // ✅ Split vendor libraries into a separate chunk
+        },
+      },
+    },
+    chunkSizeWarningLimit: 3000, // ✅ Optional: increase warning limit (3 MB)
+  },
 });
