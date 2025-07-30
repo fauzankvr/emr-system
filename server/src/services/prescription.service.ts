@@ -17,7 +17,7 @@ export class PrescriptionService {
       }
 
       for (const [index, med] of data.medicines.entries()) {
-        if (!med.medicine || !Types.ObjectId.isValid(med.medicine)) {
+        if (!med.medicine) {
           throw new Error(`Invalid medicine ID at index ${index}.`);
         }
       }
@@ -35,50 +35,60 @@ export class PrescriptionService {
         notes: data.notes || "",
         labReports: data.labReports || [],
         labTest: data.labTest || "",
-        vitals: data.vitals || {
-          spo2: "",
-          bp: "",
-          pulse: "",
-          temp: "",
-          weight: "",
-        },
+        // vitals removed
       });
-      
 
       await newPrescription.save();
 
-      const populatedPrescription = await Prescription.findById(newPrescription._id)
+      const populatedPrescription = await Prescription.findById(
+        newPrescription._id
+      )
         .populate("doctor", "name specialization email phone")
-        .populate("patient", "name email phone gender")
+        .populate("patient")
         .populate("medicines.medicine", "name");
 
       if (!populatedPrescription) {
         throw new Error("Failed to populate prescription details.");
       }
-      const some = prescriptionEmitter.emit("prescription:created", patient.email, populatedPrescription);
+      const some = prescriptionEmitter.emit(
+        "prescription:created",
+        patient.email,
+        populatedPrescription
+      );
       console.log("some", some);
       return populatedPrescription;
     } catch (error: any) {
-      console.log(error)
+      console.log(error);
       throw new Error(`Failed to create prescription: ${error.message}`);
     }
   }
 
+  static async getAllPrescriptions() {
+    return await Prescription.find().populate(
+      "doctor patient medicines.medicine"
+    );
+  }
+
   static async getPrescriptionById(id: string) {
     if (!Types.ObjectId.isValid(id)) throw new Error("Invalid prescription ID");
-    return await Prescription.findById(id).populate("doctor patient medicines.medicine");
+    return await Prescription.findById(id).populate(
+      "doctor patient"
+    );
   }
 
   static async getPrescriptionsByPatient(patientId: string) {
-    if (!Types.ObjectId.isValid(patientId)) throw new Error("Invalid patient ID");
+    if (!Types.ObjectId.isValid(patientId))
+      throw new Error("Invalid patient ID");
     return await Prescription.find({ patient: patientId }).populate(
-      "doctor patient medicines.medicine"
+      "doctor patient"
     );
   }
 
   static async getPrescriptionsByDoctor(doctorId: string) {
     if (!Types.ObjectId.isValid(doctorId)) throw new Error("Invalid doctor ID");
-    return await Prescription.find({ doctor: doctorId }).populate("patient medicines.medicine");
+    return await Prescription.find({ doctor: doctorId }).populate(
+      "patient"
+    );
   }
 
   static async updatePrescription(id: string, updates: Partial<IPrescription>) {

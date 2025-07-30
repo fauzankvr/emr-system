@@ -7,11 +7,6 @@ export class PatientService {
         throw new Error("Missing required patient fields: name, age, or gender");
       }
 
-      const patientExists = await this.checkPatientExist(patientData.phone, patientData.email);
-      if (patientExists) {
-        throw new Error("Patient with the provided phone or email already exists");
-      }
-
       const newPatient = new PatientModel(patientData);
       await newPatient.save();
       return newPatient.toObject();
@@ -59,6 +54,15 @@ export class PatientService {
     }
   }
 
+  static async updatePatientVitals(id: string, vitals: any): Promise<IPatient | null> {
+    try {
+      const updated = await PatientModel.findByIdAndUpdate(id, { vitals }, { new: true });
+      return updated ? updated.toObject() : null;
+    } catch (error: any) {
+      throw new Error(`Error updating patient vitals: ${error.message}`);
+    }
+  }
+
   static async deletePatient(id: string): Promise<void> {
     try {
       const deleted = await PatientModel.findByIdAndDelete(id);
@@ -73,6 +77,7 @@ export class PatientService {
       let value = query.toString();
       return await PatientModel.find({
         $or: [
+          { name: { $regex: value, $options: "i" } },
           { email: { $regex: value, $options: "i" } },
           { phone: { $regex: value, $options: "i" } }
         ]

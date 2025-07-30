@@ -75,6 +75,9 @@ export default function AppointmentBookingForm() {
     // },
   });
 
+  // Add state for vitals
+  const [vitals, setVitals] = useState({ spo2: '', bp: '', pulse: '', temp: '', weight: '' });
+
   // Fetch doctors on component mount
 
   useEffect(() => {
@@ -217,41 +220,30 @@ export default function AppointmentBookingForm() {
   const bookAppointment = async () => {
     if (!selectedPatient || !selectedDoctor || !selectedSlot) {
       setBookingError("Please complete all required fields");
-
       return;
     }
-
     setLoading(true);
-
     try {
+      // Update patient vitals before booking
+      if (selectedPatient._id) {
+        await axiosInstance.patch(`/api/patient/${selectedPatient._id}/vitals`, { vitals });
+      }
       // const [slotTime, slotEndTime] = selectedSlot.startTime.split("-");
 
       const bookingData = {
         patientId: selectedPatient._id,
-
         doctorId: selectedDoctor._id,
-
         appointmentDate: selectedDate,
-
         timeSlot: selectedSlot,
-
         status: "booked",
-
         // reason: bookingReason,
-
         // notes: bookingNotes,
       };
-
-       await axiosInstance.post("/api/booking", 
-        bookingData
-      );
-
+      await axiosInstance.post("/api/booking", bookingData);
       setBookingSuccess(true);
-
       setBookingError("");
     } catch (error) {
       console.error("Error booking appointment:", error);
-
       setBookingError("Failed to book appointment. Please try again.");
     } finally {
       setLoading(false);
@@ -929,31 +921,55 @@ export default function AppointmentBookingForm() {
             </div>
           </div>
 
-          <div className="mb-4">
-            {/* <label className="block text-sm font-medium text-gray-700 mb-1">
-              Reason for Visit
-            </label> */}
+          {/* Add Vitals Input Fields */}
+          <div className="mb-6 grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">SpO2</label>
+              <input type="text" className="w-full border rounded-md p-2" value={vitals.spo2} onChange={e => setVitals({ ...vitals, spo2: e.target.value })} placeholder="e.g. 98%" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">BP</label>
+              <input type="text" className="w-full border rounded-md p-2" value={vitals.bp} onChange={e => setVitals({ ...vitals, bp: e.target.value })} placeholder="e.g. 120/80" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Pulse</label>
+              <input type="text" className="w-full border rounded-md p-2" value={vitals.pulse} onChange={e => setVitals({ ...vitals, pulse: e.target.value })} placeholder="e.g. 72" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Temperature</label>
+              <input type="text" className="w-full border rounded-md p-2" value={vitals.temp} onChange={e => setVitals({ ...vitals, temp: e.target.value })} placeholder="e.g. 37.5°C" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Weight</label>
+              <input type="text" className="w-full border rounded-md p-2" value={vitals.weight} onChange={e => setVitals({ ...vitals, weight: e.target.value })} placeholder="e.g. 70kg" />
+            </div>
+          </div>
 
-            {/* <textarea
+          {/* <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Reason for Visit
+            </label>
+
+            <textarea
               value={bookingReason}
               onChange={(e) => setBookingReason(e.target.value)}
               className="w-full border rounded-md p-2 h-20 focus:ring-blue-500 focus:border-blue-500"
               placeholder="Enter reason for appointment"
-            ></textarea> */}
-          </div>
+            ></textarea>
+          </div> */}
 
-          <div className="mb-6">
-            {/* <label className="block text-sm font-medium text-gray-700 mb-1">
+          {/* <div className="mb-6">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
               Additional Notes
-            </label> */}
+            </label>
 
-            {/* <textarea
+            <textarea
               value={bookingNotes}
               onChange={(e) => setBookingNotes(e.target.value)}
               className="w-full border rounded-md p-2 h-16 focus:ring-blue-500 focus:border-blue-500"
               placeholder="Enter any additional information"
-            ></textarea> */}
-          </div>
+            ></textarea>
+          </div> */}
 
           {bookingError && (
             <div className="mb-4 p-3 bg-red-50 border-l-4 border-red-500 text-red-700">

@@ -9,7 +9,7 @@ const LoginPage = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const navigate = useNavigate()
+  const navigate = useNavigate();
 
   const handleLogin = async () => {
     setLoading(true);
@@ -21,15 +21,13 @@ const LoginPage = () => {
       });
 
       console.log(response.data.doctor);
-      localStorage.setItem("token", response.data.token)
-      localStorage.setItem("doctorData", response.data.doctor);
+      localStorage.setItem("token", response.data.token);
+      localStorage.setItem("doctorData", JSON.stringify(response.data.doctor)); // Stringify doctorData
 
       toast.success("Login successful!", {
         position: "top-center",
       });
 
-      // Handle success (e.g., redirect or store token)
-      console.log("Login success:", response.data);
       navigate("/doctor/dashboard");
     } catch (err) {
       toast.error(err.response?.data?.message || "Login failed", {
@@ -40,9 +38,23 @@ const LoginPage = () => {
     }
   };
 
+  const handleBack = () => {
+    navigate("/"); // Go back to the previous page
+    // Alternatively, you can navigate to a specific route, e.g., navigate("/");
+  };
+
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-r from-cyan-700 to-cyan-400 px-4 relative">
       <ToastContainer />
+
+      {/* Back Button */}
+      <button
+        onClick={handleBack}
+        className="absolute top-4 left-4 text-white hover:text-cyan-200 transition-colors"
+        aria-label="Go back"
+      >
+        <FaArrowLeft size={24} />
+      </button>
 
       {/* Login Box */}
       <div className="bg-white p-8 rounded-xl shadow-2xl w-full max-w-md text-center space-y-5">

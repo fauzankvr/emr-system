@@ -9,5 +9,6 @@ router.get('/search', PatientController.search);
 router.get('/:id', PatientController.getById);
 router.put('/:id', PatientController.update);
 router.delete('/:id', PatientController.delete);
+router.patch('/:id/vitals', PatientController.updateVitals);
 
 export default router;

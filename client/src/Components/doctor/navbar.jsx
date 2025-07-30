@@ -100,8 +100,8 @@ const Navbar = ({ theme, setTheme }) => {
         >
           {NAV_ITEMS.map((item) => (
             <li key={item} role="none">
-              <Link
-                to={`#${item.toLowerCase().replace(" ", "-")}`}
+              <a
+                href={`#${item.toLowerCase().replace(" ", "-")}`}
                 className="text-[#f1faee] text-lg hover:text-[#00a896] relative group"
                 onClick={handleNavClick}
                 role="menuitem"
@@ -109,7 +109,7 @@ const Navbar = ({ theme, setTheme }) => {
               >
                 {item}
                 <span className="absolute bottom-[-5px] left-1/2 transform -translate-x-1/2 w-0 h-0.5 bg-[#00a896] group-hover:w-full transition-all duration-300"></span>
-              </Link>
+              </a>
             </li>
           ))}
           <li role="none">

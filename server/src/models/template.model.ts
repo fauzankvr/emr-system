@@ -5,7 +5,6 @@ interface ILabReport {
   name?: string;
   values?: string;
   reportDate?: Date;
-  reportImageUrl?: string;
 }
 
 interface ITaperingSchedule {
@@ -23,9 +22,10 @@ interface IMedicineEntry {
   tapering?: ITaperingSchedule[];
 }
 
-export interface IPrescription extends Document {
+export interface ITemplate extends Document {
   doctor: Types.ObjectId;
-  patient: Types.ObjectId;
+  name: string;
+  description?: string;
   medicines: IMedicineEntry[];
   diagnosis?: string;
   notes?: string;
@@ -48,15 +48,15 @@ const LabReportSchema = new Schema<ILabReport>(
     name: { type: String },
     values: { type: String },
     reportDate: { type: Date, default: Date.now },
-    reportImageUrl: { type: String },
   },
   { _id: false }
 );
 
-const PrescriptionSchema = new Schema<IPrescription>(
+const TemplateSchema = new Schema<ITemplate>(
   {
     doctor: { type: Schema.Types.ObjectId, ref: "Doctor", required: true },
-    patient: { type: Schema.Types.ObjectId, ref: "Patient", required: true },
+    name: { type: String, required: true },
+    description: { type: String },
     medicines: [
       {
         medicine: MedicineSchema,
@@ -76,5 +76,4 @@ const PrescriptionSchema = new Schema<IPrescription>(
   { timestamps: true }
 );
 
-
-export const Prescription = model<IPrescription>('Prescription', PrescriptionSchema);
+export const Template = model<ITemplate>('Template', TemplateSchema); 

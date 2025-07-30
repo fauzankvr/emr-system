@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from "react";
-import { Search, Plus, Trash2, FileText, Download } from "lucide-react";
+import { Search, Plus, Trash2, FileText, Download, Pencil } from "lucide-react";
 import { axiosInstance } from "../../API/axiosInstance";
 import { useLocation } from "react-router-dom";
 import { ToastContainer, toast } from "react-toastify";
 import { Document, Page, Text, View, StyleSheet } from "@react-pdf/renderer";
 import { PDFDownloadLink, PDFViewer } from "@react-pdf/renderer";
+import TemplateModal from "../../Components/doctor/models/TemplateModal";
 
 const styles = StyleSheet.create({
   page: {
@@ -191,13 +192,19 @@ const PrescriptionPDF = ({
             labReports.map((report, index) => (
               <View key={index} style={{ marginBottom: 10 }}>
                 <Text>
-                  <Text style={styles.label}>Report Type:</Text>{" "}
-                  {report.reportType}
+                  <Text style={styles.label}>Report Name:</Text> {report.name}
                 </Text>
                 <Text>
-                  <Text style={styles.label}>Findings:</Text>{" "}
-                  {report.findings || "-"}
+                  <Text style={styles.label}>Value:</Text>{" "}
+                  {report.values || "-"}
                 </Text>
+                <Text>
+                  <Text style={styles.label}>Report Date:</Text>{" "}
+                  {report.reportDate || "-"}
+                </Text>
+                {report.reportImageUrl && (
+                  <a href={report.reportImageUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline ml-2">View File</a>
+                )}
               </View>
             ))
           ) : (
@@ -260,7 +267,7 @@ const PrescriptionPDF = ({
                             },
                           ]}
                         >
-                          Note: {med.medicine.content}
+                          Content: {med.medicine.content}
                         </Text>
                       )}
 
@@ -287,7 +294,7 @@ const PrescriptionPDF = ({
                                 { color: "#6B7280", marginLeft: 6 },
                               ]}
                             >
-                              - {taper.dosage || "-"} for {taper.days || "-"}
+                              {taper.dosage || "-"} for {taper.days || "-"}
                             </Text>
                           ))}
                         </>
@@ -375,7 +382,15 @@ const Prescription = () => {
   const [showMedicineDropdown, setShowMedicineDropdown] = useState(false);
   const [showPDFModal, setShowPDFModal] = useState(false);
   const location = useLocation();
-  const [labTest,setLabTest] = useState([""])
+  const [labTest, setLabTest] = useState([""])
+  const [editMedicineIndex, setEditMedicineIndex] = useState(null);
+  const [showTemplateModal, setShowTemplateModal] = useState(false);
+  const [showPatientModal, setShowPatientModal] = useState(false);
+  const [showDoctorModal, setShowDoctorModal] = useState(false);
+  const [availablePatients, setAvailablePatients] = useState([]);
+  const [availableDoctors, setAvailableDoctors] = useState([]);
+  const [patientSearchQuery, setPatientSearchQuery] = useState('');
+  const [doctorSearchQuery, setDoctorSearchQuery] = useState('');
 
   const [newMedicine, setNewMedicine] = useState({
     medicine: "",
@@ -387,11 +402,12 @@ const Prescription = () => {
   });
 
   const [newLabReport, setNewLabReport] = useState({
-    reportType: "",
-    findings: "",
-    values: [{ name: "", value: "" }],
+    name: "",
+    values: "",
     reportDate: "",
   });
+
+  const [newLabReportFile, setNewLabReportFile] = useState(null);
 
   const diagnosisOptions = [
     "Abdominal Pain",
@@ -441,13 +457,29 @@ const Prescription = () => {
     "Custom",
   ];
 
+  const [frequencyCustomMode, setFrequencyCustomMode] = useState(false);
+  const [customFrequency, setCustomFrequency] = useState("");
+  const [durationCustomMode, setDurationCustomMode] = useState(false);
+  const [customDuration, setCustomDuration] = useState("");
+  const [instructionsCustomMode, setInstructionsCustomMode] = useState(false);
+  const [customInstructions, setCustomInstructions] = useState("");
+  const [taperingCustomModes, setTaperingCustomModes] = useState([]); // [{ freq: false, days: false, freqVal: '', daysVal: '' }, ...]
+  const [diagnosisCustomMode, setDiagnosisCustomMode] = useState(false);
+  const [customDiagnosisValue, setCustomDiagnosisValue] = useState("");
+
   const queryParams = new URLSearchParams(location.search);
   const patientId = queryParams.get("patientId");
   const doctorId = queryParams.get("doctorId");
   const appointmentId = queryParams.get("appointmentId");
+  const templateId = queryParams.get("templateId");
+  const saveAsTemplate = queryParams.get("saveAsTemplate");
 
   useEffect(() => {
     const fetchInitialData = async () => {
+      // Auto-show template modal if saveAsTemplate parameter is present
+      if (saveAsTemplate === 'true') {
+        setShowTemplateModal(true);
+      }
       setLoading(true);
       try {
         if (doctorId) {
@@ -462,6 +494,9 @@ const Prescription = () => {
             `/api/patient/${patientId}`
           );
           setPatient(patientResponse.data.data);
+          if (patientResponse?.data?.data?.vitals) {
+            setVitals(patientResponse.data.data.vitals);
+          }
         }
 
         const medicinesResponse = await axiosInstance.get("/api/medicine");
@@ -469,13 +504,16 @@ const Prescription = () => {
 
         const urlParams = new URLSearchParams(window.location.search);
         const prescId =
-          urlParams.get("id") || localStorage.getItem("currentPrescriptionId");
+          urlParams.get("id") || localStorage.getItem("prescription");
 
         if (prescId) {
           const prescriptionResponse = await axiosInstance.get(
             `/api/prescription/${prescId}`
           );
-          const prescData = prescriptionResponse.data;
+          const prescData = prescriptionResponse.data.data;
+          console.log("prescData", prescData)
+          console.log(prescData)
+          setPrescriptionId(prescData._id);
           setDiagnosis(prescData.diagnosis || "");
           if (!diagnosisOptions.includes(prescData.diagnosis)) {
             setCustomDiagnosis(prescData.diagnosis);
@@ -484,15 +522,24 @@ const Prescription = () => {
           setNotes(prescData.notes || "");
           setMedicines(prescData.medicines || []);
           setLabReports(prescData.labReports || []);
-          setVitals(
-            prescData.vitals || {
-              spo2: "",
-              bp: "",
-              pulse: "",
-              temp: "",
-              weight: "",
-            }
+          setLabTest(prescData.labTest || []);
+        }
+
+        // Load template data if templateId is provided
+        if (templateId) {
+          const templateResponse = await axiosInstance.get(
+            `/api/template/${templateId}`
           );
+          const templateData = templateResponse.data.data;
+          setDiagnosis(templateData.diagnosis || "");
+          if (templateData.diagnosis && !diagnosisOptions.includes(templateData.diagnosis)) {
+            setCustomDiagnosis(templateData.diagnosis);
+            setDiagnosis("Custom");
+          }
+          setNotes(templateData.notes || "");
+          setMedicines(templateData.medicines || []);
+          setLabReports(templateData.labReports || []);
+          setLabTest(templateData.labTest || []);
         }
       } catch (error) {
         console.error("Error fetching initial data:", error);
@@ -534,37 +581,34 @@ const Prescription = () => {
   };
 
   const handleAddMedicine = async () => {
-    if (!newMedicine.medicine._id) {
+    if (!newMedicine.medicine) {
       toast.error("Please select a medicine");
-      return;
-    }
-
-    if (!newMedicine.dosage) {
-      toast.error("Please enter a dosage");
-      return;
-    }
-
-    if (!newMedicine.duration) {
-      toast.error("Please select a duration");
-      return;
-    }
-
-    if (!newMedicine.instructions) {
-      toast.error("Please select instructions");
       return;
     }
 
     if (newMedicine.isTapering) {
       const invalidSchedule = newMedicine.tapering.some(
-        (schedule) => !schedule.dosage || !schedule.days
+        (schedule, tIdx) =>
+          !(taperingCustomModes[tIdx]?.freq ? taperingCustomModes[tIdx].freqVal : schedule.dosage) ||
+          !(taperingCustomModes[tIdx]?.days ? taperingCustomModes[tIdx].daysVal : schedule.days)
       );
       if (invalidSchedule) {
-        toast.error(
-          "Please fill all tapering schedule fields (dosage and days)"
-        );
+        toast.error("Please fill all tapering schedule fields (dosage and days)");
         return;
       }
     }
+
+    // Use custom value if in custom mode, otherwise use select value
+    const frequencyValue = frequencyCustomMode ? customFrequency : newMedicine.dosage;
+    const durationValue = durationCustomMode ? customDuration : newMedicine.duration;
+    const instructionsValue = instructionsCustomMode ? customInstructions : newMedicine.instructions;
+    const taperingValue = newMedicine.isTapering && newMedicine.tapering
+      ? newMedicine.tapering.map((tap, tIdx) => ({
+          ...tap,
+          dosage: taperingCustomModes[tIdx]?.freq ? taperingCustomModes[tIdx].freqVal : tap.dosage,
+          days: taperingCustomModes[tIdx]?.days ? taperingCustomModes[tIdx].daysVal : tap.days,
+        }))
+      : newMedicine.tapering;
 
     const medicineToAdd = {
       medicine: {
@@ -574,11 +618,11 @@ const Prescription = () => {
         dosageForm: newMedicine.medicine.dosageForm,
         strength: newMedicine.medicine.strength,
       },
-      dosage: newMedicine.dosage,
-      duration: newMedicine.duration,
-      instructions: newMedicine.instructions,
+      dosage: frequencyValue,
+      duration: durationValue,
+      instructions: instructionsValue,
       isTapering: newMedicine.isTapering, // Explicitly set isTapering
-      ...(newMedicine.isTapering && { tapering: newMedicine.tapering }), // Include tapering only if isTapering is true
+      ...(newMedicine.isTapering && { tapering: taperingValue }), // Include tapering only if isTapering is true
     };
 
     setMedicines([...medicines, medicineToAdd]);
@@ -591,6 +635,14 @@ const Prescription = () => {
       tapering: [{ dosage: "", days: "" }],
     });
     setSearchTerm("");
+    // Reset custom modes and values
+    setFrequencyCustomMode(false);
+    setCustomFrequency("");
+    setDurationCustomMode(false);
+    setCustomDuration("");
+    setInstructionsCustomMode(false);
+    setCustomInstructions("");
+    setTaperingCustomModes([]);
   };
 
   const handleRemoveMedicine = (index) => {
@@ -602,6 +654,7 @@ const Prescription = () => {
       ...newMedicine,
       tapering: [...newMedicine.tapering, { dosage: "", days: "" }],
     });
+    setTaperingCustomModes([...taperingCustomModes, { freq: false, days: false, freqVal: '', daysVal: '' }]);
   };
 
   const handleUpdateTaperingSchedule = (index, field, value) => {
@@ -615,57 +668,168 @@ const Prescription = () => {
       ...newMedicine,
       tapering: newMedicine.tapering.filter((_, i) => i !== index),
     });
+    setTaperingCustomModes(taperingCustomModes.filter((_, i) => i !== index));
   };
 
-  const handleAddLabReportValue = () => {
-    setNewLabReport({
-      ...newLabReport,
-      values: [...newLabReport.values, { name: "", value: "" }],
-    });
-  };
 
-  const handleUpdateLabReportValue = (index, field, value) => {
-    const updatedValues = [...newLabReport.values];
-    updatedValues[index] = { ...updatedValues[index], [field]: value };
-    setNewLabReport({ ...newLabReport, values: updatedValues });
-  };
-
-  const handleRemoveLabReportValue = (index) => {
-    setNewLabReport({
-      ...newLabReport,
-      values: newLabReport.values.filter((_, i) => i !== index),
-    });
-  };
-
-  const handleAddLabReport = () => {
-    if (!newLabReport.reportType) {
-      toast.error("Please enter a lab report type");
+  const handleAddLabReport = async () => {
+    if (!newLabReport.name || !newLabReport.values) {
+      toast.error("Please provide both report name and value");
       return;
     }
-
-    const valuesObject = newLabReport.values.reduce((acc, { name, value }) => {
-      if (name && value) acc[name] = value;
-      return acc;
-    }, {});
-
+    
+    let reportImageUrl = "";
+    if (newLabReportFile) {
+      try {
+        // Create FormData for file upload
+        const formData = new FormData();
+        formData.append("reportFile", newLabReportFile);
+        
+        // Upload file to server
+        const response = await axiosInstance.post("/api/prescription/upload-lab-report", formData, {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        });
+        
+        if (response.data.success) {
+          reportImageUrl = response.data.data.reportImageUrl;
+        } else {
+          toast.error("Failed to upload file");
+          return;
+        }
+      } catch (error) {
+        console.error("File upload error:", error);
+        toast.error("Failed to upload file");
+        return;
+      }
+    }
+    
     const labReportToAdd = {
-      reportType: newLabReport.reportType,
-      findings: newLabReport.findings,
-      values: valuesObject,
-      reportDate: newLabReport.reportDate || new Date(),
+      name: newLabReport.name,
+      values: newLabReport.values,
+      reportDate: newLabReport.reportDate,
+      reportImageUrl,
     };
-
+    
     setLabReports([...labReports, labReportToAdd]);
-    setNewLabReport({
-      reportType: "",
-      findings: "",
-      values: [{ name: "", value: "" }],
-      reportDate: "",
-    });
+    setNewLabReport({ name: "", values: "", reportDate: "" });
+    setNewLabReportFile(null);
   };
 
   const handleRemoveLabReport = (index) => {
     setLabReports(labReports.filter((_, i) => i !== index));
+  };
+
+  const handleEditLabReport = (index) => {
+    const report = labReports[index];
+    setNewLabReport({
+      name: report.name || "",
+      values: report.values || "",
+      reportDate: report.reportDate || "",
+    });
+
+    // Remove the original so user can re-add the edited version
+    setLabReports(labReports.filter((_, i) => i !== index));
+  };
+
+  const handleEditMedicine = (index) => {
+    const med = medicines[index];
+    setNewMedicine({
+      medicine: med.medicine,
+      dosage: med.dosage,
+      duration: med.duration,
+      instructions: med.instructions,
+      isTapering: med.isTapering || false,
+      tapering: med.tapering ? [...med.tapering] : [{ dosage: '', days: '' }],
+    });
+    setEditMedicineIndex(index);
+    setSearchTerm(med.medicine.name);
+  };
+
+  const handleSaveMedicine = () => {
+    if (!newMedicine.medicine) {
+      toast.error("Please select a medicine");
+      return;
+    }
+  
+    // Validate tapering schedule if isTapering is true
+    if (newMedicine.isTapering) {
+      const invalidSchedule = newMedicine.tapering.some((schedule, tIdx) => {
+        const dosage = taperingCustomModes[tIdx]?.freq
+          ? taperingCustomModes[tIdx].freqVal
+          : schedule.dosage;
+        const days = taperingCustomModes[tIdx]?.days
+          ? taperingCustomModes[tIdx].daysVal
+          : schedule.days;
+        return !dosage || !days;
+      });
+      // if (invalidSchedule) {
+      //   toast.error("Please fill all tapering schedule fields (dosage and days)");
+      //   return;
+      // }
+    }
+  
+    // Use custom values if in custom mode, otherwise use select values
+    const frequencyValue = frequencyCustomMode ? customFrequency : newMedicine.dosage;
+    const durationValue = durationCustomMode ? customDuration : newMedicine.duration;
+    const instructionsValue = instructionsCustomMode
+      ? customInstructions
+      : newMedicine.instructions;
+  
+    // Process tapering schedule with custom values
+    const taperingValue = newMedicine.isTapering
+      ? newMedicine.tapering.map((tap, tIdx) => ({
+          dosage: taperingCustomModes[tIdx]?.freq
+            ? taperingCustomModes[tIdx].freqVal
+            : tap.dosage,
+          days: taperingCustomModes[tIdx]?.days
+            ? taperingCustomModes[tIdx].daysVal
+            : tap.days,
+        }))
+      : [];
+  
+    // Validate required fields
+    if (!frequencyValue) {
+      toast.error("Please provide a frequency");
+      return;
+    }
+  
+    const medicineToAdd = {
+      medicine: {
+        _id: newMedicine.medicine._id,
+        name: newMedicine.medicine.name,
+        content: newMedicine.medicine.content,
+        dosageForm: newMedicine.medicine.dosageForm,
+        strength: newMedicine.medicine.strength,
+      },
+      dosage: frequencyValue,
+      duration: durationValue || "", // Allow empty duration if not required
+      instructions: instructionsValue || "", // Allow empty instructions if not required
+      isTapering: newMedicine.isTapering,
+      ...(newMedicine.isTapering && { tapering: taperingValue }),
+    };
+  
+    // Update medicines state
+    setMedicines([...medicines, medicineToAdd]);
+  
+    // Reset form
+    setNewMedicine({
+      medicine: "",
+      dosage: "",
+      duration: "",
+      instructions: "",
+      isTapering: false,
+      tapering: [{ dosage: "", days: "" }],
+    });
+    setSearchTerm("");
+    setFrequencyCustomMode(false);
+    setCustomFrequency("");
+    setDurationCustomMode(false);
+    setCustomDuration("");
+    setInstructionsCustomMode(false);
+    setCustomInstructions("");
+    setTaperingCustomModes([]);
   };
 
   const handleSavePrescription = async () => {
@@ -674,7 +838,7 @@ const Prescription = () => {
       return;
     }
 
-    if (!diagnosis || (diagnosis === "Custom" && !customDiagnosis)) {
+    if (!diagnosis || (diagnosis === "Custom" && !customDiagnosisValue)) {
       toast.error("Please select or enter a diagnosis");
       return;
     }
@@ -684,23 +848,32 @@ const Prescription = () => {
       return;
     }
 
-    const finalDiagnosis = diagnosis === "Custom" ? customDiagnosis : diagnosis;
+    const diagnosisValue = diagnosisCustomMode ? customDiagnosisValue : diagnosis;
+    console.log("ls")
+
+    // Update patient vitals before saving prescription
+    try {
+      await axiosInstance.patch(`/api/patient/${patientId}/vitals`, { vitals });
+    } catch (error) {
+      console.error("Error updating patient vitals:", error);
+      toast.error("Failed to update patient vitals");
+      return;
+    }
 
     const prescriptionData = {
       doctor: doctorId,
       patient: patientId,
-      diagnosis: finalDiagnosis,
+      diagnosis: diagnosisValue,
       notes,
-      vitals,
       medicines: medicines.map((med) => ({
-        medicine: med.medicine._id,
+        medicine: med.medicine,
         dosage: med.dosage,
         duration: med.duration,
         instructions: med.instructions,
         isTapering: med.isTapering,
         ...(med.isTapering && { tapering: med.tapering }),
       })),
-      labReports,
+      labReports: labReports.map(r => ({ ...r, values: r.values || r.value })), // ensure 'values' is sent
       labTest
     };
 
@@ -727,6 +900,42 @@ const Prescription = () => {
       toast.error("Failed to save prescription");
     }
   };
+
+  const handleSaveAsTemplate = () => {
+    if (medicines.length === 0) {
+      toast.error("At least one medicine is required to save as template");
+      return;
+    }
+    setShowTemplateModal(true);
+  };
+
+  // Doctor and patient search handlers
+  const fetchDoctors = async (query = '') => {
+    try {
+      const response = await axiosInstance.get('/api/doctor', {
+        params: query ? { q: query } : {},
+      });
+      setAvailableDoctors(response.data.data || []);
+    } catch (error) {
+      toast.error('Failed to fetch doctors');
+    }
+  };
+
+  const fetchPatients = async (query = '') => {
+    try {
+      const response = await axiosInstance.get(`/api/patient/search?q=${query}`);
+      setAvailablePatients(response.data.data || []);
+    } catch (error) {
+      toast.error('Failed to fetch patients');
+    }
+  };
+
+  useEffect(() => {
+    if (templateId) {
+      fetchDoctors();
+      fetchPatients();
+    }
+  }, [templateId]);
 
   if (loading) {
     return (
@@ -756,9 +965,17 @@ const Prescription = () => {
                 <button
                   className="bg-blue-700 hover:bg-blue-800 text-white px-4 py-2 rounded-md flex items-center"
                   onClick={handleSavePrescription}
+                  disabled={templateId && (!doctor || !patient)}
                 >
                   <FileText size={16} className="mr-2" />
                   Save
+                </button>
+                <button
+                  className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md flex items-center"
+                  onClick={handleSaveAsTemplate}
+                >
+                  <Plus size={16} className="mr-2" />
+                  Save as Template
                 </button>
                 <button
                   className="bg-blue-700 hover:bg-blue-800 text-white px-4 py-2 rounded-md flex items-center"
@@ -773,61 +990,95 @@ const Prescription = () => {
 
           {/* Doctor and Patient Information */}
           <div className="p-4 md:p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Doctor Selection */}
             <div className="border rounded-lg p-4 bg-gray-50">
-              <h2 className="text-lg font-semibold text-gray-700 mb-3">
-                Doctor
-              </h2>
-              {doctor ? (
+              <h2 className="text-lg font-semibold text-gray-700 mb-3">Doctor</h2>
+              {(!doctor && templateId) ? (
+                <>
+                  <input
+                    type="text"
+                    placeholder="Search doctor..."
+                    value={doctorSearchQuery}
+                    onChange={e => {
+                      setDoctorSearchQuery(e.target.value);
+                      fetchDoctors(e.target.value);
+                    }}
+                    className="w-full p-2 border border-gray-300 rounded-lg mb-2"
+                  />
+                  <div className="max-h-40 overflow-y-auto">
+                    {availableDoctors.map(doc => (
+                      <div
+                        key={doc._id}
+                        className="p-2 hover:bg-blue-100 cursor-pointer rounded"
+                        onClick={() => setDoctor(doc)}
+                      >
+                        <span className="font-medium">{doc.name}</span>
+                        <span className="ml-2 text-xs text-gray-500">{doc.email}</span>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              ) : doctor ? (
                 <div className="space-y-2">
-                  <p className="text-gray-800">
-                    <span className="font-medium">Name:</span> {doctor.name}
-                  </p>
-                  <p className="text-gray-800">
-                    <span className="font-medium">ID:</span> {doctor._id}
-                  </p>
+                  <p className="text-gray-800"><span className="font-medium">Name:</span> {doctor.name}</p>
+                  <p className="text-gray-800"><span className="font-medium">ID:</span> {doctor._id}</p>
                   {doctor.specialization && (
-                    <p className="text-gray-800">
-                      <span className="font-medium">Specialization:</span>{" "}
-                      {doctor.specialization}
-                    </p>
+                    <p className="text-gray-800"><span className="font-medium">Specialization:</span> {doctor.specialization}</p>
                   )}
                   {doctor.contact && (
-                    <p className="text-gray-800">
-                      <span className="font-medium">Contact:</span>{" "}
-                      {doctor.contact}
-                    </p>
+                    <p className="text-gray-800"><span className="font-medium">Contact:</span> {doctor.contact}</p>
                   )}
                 </div>
               ) : (
                 <p className="text-gray-500">Loading doctor details...</p>
               )}
             </div>
+            {/* Patient Selection */}
             <div className="border rounded-lg p-4 bg-gray-50">
-              <h2 className="text-lg font-semibold text-gray-700 mb-3">
-                Patient
-              </h2>
-              {patient ? (
+              <h2 className="text-lg font-semibold text-gray-700 mb-3">Patient</h2>
+              {(!patient && templateId) ? (
+                <>
+                  <input
+                    type="text"
+                    placeholder="Search patient..."
+                    value={patientSearchQuery}
+                    onChange={e => {
+                      setPatientSearchQuery(e.target.value);
+                      fetchPatients(e.target.value);
+                    }}
+                    className="w-full p-2 border border-gray-300 rounded-lg mb-2"
+                  />
+                  <div className="max-h-40 overflow-y-auto">
+                    {availablePatients.map(pat => (
+                      <div
+                        key={pat._id}
+                        className="p-2 hover:bg-blue-100 cursor-pointer rounded"
+                        onClick={() => {
+                          setPatient(pat);
+                          if(pat.vitals){
+                            setVitals(pat.vitals);
+                          }
+                        }}
+                      >
+                        <span className="font-medium">{pat.name}</span>
+                        <span className="ml-2 text-xs text-gray-500">{pat.email}</span>
+                      </div>
+                    ))}
+
+                  </div>
+                </>
+              ) : patient ? (
                 <div className="space-y-2">
-                  <p className="text-gray-800">
-                    <span className="font-medium">Name:</span> {patient.name}
-                  </p>
-                  <p className="text-gray-800">
-                    <span className="font-medium">Age:</span> {patient.age}
-                  </p>
-                  <p className="text-gray-800">
-                    <span className="font-medium">ID:</span> {patient._id}
-                  </p>
+                  <p className="text-gray-800"><span className="font-medium">Name:</span> {patient.name}</p>
+                  <p className="text-gray-800"><span className="font-medium">ID:</span> {patient._id}</p>
+                  {patient.age && (
+                    <p className="text-gray-800"><span className="font-medium">Age:</span> {patient.age}</p>
+                  )}
                   {patient.gender && (
-                    <p className="text-gray-800">
-                      <span className="font-medium">Gender:</span>{" "}
-                      {patient.gender}
-                    </p>
+                    <p className="text-gray-800"><span className="font-medium">Gender:</span> {patient.gender}</p>
                   )}
                   {patient.contact && (
-                    <p className="text-gray-800">
-                      <span className="font-medium">Contact:</span>{" "}
-                      {patient.contact}
-                    </p>
+                    <p className="text-gray-800"><span className="font-medium">Contact:</span> {patient.contact}</p>
                   )}
                 </div>
               ) : (
@@ -850,7 +1101,7 @@ const Prescription = () => {
                 <input
                   type="text"
                   id="spo2"
-                  value={vitals.spo2}
+                  value={vitals?.spo2}
                   onChange={(e) =>
                     setVitals({ ...vitals, spo2: e.target.value })
                   }
@@ -934,34 +1185,46 @@ const Prescription = () => {
           {/* Diagnosis and Notes */}
           <div className="p-4 md:p-6 border-t">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label
-                  htmlFor="diagnosis"
-                  className="block text-sm font-medium text-gray-700 mb-1"
-                >
-                  Diagnosis
-                </label>
-                <select
-                  id="diagnosis"
-                  value={diagnosis}
-                  onChange={(e) => setDiagnosis(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="">-- Select Diagnosis --</option>
-                  {diagnosisOptions.map((option) => (
-                    <option key={option} value={option}>
-                      {option}
-                    </option>
-                  ))}
-                </select>
-                {diagnosis === "Custom" && (
-                  <input
-                    type="text"
-                    value={customDiagnosis}
-                    onChange={(e) => setCustomDiagnosis(e.target.value)}
-                    className="w-full mt-2 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Enter custom diagnosis"
-                  />
+              <div className="relative mb-4">
+                <label htmlFor="diagnosis" className="block text-sm font-medium text-gray-700 mb-1">Diagnosis</label>
+                {!diagnosisCustomMode ? (
+                  <>
+                    <select
+                      id="diagnosis"
+                      value={diagnosis}
+                      onChange={e => setDiagnosis(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="">Select diagnosis</option>
+                      {diagnosisOptions.map(opt => (
+                        <option key={opt} value={opt}>{opt}</option>
+                      ))}
+                    </select>
+                    <button
+                      type="button"
+                      className="absolute right-2 top-2 text-xs px-2 py-1 bg-gray-200 rounded"
+                      onClick={() => setDiagnosisCustomMode(true)}
+                    >
+                      Custom
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <input
+                      type="text"
+                      value={customDiagnosisValue}
+                      onChange={e => setCustomDiagnosisValue(e.target.value)}
+                      placeholder="Enter custom diagnosis"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md mt-2"
+                    />
+                    <button
+                      type="button"
+                      className="absolute right-2 top-2 text-xs px-2 py-1 bg-gray-200 rounded"
+                      onClick={() => setDiagnosisCustomMode(false)}
+                    >
+                      Select
+                    </button>
+                  </>
                 )}
               </div>
               <div>
@@ -1054,45 +1317,70 @@ const Prescription = () => {
                   htmlFor="dosage"
                   className="block text-sm font-medium text-gray-700 mb-1"
                 >
-                  Dosage
+                  Frequency
                 </label>
-                <select
-                  id="dosage"
-                  value={newMedicine.dosage}
-                  onChange={(e) =>
-                    setNewMedicine({
-                      ...newMedicine,
-                      dosage: e.target.value,
-                    })
-                  }
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="">Select dosage</option>
-                  <option value="1-0-0">1-0-0 (Morning only)</option>
-                  <option value="0-1-0">0-1-0 (Afternoon only)</option>
-                  <option value="0-0-1">0-0-1 (Night only)</option>
-                  <option value="1-1-0">1-1-0 (Morning & Afternoon)</option>
-                  <option value="1-0-1">1-0-1 (Morning & Night)</option>
-                  <option value="0-1-1">0-1-1 (Afternoon & Night)</option>
-                  <option value="1-1-1">1-1-1 (Three times daily)</option>
-                  <option value="2-0-0">2-0-0 (Two in morning)</option>
-                  <option value="0-2-0">0-2-0 (Two in afternoon)</option>
-                  <option value="0-0-2">0-0-2 (Two at night)</option>
-                  <option value="2-1-1">
-                    2-1-1 (Two morning, one afternoon & night)
-                  </option>
-                  <option value="1-2-1">
-                    1-2-1 (One morning, two afternoon, one night)
-                  </option>
-                  <option value="1-1-2">
-                    1-1-2 (One morning & afternoon, two night)
-                  </option>
-                  <option value="2-2-2">
-                    2-2-2 (Two tablets three times daily)
-                  </option>
-                  <option value="SOS">SOS (As needed)</option>
-                  <option value="STAT">STAT (Immediately)</option>
-                </select>
+                <div className="relative">
+                  {!frequencyCustomMode ? (
+                    <>
+                      <select
+                        id="dosage"
+                        value={newMedicine.dosage}
+                        onChange={e => setNewMedicine({ ...newMedicine, dosage: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      >
+                        <option value="">Select frequency</option>
+                        <option value="1-0-0">1-0-0 (Morning only)</option>
+                        <option value="0-1-0">0-1-0 (Afternoon only)</option>
+                        <option value="0-0-1">0-0-1 (Night only)</option>
+                        <option value="1-1-0">1-1-0 (Morning & Afternoon)</option>
+                        <option value="1-0-1">1-0-1 (Morning & Night)</option>
+                        <option value="0-1-1">0-1-1 (Afternoon & Night)</option>
+                        <option value="1-1-1">1-1-1 (Three times daily)</option>
+                        <option value="2-0-0">2-0-0 (Two in morning)</option>
+                        <option value="0-2-0">0-2-0 (Two in afternoon)</option>
+                        <option value="0-0-2">0-0-2 (Two at night)</option>
+                        <option value="2-1-1">
+                          2-1-1 (Two morning, one afternoon & night)
+                        </option>
+                        <option value="1-2-1">
+                          1-2-1 (One morning, two afternoon, one night)
+                        </option>
+                        <option value="1-1-2">
+                          1-1-2 (One morning & afternoon, two night)
+                        </option>
+                        <option value="2-2-2">
+                          2-2-2 (Two tablets three times daily)
+                        </option>
+                        <option value="SOS">SOS (As needed)</option>
+                        <option value="STAT">STAT (Immediately)</option>
+                      </select>
+                      <button
+                        type="button"
+                        className="absolute right-2 top-2 text-xs px-2 py-1 bg-gray-200 rounded"
+                        onClick={() => setFrequencyCustomMode(true)}
+                      >
+                        Custom
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <input
+                        type="text"
+                        value={customFrequency}
+                        onChange={e => setCustomFrequency(e.target.value)}
+                        placeholder="Enter custom frequency"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md mt-2"
+                      />
+                      <button
+                        type="button"
+                        className="absolute right-2 top-2 text-xs px-2 py-1 bg-gray-200 rounded"
+                        onClick={() => setFrequencyCustomMode(false)}
+                      >
+                        Select
+                      </button>
+                    </>
+                  )}
+                </div>
               </div>
 
               <div>
@@ -1102,25 +1390,50 @@ const Prescription = () => {
                 >
                   Duration
                 </label>
-                <select
-                  id="duration"
-                  value={newMedicine.duration}
-                  onChange={(e) =>
-                    setNewMedicine({
-                      ...newMedicine,
-                      duration: e.target.value,
-                    })
-                  }
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="">Select duration</option>
-                  <option value="1 day">1 day</option>
-                  <option value="3 days">3 days</option>
-                  <option value="5 days">5 days</option>
-                  <option value="7 days">7 days</option>
-                  <option value="14 days">14 days</option>
-                  <option value="30 days">30 days</option>
-                </select>
+                <div className="relative">
+                  {!durationCustomMode ? (
+                    <>
+                      <select
+                        id="duration"
+                        value={newMedicine.duration}
+                        onChange={e => setNewMedicine({ ...newMedicine, duration: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      >
+                        <option value="">Select duration</option>
+                        <option value="1 day">1 day</option>
+                        <option value="3 days">3 days</option>
+                        <option value="5 days">5 days</option>
+                        <option value="7 days">7 days</option>
+                        <option value="14 days">14 days</option>
+                        <option value="30 days">30 days</option>
+                      </select>
+                      <button
+                        type="button"
+                        className="absolute right-2 top-2 text-xs px-2 py-1 bg-gray-200 rounded"
+                        onClick={() => setDurationCustomMode(true)}
+                      >
+                        Custom
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <input
+                        type="text"
+                        value={customDuration}
+                        onChange={e => setCustomDuration(e.target.value)}
+                        placeholder="Enter custom duration"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md mt-2"
+                      />
+                      <button
+                        type="button"
+                        className="absolute right-2 top-2 text-xs px-2 py-1 bg-gray-200 rounded"
+                        onClick={() => setDurationCustomMode(false)}
+                      >
+                        Select
+                      </button>
+                    </>
+                  )}
+                </div>
               </div>
 
               <div>
@@ -1130,24 +1443,49 @@ const Prescription = () => {
                 >
                   Instructions
                 </label>
-                <select
-                  id="instructions"
-                  value={newMedicine.instructions}
-                  onChange={(e) =>
-                    setNewMedicine({
-                      ...newMedicine,
-                      instructions: e.target.value,
-                    })
-                  }
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="">Select instructions</option>
-                  <option value="Before food">Before food</option>
-                  <option value="After food">After food</option>
-                  <option value="With food">With food</option>
-                  <option value="Empty stomach">Empty stomach</option>
-                  <option value="As needed">As needed</option>
-                </select>
+                <div className="relative">
+                  {!instructionsCustomMode ? (
+                    <>
+                      <select
+                        id="instructions"
+                        value={newMedicine.instructions}
+                        onChange={e => setNewMedicine({ ...newMedicine, instructions: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      >
+                        <option value="">Select instructions</option>
+                        <option value="Before food">Before food</option>
+                        <option value="After food">After food</option>
+                        <option value="With food">With food</option>
+                        <option value="Empty stomach">Empty stomach</option>
+                        <option value="As needed">As needed</option>
+                      </select>
+                      <button
+                        type="button"
+                        className="absolute right-2 top-2 text-xs px-2 py-1 bg-gray-200 rounded"
+                        onClick={() => setInstructionsCustomMode(true)}
+                      >
+                        Custom
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <input
+                        type="text"
+                        value={customInstructions}
+                        onChange={e => setCustomInstructions(e.target.value)}
+                        placeholder="Enter custom instructions"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md mt-2"
+                      />
+                      <button
+                        type="button"
+                        className="absolute right-2 top-2 text-xs px-2 py-1 bg-gray-200 rounded"
+                        onClick={() => setInstructionsCustomMode(false)}
+                      >
+                        Select
+                      </button>
+                    </>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -1161,61 +1499,136 @@ const Prescription = () => {
                     key={index}
                     className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4"
                   >
+                    {/* Frequency */}
                     <div>
-                      <label
-                        htmlFor={`tapering-dosage-${index}`}
-                        className="block text-sm font-medium text-gray-700 mb-1"
-                      >
-                        Dosage
-                      </label>
-                      <select
-                        id={`tapering-dosage-${index}`}
-                        value={schedule.dosage}
-                        onChange={(e) =>
-                          handleUpdateTaperingSchedule(
-                            index,
-                            "dosage",
-                            e.target.value
-                          )
-                        }
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      >
-                        <option value="">Select dosage</option>
-                        <option value="5 mg">5 mg</option>
-                        <option value="10 mg">10 mg</option>
-                        <option value="15 mg">15 mg</option>
-                        <option value="20 mg">20 mg</option>
-                        <option value="25 mg">25 mg</option>
-                        <option value="30 mg">30 mg</option>
-                      </select>
+                      <label htmlFor={`tapering-dosage-${index}`} className="block text-sm font-medium text-gray-700 mb-1">Frequency</label>
+                      <div className="relative">
+                        {!taperingCustomModes[index]?.freq ? (
+                          <>
+                            <select
+                              id={`tapering-dosage-${index}`}
+                              value={schedule.dosage}
+                              onChange={e => handleUpdateTaperingSchedule(index, 'dosage', e.target.value)}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            >
+                              <option value="">Select frequency</option>
+                              <option value="1-0-0">1-0-0 (Morning only)</option>
+                              <option value="0-1-0">0-1-0 (Afternoon only)</option>
+                              <option value="0-0-1">0-0-1 (Night only)</option>
+                              <option value="1-1-0">1-1-0 (Morning & Afternoon)</option>
+                              <option value="1-0-1">1-0-1 (Morning & Night)</option>
+                              <option value="0-1-1">0-1-1 (Afternoon & Night)</option>
+                              <option value="1-1-1">1-1-1 (Three times daily)</option>
+                              <option value="2-0-0">2-0-0 (Two in morning)</option>
+                              <option value="0-2-0">0-2-0 (Two in afternoon)</option>
+                              <option value="0-0-2">0-0-2 (Two at night)</option>
+                              <option value="2-1-1">2-1-1 (Two morning, one afternoon & night)</option>
+                              <option value="1-2-1">1-2-1 (One morning, two afternoon, one night)</option>
+                              <option value="1-1-2">1-1-2 (One morning & afternoon, two night)</option>
+                              <option value="2-2-2">2-2-2 (Two tablets three times daily)</option>
+                              <option value="SOS">SOS (As needed)</option>
+                              <option value="STAT">STAT (Immediately)</option>
+                            </select>
+                            <button
+                              type="button"
+                              className="absolute right-2 top-2 text-xs px-2 py-1 bg-gray-200 rounded"
+                              onClick={() => {
+                                const arr = [...taperingCustomModes];
+                                arr[index] = { ...arr[index], freq: true };
+                                setTaperingCustomModes(arr);
+                              }}
+                            >
+                              Custom
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            <input
+                              type="text"
+                              value={taperingCustomModes[index]?.freqVal || ''}
+                              onChange={e => {
+                                const arr = [...taperingCustomModes];
+                                arr[index] = { ...arr[index], freqVal: e.target.value };
+                                setTaperingCustomModes(arr);
+                              }}
+                              placeholder="Enter custom frequency"
+                              className="w-full px-3 py-2 border border-gray-300 rounded-md mt-2"
+                            />
+                            <button
+                              type="button"
+                              className="absolute right-2 top-2 text-xs px-2 py-1 bg-gray-200 rounded"
+                              onClick={() => {
+                                const arr = [...taperingCustomModes];
+                                arr[index] = { ...arr[index], freq: false };
+                                setTaperingCustomModes(arr);
+                              }}
+                            >
+                              Select
+                            </button>
+                          </>
+                        )}
+                      </div>
                     </div>
+                    {/* Days */}
                     <div>
-                      <label
-                        htmlFor={`tapering-days-${index}`}
-                        className="block text-sm font-medium text-gray-700 mb-1"
-                      >
-                        Days
-                      </label>
-                      <select
-                        id={`tapering-days-${index}`}
-                        value={schedule.days}
-                        onChange={(e) =>
-                          handleUpdateTaperingSchedule(
-                            index,
-                            "days",
-                            e.target.value
-                          )
-                        }
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      >
-                        <option value="">Select days</option>
-                        <option value="3 days">3 days</option>
-                        <option value="5 days">5 days</option>
-                        <option value="7 days">7 days</option>
-                        <option value="10 days">10 days</option>
-                        <option value="14 days">14 days</option>
-                      </select>
+                      <label htmlFor={`tapering-days-${index}`} className="block text-sm font-medium text-gray-700 mb-1">Days</label>
+                      <div className="relative">
+                        {!taperingCustomModes[index]?.days ? (
+                          <>
+                            <select
+                              id={`tapering-days-${index}`}
+                              value={schedule.days}
+                              onChange={e => handleUpdateTaperingSchedule(index, 'days', e.target.value)}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            >
+                              <option value="">Select days</option>
+                              <option value="3 days">3 days</option>
+                              <option value="5 days">5 days</option>
+                              <option value="7 days">7 days</option>
+                              <option value="10 days">10 days</option>
+                              <option value="14 days">14 days</option>
+                            </select>
+                            <button
+                              type="button"
+                              className="absolute right-2 top-2 text-xs px-2 py-1 bg-gray-200 rounded"
+                              onClick={() => {
+                                const arr = [...taperingCustomModes];
+                                arr[index] = { ...arr[index], days: true };
+                                setTaperingCustomModes(arr);
+                              }}
+                            >
+                              Custom
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            <input
+                              type="text"
+                              value={taperingCustomModes[index]?.daysVal || ''}
+                              onChange={e => {
+                                const arr = [...taperingCustomModes];
+                                arr[index] = { ...arr[index], daysVal: e.target.value };
+                                setTaperingCustomModes(arr);
+                              }}
+                              placeholder="Enter custom days"
+                              className="w-full px-3 py-2 border border-gray-300 rounded-md mt-2"
+                            />
+                            <button
+                              type="button"
+                              className="absolute right-2 top-2 text-xs px-2 py-1 bg-gray-200 rounded"
+                              onClick={() => {
+                                const arr = [...taperingCustomModes];
+                                arr[index] = { ...arr[index], days: false };
+                                setTaperingCustomModes(arr);
+                              }}
+                            >
+                              Select
+                            </button>
+                          </>
+                        )}
+                      </div>
                     </div>
+                    {/* Remove button */}
                     <div className="flex items-end">
                       <button
                         onClick={() => handleRemoveTaperingSchedule(index)}
@@ -1238,11 +1651,20 @@ const Prescription = () => {
 
             <div className="flex items-end">
               <button
-                onClick={handleAddMedicine}
+                onClick={handleSaveMedicine}
                 className="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md flex items-center justify-center"
               >
-                <Plus size={16} className="mr-2" />
-                Add Medicine
+                {editMedicineIndex !== null ? (
+                  <>
+                    <Pencil size={16} className="mr-2" />
+                    Save Medicine
+                  </>
+                ) : (
+                  <>
+                    <Plus size={16} className="mr-2" />
+                    Add Medicine
+                  </>
+                )}
               </button>
             </div>
 
@@ -1256,9 +1678,7 @@ const Prescription = () => {
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Content
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Dosage
-                    </th>
+
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Duration
                     </th>
@@ -1297,9 +1717,7 @@ const Prescription = () => {
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                           {medicine.medicine.content || "-"}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {medicine.dosage}
-                        </td>
+
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                           {medicine.duration || "-"}
                         </td>
@@ -1309,14 +1727,21 @@ const Prescription = () => {
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                           {medicine.isTapering && medicine.tapering?.length > 0
                             ? medicine.tapering
-                                .map(
-                                  (schedule) =>
-                                    `${schedule.dosage} for ${schedule.days}`
-                                )
-                                .join(", ")
+                              .map(
+                                (schedule) =>
+                                  `${schedule.dosage} for ${schedule.days}`
+                              )
+                              .join(", ")
                             : "No"}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
+                          <button
+                            onClick={() => handleEditMedicine(index)}
+                            className="text-yellow-600 hover:text-yellow-800 mr-2"
+                            title="Edit Medicine"
+                          >
+                            <Pencil size={16} />
+                          </button>
                           <button
                             onClick={() => handleRemoveMedicine(index)}
                             className="text-red-600 hover:text-red-800"
@@ -1341,20 +1766,17 @@ const Prescription = () => {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                 <div>
                   <label
-                    htmlFor="reportType"
+                    htmlFor="reportName"
                     className="block text-sm font-medium text-gray-700 mb-1"
                   >
-                    Report Type
+                    Report Name
                   </label>
                   <input
                     type="text"
-                    id="reportType"
-                    value={newLabReport.reportType}
+                    id="reportName"
+                    value={newLabReport.name}
                     onChange={(e) =>
-                      setNewLabReport({
-                        ...newLabReport,
-                        reportType: e.target.value,
-                      })
+                      setNewLabReport({ ...newLabReport, name: e.target.value })
                     }
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     placeholder="e.g. Blood Test"
@@ -1362,23 +1784,18 @@ const Prescription = () => {
                 </div>
                 <div>
                   <label
-                    htmlFor="findings"
+                    htmlFor="reportValue"
                     className="block text-sm font-medium text-gray-700 mb-1"
                   >
-                    Findings
+                    Value
                   </label>
                   <input
                     type="text"
-                    id="findings"
-                    value={newLabReport.findings}
-                    onChange={(e) =>
-                      setNewLabReport({
-                        ...newLabReport,
-                        findings: e.target.value,
-                      })
-                    }
+                    id="reportValue"
+                    value={newLabReport.values}
+                    onChange={e => setNewLabReport({ ...newLabReport, values: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="e.g. Cholesterol levels slightly elevated"
+                    placeholder="e.g. 220 mg/dL"
                   />
                 </div>
                 <div>
@@ -1401,76 +1818,19 @@ const Prescription = () => {
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
-              </div>
-              <h3 className="text-sm font-medium text-gray-700 mb-2">
-                Lab Values
-              </h3>
-              {newLabReport.values.map((val, index) => (
-                <div
-                  key={index}
-                  className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4"
-                >
-                  <div>
-                    <label
-                      htmlFor={`value-name-${index}`}
-                      className="block text-sm font-medium text-gray-700 mb-1"
-                    >
-                      Name
-                    </label>
-                    <input
-                      type="text"
-                      id={`value-name-${index}`}
-                      value={val.name}
-                      onChange={(e) =>
-                        handleUpdateLabReportValue(
-                          index,
-                          "name",
-                          e.target.value
-                        )
-                      }
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="e.g. Total Cholesterol"
-                    />
-                  </div>
-                  <div>
-                    <label
-                      htmlFor={`value-value-${index}`}
-                      className="block text-sm font-medium text-gray-700 mb-1"
-                    >
-                      Value
-                    </label>
-                    <input
-                      type="text"
-                      id={`value-value-${index}`}
-                      value={val.value}
-                      onChange={(e) =>
-                        handleUpdateLabReportValue(
-                          index,
-                          "value",
-                          e.target.value
-                        )
-                      }
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="e.g. 220 mg/dL"
-                    />
-                  </div>
-                  <div className="flex items-end">
-                    <button
-                      onClick={() => handleRemoveLabReportValue(index)}
-                      className="text-red-600 hover:text-red-800"
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                  </div>
+                <div className="md:col-span-3">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Report File (Image or PDF)</label>
+                  <input
+                    type="file"
+                    accept="image/*,application/pdf"
+                    onChange={e => setNewLabReportFile(e.target.files[0])}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  {newLabReportFile && (
+                    <div className="mt-1 text-xs text-gray-500">Selected: {newLabReportFile.name}</div>
+                  )}
                 </div>
-              ))}
-              <button
-                onClick={handleAddLabReportValue}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md flex items-center mb-4"
-              >
-                <Plus size={16} className="mr-2" />
-                Add Lab Value
-              </button>
+              </div>
               <div className="flex items-end">
                 <button
                   onClick={handleAddLabReport}
@@ -1487,13 +1847,10 @@ const Prescription = () => {
                 <thead className="bg-gray-50">
                   <tr>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Report Type
+                      Report Name
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Findings
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Values
+                      Value
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Report Date
@@ -1507,7 +1864,7 @@ const Prescription = () => {
                   {labReports.length === 0 ? (
                     <tr>
                       <td
-                        colSpan={5}
+                        colSpan={4}
                         className="px-6 py-4 text-center text-gray-500"
                       >
                         No lab reports added yet
@@ -1516,24 +1873,27 @@ const Prescription = () => {
                   ) : (
                     labReports.map((report, index) => (
                       <tr key={index}>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                          {report.reportType}
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {report.name || "-"}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {report.findings || "-"}
+                          {report.values || "-"}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {report.values
-                            ? Object.entries(report.values)
-                                .map(([key, value]) => `${key}: ${value}`)
-                                .join(", ")
+                          {report.reportDate
+                            ? new Date(report.reportDate).toLocaleDateString()
                             : "-"}
+                          {report.reportImageUrl && (
+                            <a href={report.reportImageUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline ml-2">View File</a>
+                          )}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {new Date(report.reportDate).toLocaleDateString() ||
-                            "-"}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
+                          <button
+                            onClick={() => handleEditLabReport(index)}
+                            className="text-blue-600 hover:text-blue-800"
+                          >
+                            <Pencil size={16} />
+                          </button>
                           <button
                             onClick={() => handleRemoveLabReport(index)}
                             className="text-red-600 hover:text-red-800"
@@ -1619,7 +1979,7 @@ const Prescription = () => {
                       doctor={doctor}
                       patient={patient}
                       diagnosis={
-                        diagnosis === "Custom" ? customDiagnosis : diagnosis
+                        diagnosis === "Custom" ? customDiagnosisValue : diagnosis
                       }
                       medicines={medicines}
                       labReports={labReports}
@@ -1654,7 +2014,7 @@ const Prescription = () => {
                   doctor={doctor}
                   patient={patient}
                   diagnosis={
-                    diagnosis === "Custom" ? customDiagnosis : diagnosis
+                    diagnosis === "Custom" ? customDiagnosisValue : diagnosis
                   }
                   medicines={medicines}
                   labReports={labReports}
@@ -1670,7 +2030,7 @@ const Prescription = () => {
                     doctor={doctor}
                     patient={patient}
                     diagnosis={
-                      diagnosis === "Custom" ? customDiagnosis : diagnosis
+                      diagnosis === "Custom" ? customDiagnosisValue : diagnosis
                     }
                     medicines={medicines}
                     labReports={labReports}
@@ -1695,6 +2055,25 @@ const Prescription = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Template Modal */}
+      {showTemplateModal && (
+        <TemplateModal
+          isOpen={showTemplateModal}
+          onClose={() => setShowTemplateModal(false)}
+          prescriptionData={{
+            medicines,
+            diagnosis: diagnosis === "Custom" ? customDiagnosisValue : diagnosis,
+            notes,
+            labReports,
+            labTest
+          }}
+          onSave={(template) => {
+            toast.success('Template saved successfully!');
+            setShowTemplateModal(false);
+          }}
+        />
       )}
     </>
   );

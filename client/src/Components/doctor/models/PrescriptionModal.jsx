@@ -10,12 +10,12 @@ class PDFErrorBoundary extends React.Component {
   state = { hasError: false, error: null };
 
   static getDerivedStateFromError(error) {
-    console.error("PDFErrorBoundary caught error:", error); // Log error for debugging
+    console.error("PDFErrorBoundary caught error:", error);
     return { hasError: true, error };
   }
 
   componentDidCatch(error, errorInfo) {
-    console.error("PDFErrorBoundary error info:", errorInfo); // Log additional error info
+    console.error("PDFErrorBoundary error info:", errorInfo);
   }
 
   render() {
@@ -36,7 +36,7 @@ class PDFErrorBoundary extends React.Component {
   }
 }
 
-// PDF Styles (unchanged)
+// PDF Styles
 const styles = StyleSheet.create({
   page: {
     padding: 15,
@@ -171,7 +171,8 @@ const PrescriptionPDF = memo(
               Dr.{doctor.name}, MD (PHYSICIAN)
             </Text>
             <Text style={styles.subHeaderText}>
-              General Practitioner | Reg No: 35083 | +91 9895353078
+              General Practitioner | Reg No: {doctor.regNo} | +91{" "}
+              {doctor.contact}
             </Text>
             <Text style={styles.subHeaderText}>
               Pathappiriyam | BOOKING NO: +918606344694
@@ -203,19 +204,20 @@ const PrescriptionPDF = memo(
               </View>
               <View style={{ width: "30%" }}>
                 <Text>
-                  <Text style={styles.label}>SpO2:</Text> {vitals.spo2}
+                  <Text style={styles.label}>SpO2:</Text> {vitals.spo2 || "-"}
                 </Text>
                 <Text>
-                  <Text style={styles.label}>BP:</Text> {vitals.bp}
+                  <Text style={styles.label}>BP:</Text> {vitals.bp || "-"}
                 </Text>
                 <Text>
-                  <Text style={styles.label}>Pulse:</Text> {vitals.pulse}
+                  <Text style={styles.label}>Pulse:</Text> {vitals.pulse || "-"}
                 </Text>
                 <Text>
-                  <Text style={styles.label}>Temp:</Text> {vitals.temp}
+                  <Text style={styles.label}>Temp:</Text> {vitals.temp || "-"}
                 </Text>
                 <Text>
-                  <Text style={styles.label}>Weight:</Text> {vitals.weight}
+                  <Text style={styles.label}>Weight:</Text>{" "}
+                  {vitals.weight || "-"}
                 </Text>
               </View>
             </View>
@@ -368,7 +370,9 @@ const PrescriptionPDF = memo(
           {/* Lab Tests for Next Visit */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Lab Tests On Next Visit</Text>
-            {Array.isArray(labTest) && labTest.length > 0 ? (
+            {Array.isArray(labTest) &&
+            labTest.length > 0 &&
+            labTest[0] !== "" ? (
               labTest.map((val, idx) => <Text key={idx}>• {val}</Text>)
             ) : (
               <Text>-</Text>
@@ -395,65 +399,31 @@ const PrescriptionPDF = memo(
 );
 
 // PrescriptionModal Component
-const PrescriptionModal = ({ patientId, onClose, date }) => {
-  const [prescriptions, setPrescriptions] = useState([]);
+const PrescriptionModal = ({ prescriptionId, onClose }) => {
+  const [prescription, setPrescription] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [selectedPrescription, setSelectedPrescription] = useState(null);
 
   useEffect(() => {
-    const fetchPrescriptions = async () => {
+    const fetchPrescription = async () => {
       try {
         setLoading(true);
         const response = await axiosInstance.get(
-          `/api/prescription/patient/${patientId}`
+          `/api/prescription/${prescriptionId}`
         );
-        const prescriptionData = response.data.data || [];
-
-        // Sort prescriptions by createdAt date (descending)
-        const sortedPrescriptions = prescriptionData.sort(
-          (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
-        );
-
-        setPrescriptions(sortedPrescriptions);
-
-        if (sortedPrescriptions.length > 0) {
-          if (date) {
-            const inputDate = new Date(date).toISOString().split("T")[0];
-            const matched = sortedPrescriptions.find((val) => {
-              const createdAtDate = new Date(val.createdAt)
-                .toISOString()
-                .split("T")[0];
-              return createdAtDate === inputDate;
-            });
-            setSelectedPrescription(matched || sortedPrescriptions[0]);
-          } else {
-            setSelectedPrescription(sortedPrescriptions[0]);
-          }
-        }
-
+        const prescriptionData = response.data.data;
+        setPrescription(prescriptionData);
         setLoading(false);
       } catch (err) {
-        console.error("Error fetching prescriptions:", err);
-        setError("Failed to load prescriptions. Please try again.");
+        console.error("Error fetching prescription:", err);
+        setError("Failed to load prescription. Please try again.");
         setLoading(false);
-        toast.error("Failed to load prescriptions.");
+        toast.error("Failed to load prescription.");
       }
     };
 
-    if (patientId) {
-      fetchPrescriptions();
-    }
-  }, [patientId, date]);
-
-  // Debounced handler for select change
-  // const handleSelectChange = useCallback(
-  //   (e) => {
-  //     const selected = prescriptions.find((p) => p._id === e.target.value);
-  //     setSelectedPrescription(selected);
-  //   },
-  //   [prescriptions]
-  // );
+    fetchPrescription();
+  }, [prescriptionId]);
 
   if (loading) {
     return (
@@ -487,6 +457,26 @@ const PrescriptionModal = ({ patientId, onClose, date }) => {
     );
   }
 
+  if (!prescription) {
+    return (
+      <div className="fixed inset-0 flex items-center justify-center z-50 backdrop-blur-sm">
+        <div className="bg-white rounded-lg p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+          <div className="text-center py-4 text-gray-500">
+            No prescription found.
+          </div>
+          <div className="flex justify-end">
+            <button
+              onClick={onClose}
+              className="px-4 py-2 bg-red-700 hover:bg-red-800 text-white rounded"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="fixed inset-0 flex items-center justify-center z-50 backdrop-blur-sm">
       <div className="bg-white rounded-lg p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
@@ -500,93 +490,65 @@ const PrescriptionModal = ({ patientId, onClose, date }) => {
           </button>
         </div>
 
-        {prescriptions.length === 0 ? (
-          <div className="text-center py-4 text-gray-500">
-            No prescriptions found for this patient.
+        <PDFErrorBoundary>
+          <div className="h-[500px] overflow-auto">
+            <PDFViewer width="100%" height="100%" showToolbar={false}>
+              <PrescriptionPDF
+                key={prescription._id}
+                doctor={{
+                  name: prescription.doctor.name,
+                  regNo: "35083",
+                  contact: prescription.doctor.phone,
+                }}
+                patient={{
+                  name: prescription.patient.name,
+                  mobile: prescription.patient.phone,
+                  age: prescription.patient.age,
+                }}
+                diagnosis={prescription.diagnosis}
+                medicines={prescription.medicines}
+                labReports={prescription.labReports}
+                labTest={prescription.labTest}
+                vitals={prescription.vitals}
+              />
+            </PDFViewer>
           </div>
-        ) : (
-          <>
-            {/* Prescription Selector */}
-            {/* <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Select Prescription
-              </label>
-              <select
-                value={selectedPrescription?._id || ""}
-                onChange={handleSelectChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="" disabled>
-                  Select a prescription
-                </option>
-                {prescriptions.map((prescription) => (
-                  <option key={prescription._id} value={prescription._id}>
-                    Prescription -{" "}
-                    {new Date(prescription.createdAt).toLocaleDateString(
-                      "en-GB",
-                      {
-                        day: "2-digit",
-                        month: "2-digit",
-                        year: "numeric",
-                      }
-                    )}
-                  </option>
-                ))}
-              </select>
-            </div> */}
-
-            {/* PDF Viewer */}
-            {selectedPrescription ? (
-              <PDFErrorBoundary>
-                <div className="h-[500px] overflow-auto">
-                  <PDFViewer width="100%" height="100%" showToolbar={false}>
-                    <PrescriptionPDF
-                      key={selectedPrescription._id} // Add key to force re-render
-                      doctor={selectedPrescription.doctor}
-                      patient={selectedPrescription.patient}
-                      diagnosis={selectedPrescription.diagnosis}
-                      medicines={selectedPrescription.medicines}
-                      labReports={selectedPrescription.labReports}
-                      labTest={selectedPrescription.labTest}
-                      vitals={selectedPrescription.vitals}
-                    />
-                  </PDFViewer>
-                </div>
-                <div className="flex justify-end mt-4">
-                  <PDFDownloadLink
-                    document={
-                      <PrescriptionPDF
-                        doctor={selectedPrescription.doctor}
-                        patient={selectedPrescription.patient}
-                        diagnosis={selectedPrescription.diagnosis}
-                        medicines={selectedPrescription.medicines}
-                        labReports={selectedPrescription.labReports}
-                        labTest={selectedPrescription.labTest}
-                        vitals={selectedPrescription.vitals}
-                      />
-                    }
-                    fileName={`prescription-${selectedPrescription._id}.pdf`}
-                  >
-                    {({ loading }) =>
-                      loading ? (
-                        "Loading document..."
-                      ) : (
-                        <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md flex items-center">
-                          <Download size={16} className="mr-2" />
-                          Download PDF
-                        </button>
-                      )
-                    }
-                  </PDFDownloadLink>
-                </div>
-              </PDFErrorBoundary>
-            ) : (
-              <div className="text-center py-4 text-gray-500">
-                Please select a prescription to view.
-              </div>
-            )}
-          </>
-        )}
+          <div className="flex justify-end mt-4">
+            <PDFDownloadLink
+              document={
+                <PrescriptionPDF
+                  doctor={{
+                    name: prescription.doctor.name,
+                    regNo: "35083",
+                    contact: prescription.doctor.phone,
+                  }}
+                  patient={{
+                    name: prescription.patient.name,
+                    mobile: prescription.patient.phone,
+                    age: prescription.patient.age,
+                  }}
+                  diagnosis={prescription.diagnosis}
+                  medicines={prescription.medicines}
+                  labReports={prescription.labReports}
+                  labTest={prescription.labTest}
+                  vitals={prescription.vitals}
+                />
+              }
+              fileName={`prescription-${prescription._id}.pdf`}
+            >
+              {({ loading }) =>
+                loading ? (
+                  "Loading document..."
+                ) : (
+                  <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md flex items-center">
+                    <Download size={16} className="mr-2" />
+                    Download PDF
+                  </button>
+                )
+              }
+            </PDFDownloadLink>
+          </div>
+        </PDFErrorBoundary>
       </div>
     </div>
   );

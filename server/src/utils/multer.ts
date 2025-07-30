@@ -38,3 +38,21 @@ export const upload = multer({
     fileSize: 2 * 1024 * 1024
   }
 });
+
+const storageLabReport = multer.diskStorage({
+  destination: function (req: any, file: any, cb: any) {
+    cb(null, path.join(__dirname, "../uploads/labReports"));
+  },
+  filename: function (req: any, file: any, cb: any) {
+    const ext = path.extname(file.originalname);
+    cb(null, "labreport-" + Date.now() + ext);
+  },
+});
+
+const fileFilterLabReport = (req: any, file: any, cb: any) => {
+  const allowed = ["image/jpeg", "image/png", "application/pdf"];
+  if (allowed.includes(file.mimetype)) cb(null, true);
+  else cb(new Error("Only images and pdfs allowed"), false);
+};
+
+export const uploadLabReport = multer({ storage: storageLabReport, fileFilter: fileFilterLabReport });

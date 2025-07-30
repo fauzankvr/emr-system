@@ -1,5 +1,13 @@
 import mongoose, { Schema, model, Document } from 'mongoose';
 
+export interface IVitals {
+  spo2?: string;
+  bp?: string;
+  pulse?: string;
+  temp?: string;
+  weight?: string;
+}
+
 export interface IPatient extends Document {
   name: string;
   email: string;
@@ -7,18 +15,28 @@ export interface IPatient extends Document {
   gender: string;
   age: string;
   dob: Date;
+  vitals?: IVitals;
   createdAt: Date;
   updatedAt: Date;
 }
 
+const vitalsSchema = new Schema<IVitals>({
+  spo2: { type: String },
+  bp: { type: String },
+  pulse: { type: String },
+  temp: { type: String },
+  weight: { type: String },
+}, { _id: false });
+
 const patientSchema = new Schema<IPatient>(
   {
     name: { type: String, required: true },
-    email: { type: String, required: true, unique: true },
-    phone: { type: String, required: true, unique: true },
+    email: { type: String},
+    phone: { type: String, required: true},
     age: { type: String, required: true},
     gender: { type: String, enum: ['male', 'female', 'other'], required: true },
     dob: { type: Date },
+    vitals: vitalsSchema,
   },
   { timestamps: true }
 );

@@ -84,7 +84,8 @@ function DashboardPage() {
   }, []);
 
   const handleViewDetails = (appointment) => {
-    setSelectedAppointment(appointment);
+    console.log("View details for appointment:", appointment.patientId);
+    setSelectedAppointment(appointment.patientId);
     setShowModal(true);
   };
 
@@ -287,7 +288,7 @@ function DashboardPage() {
 
       {showModal && selectedAppointment && (
         <PatientDetailsModal
-          selectedAppointment={selectedAppointment}
+          patient={selectedAppointment}
           onClose={() => setShowModal(false)}
         />
       )}

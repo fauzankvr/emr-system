@@ -31,12 +31,22 @@ const Home = () => {
       <Navbar theme={theme} setTheme={setTheme} />
       <Header />
       <div>
-        <WelcomeSection />
-        <ProcessSection />
-        <FeaturesSection />
-        <BenefitsSection />
+        <section id="welcome">
+          <WelcomeSection />
+        </section>
+        <section id="process">
+          <ProcessSection />
+        </section>
+        <section id="features">
+          <FeaturesSection />
+        </section>
+        <section id="benefits">
+          <BenefitsSection />
+        </section>
+        <section id="enroll-now">
+         <Footer />
+        </section>
       </div>
-      <Footer />
       <WhatsAppWidget />
       <ScrollToTop />
     </>

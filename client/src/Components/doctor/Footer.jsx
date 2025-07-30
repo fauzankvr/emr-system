@@ -6,7 +6,7 @@ const Footer = () => {
   return (
     <footer
       id="enroll-now-footer"
-      className="footer bg-[#0d1b2a] text-[#f1faee] py-20 px-4 text-center"
+      className="footer bg-[#0d1b2a] text-[#f1faee] text-center"
     >
       <div className="footer-enroll-form fade-in max-w-xl mx-auto mb-12">
         <h4 className="text-xl md:text-2xl font-semibold mb-3">

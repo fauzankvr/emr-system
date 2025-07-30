@@ -6,6 +6,7 @@ import {
   FaPills,
   FaStethoscope,
   FaSignOutAlt,
+  FaFileAlt,
 } from "react-icons/fa";
 import NavLink from "./NavLink";
 // import { axiosInstance } from "../../../API/axiosInstance";
@@ -75,6 +76,16 @@ function Sidebar() {
           to="/doctor/patient-history"
           icon={<FaStethoscope className="text-xl md:text-lg" />}
           label="Patients History"
+        />
+        <NavLink
+          to="/doctor/templates"
+          icon={<FaFileAlt className="text-xl md:text-lg" />}
+          label="Templates"
+        />
+        <NavLink
+          to="/doctor/patients"
+          icon={<FaUsers className="text-xl md:text-lg" />}
+          label="Patient List"
         />
 
         <button

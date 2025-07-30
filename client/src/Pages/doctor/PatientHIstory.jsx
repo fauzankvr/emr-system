@@ -1,42 +1,41 @@
 import React, { useEffect, useState } from "react";
 import { axiosInstance } from "../../API/axiosInstance";
-import { FaEye } from "react-icons/fa";
+import { FaEye, FaEdit, FaTrash, FaFileAlt } from "react-icons/fa";
 import PatientDetailsModal from "../../Components/doctor/models/PatientDetails";
 import PrescriptionModal from "../../Components/doctor/models/PrescriptionModal";
+import { useNavigate } from "react-router-dom";
 
 function PatientHistoryPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [dashboardData, setDashboardData] = useState({
-    appointments: [],
+    prescriptions: [],
   });
-  const [filteredAppointments, setFilteredAppointments] = useState([]);
+  const [filteredPrescriptions, setFilteredPrescriptions] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedAppointment, setSelectedAppointment] = useState(null);
+  const [selectedPrescription, setSelectedPrescription] = useState(null);
   const [showPatientModal, setShowPatientModal] = useState(false);
   const [showPrescriptionModal, setShowPrescriptionModal] = useState(false);
-  const [selectedPatientId, setSelectedPatientId] = useState(null);
-  const [prescriptionDate, setDate] = useState("");
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
-        const response = await axiosInstance.get("/api/booking");
-        const appointmentsData =
-          response.data?.data
-            .filter((item) => item.status === "completed")
-            .sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt)) ||
-          [];
+        const response = await axiosInstance.get("/api/prescription");
+        const prescriptionsData =
+          response.data?.data.sort(
+            (a, b) => new Date(b.updatedAt) - new Date(a.updatedAt)
+          ) || [];
 
         setDashboardData({
-          appointments: appointmentsData,
+          prescriptions: prescriptionsData,
         });
-        setFilteredAppointments(appointmentsData);
+        setFilteredPrescriptions(prescriptionsData);
         setLoading(false);
       } catch (error) {
-        console.error("Error fetching dashboard data", error);
-        setError("Failed to load dashboard data. Please try again later.");
+        console.error("Error fetching prescription data", error);
+        setError("Failed to load prescription data. Please try again later.");
         setLoading(false);
       }
     };
@@ -44,33 +43,69 @@ function PatientHistoryPage() {
   }, []);
 
   useEffect(() => {
-    // Filter appointments based on search query
-    const filtered = dashboardData.appointments.filter((appt) => {
-      const patient = appt.patientId;
+    // Filter prescriptions based on search query
+    const filtered = dashboardData.prescriptions.filter((pres) => {
+      const patient = pres.patient;
+      if (!patient) return false;
       const searchLower = searchQuery.toLowerCase();
       return (
-        patient.name.toLowerCase().includes(searchLower) ||
-        patient.email.toLowerCase().includes(searchLower) ||
-        patient.phone.includes(searchLower)
+        (patient.name && patient.name.toLowerCase().includes(searchLower)) ||
+        (patient.email && patient.email.toLowerCase().includes(searchLower)) ||
+        (patient.phone && patient.phone.includes(searchLower))
       );
     });
-    setFilteredAppointments(filtered);
-  }, [searchQuery, dashboardData.appointments]);
+    setFilteredPrescriptions(filtered);
+  }, [searchQuery, dashboardData.prescriptions]);
 
-  const handleViewDetails = (appointment) => {
-    setSelectedAppointment(appointment);
+  const handleViewDetails = (prescription) => {
+    setSelectedPrescription(prescription.patient);
     setShowPatientModal(true);
   };
 
-  const handleViewPrescription = (patientId, date) => {
-    setSelectedPatientId(patientId);
-    setDate(date);
+  const handleViewPrescription = (prescription) => {
+    setSelectedPrescription(prescription);
     setShowPrescriptionModal(true);
+  };
+
+  const handleDeletePrescription = async (prescriptionId) => {
+    if (window.confirm("Are you sure you want to delete this prescription?")) {
+      try {
+        await axiosInstance.delete(`/api/prescription/${prescriptionId}`);
+        setDashboardData((prev) => ({
+          prescriptions: prev.prescriptions.filter(
+            (pres) => pres._id !== prescriptionId
+          ),
+        }));
+        setFilteredPrescriptions((prev) =>
+          prev.filter((pres) => pres._id !== prescriptionId)
+        );
+      } catch (error) {
+        console.error("Error deleting prescription", error);
+        setError("Failed to delete prescription. Please try again later.");
+      }
+    }
+  };
+
+  const handleEditPrescription = (prescription) => {
+    if (prescription && prescription.patient && prescription.doctor && prescription._id) {
+      navigate(`/doctor/prescription?patientId=${prescription.patient._id}&doctorId=${prescription.doctor._id}&id=${prescription._id}`);
+    } else {
+      console.log("Edit prescription: missing patient, doctor, or id", prescription);
+    }
+  };
+
+  const handleSaveAsTemplate = (prescription) => {
+    // Navigate to prescription page with template creation mode
+    if (prescription && prescription.patient && prescription.doctor && prescription._id) {
+      navigate(`/doctor/prescription?patientId=${prescription.patient._id}&doctorId=${prescription.doctor._id}&id=${prescription._id}&saveAsTemplate=true`);
+    }
   };
 
   const handleSearchChange = (e) => {
     setSearchQuery(e.target.value);
   };
+
+
 
   return (
     <div className="p-6">
@@ -95,69 +130,78 @@ function PatientHistoryPage() {
             </div>
           ) : error ? (
             <div className="bg-red-100 text-red-700 p-3 rounded">{error}</div>
-          ) : filteredAppointments.length > 0 ? (
+          ) : filteredPrescriptions.length > 0 ? (
             <div className="overflow-x-auto">
               <table className="min-w-full bg-white">
                 <thead>
                   <tr>
                     <th className="py-3 px-3 text-left">Patient</th>
                     <th className="py-3 px-3 text-left">Date</th>
-                    <th className="py-3 px-3 text-left">Time</th>
-                    <th className="py-3 px-3 text-left">Status</th>
+                    <th className="py-3 px-3 text-left">Diagnosis</th>
                     <th className="py-3 px-3 text-left">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
-                  {filteredAppointments.map((appt) => (
+                  {filteredPrescriptions.map((pres) => (
                     <tr
-                      key={appt._id}
+                      key={pres._id}
                       className="hover:bg-gray-50 cursor-pointer"
                     >
                       <td className="py-3 px-3">
                         <div className="flex items-center">
                           <div className="h-8 w-8 rounded-full bg-blue-500 text-white flex items-center justify-center mr-3">
-                            {appt.patientId.name[0]?.toUpperCase() || "P"}
+                            {pres.patient && pres.patient.name ? pres.patient.name[0]?.toUpperCase() : "P"}
                           </div>
                           <div>
                             <div className="font-medium">
-                              {appt.patientId.name}
+                              {pres.patient && pres.patient.name ? pres.patient.name : "Unknown"}
                             </div>
                             <div className="text-xs text-gray-500">
-                              {appt.patientId.phone}
+                              {pres.patient && pres.patient.phone ? pres.patient.phone : "-"}
                             </div>
                           </div>
                         </div>
                       </td>
                       <td className="py-3 px-3">
-                        {new Date(appt.updatedAt).toLocaleDateString("en-GB")}
+                        {new Date(pres.updatedAt).toLocaleDateString("en-GB")}
                       </td>
-                      <td className="py-3 px-3">{appt.timeSlot}</td>
-                 
-                      <td className="py-3 px-3">
-                        <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
-                          {appt.status}
-                        </span>
-                      </td>
+                      <td className="py-3 px-3">{pres.diagnosis}</td>
                       <td className="py-3 px-3">
                         <div className="flex space-x-3">
                           <button
-                            onClick={() => handleViewDetails(appt)}
+                            onClick={() => handleViewDetails(pres)}
                             className="text-blue-600 hover:text-blue-800"
                             title="View Details"
                           >
                             <FaEye />
                           </button>
                           <button
-                            onClick={() =>
-                              handleViewPrescription(
-                                appt.patientId._id,
-                                appt.updatedAt
-                              )
-                            }
+                            onClick={() => handleViewPrescription(pres)}
                             className="text-blue-600 hover:text-blue-800"
                             title="View Prescription"
                           >
                             Prescription
+                          </button>
+                          <button
+                            onClick={() => handleEditPrescription(pres)}
+                            className="text-yellow-600 hover:text-yellow-800"
+                            title="Edit Prescription"
+                          >
+                            <FaEdit />
+                          </button>
+                          <button
+                            onClick={() => handleSaveAsTemplate(pres)}
+                            className="text-green-600 hover:text-green-800"
+                            title="Save as Template"
+                          >
+                            <FaFileAlt />
+                          </button>
+                          <button
+                            onClick={() => handleDeletePrescription(pres._id)}
+                            className="text-red-600 hover:text-red-800"
+                            title="Delete Prescription"
+                          >
+                            <FaTrash />
                           </button>
                         </div>
                       </td>
@@ -168,28 +212,28 @@ function PatientHistoryPage() {
             </div>
           ) : (
             <div className="text-center py-4 text-gray-500">
-              No appointments found
+              No prescriptions found
             </div>
           )}
         </div>
       </div>
 
       {/* Patient Details Modal */}
-      {showPatientModal && selectedAppointment && (
+      {showPatientModal && (
         <PatientDetailsModal
-          selectedAppointment={selectedAppointment}
+          patient={selectedPrescription}
           onClose={() => setShowPatientModal(false)}
         />
       )}
 
       {/* Prescription Modal */}
-      {showPrescriptionModal && selectedPatientId && (
+      {showPrescriptionModal && (
         <PrescriptionModal
-          patientId={selectedPatientId}
+          prescriptionId={selectedPrescription._id}
           onClose={() => setShowPrescriptionModal(false)}
-          date={prescriptionDate}
         />
       )}
+
     </div>
   );
 }

@@ -3,6 +3,10 @@
 @import url("https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/17.0.8/css/intlTelInput.css");
 @import "tailwindcss";
 
+html {
+  scroll-behavior: smooth;
+}
+
 :root {
     --bg-primary: #0d1b2a;
     --bg-secondary: #1b263b;

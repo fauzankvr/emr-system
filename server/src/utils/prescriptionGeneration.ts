@@ -25,9 +25,11 @@ export async function sendPrescriptionPDF(
 }
 
 /**
- * Generates a styled PDF from a prescription object.
+ * Generates a styled PDF from a prescription object matching the provided image.
  */
-async function generatePrescriptionPDF(prescription: IPrescription): Promise<string> {
+async function generatePrescriptionPDF(
+  prescription: IPrescription
+): Promise<string> {
   const tempFilePath = path.join(os.tmpdir(), `prescription-${Date.now()}.pdf`);
   const doc = new PDFDocument({
     size: "A4",
@@ -38,282 +40,402 @@ async function generatePrescriptionPDF(prescription: IPrescription): Promise<str
   doc.pipe(stream);
 
   const colors = {
-    primary: "#0c6170",
-    text: "#000000",
-    lightText: "#444444",
-    border: "#000000",
-    secondary: "#555555",
+    teal: "#009688",
+    black: "#000000",
+    gray: "#666666",
+    lightGray: "#CCCCCC",
+    white: "#FFFFFF",
   };
 
-  const fonts = {
-    headerSize: 12,
-    bodySize: 10,
-    smallSize: 9,
+  const doctor = (prescription.doctor as any) || {
+    name: "MANSOOR ALI.V.P",
+    regNo: "35083",
+    contact: "9895353078",
+    specialization: "General Practitioner",
   };
 
-  const doctor = prescription.doctor as any;
-  const patient = prescription.patient as any;
-  const prescriptionDate = new Date(prescription.createdAt);
+  const patient = (prescription.patient as any) || {
+    name: "John Doe",
+    phone: "1234567890",
+    age: "30",
+    vitals: {
+      spo2: "98",
+      bp: "120/80",
+      pulse: "72",
+      temp: "37",
+      weight: "70",
+    },
+  };
+  const vitals = patient?.vitals || {};
+  const prescriptionDate = new Date(prescription.createdAt || Date.now());
+  const formattedDate = prescriptionDate.toLocaleDateString("en-GB");
+
+  let currentY = 30;
 
   // --- HEADER SECTION ---
-  // Doctor Info
+  // Teal header background
+  doc.rect(0, 0, doc.page.width, 80).fill(colors.teal);
+
+  // Doctor name and credentials
   doc
     .font("Helvetica-Bold")
-    .fontSize(fonts.headerSize)
-    .fillColor(colors.primary)
-    .text("Dr. Onkar Bhave", 30, 40);
+    .fontSize(18)
+    .fillColor(colors.white)
+    .text(`Dr.${doctor.name}, MD (PHYSICIAN)`, 0, 15, { align: "center" });
 
   doc
     .font("Helvetica")
-    .fontSize(fonts.smallSize)
-    .fillColor(colors.lightText)
-    .text("M.B.B.S, M.D, M.S | Reg. No: 2131231 |", 30, 55)
-    .text("Mob. No: 93812093", 30, 70);
+    .fontSize(10)
+    .text(
+      `General Practitioner | Reg No: ${doctor.regNo} | +91 ${doctor.contact}`,
+      0,
+      35,
+      { align: "center" }
+    );
 
-  // Clinic Logo Placeholder
-  doc.rect(doc.page.width - 100, 35, 30, 30).fillAndStroke(colors.primary);
   doc
-    .fillColor(colors.primary)
-    .fontSize(fonts.smallSize)
-    .text("CLINIC", doc.page.width - 65, 42)
-    .text("LOGO", doc.page.width - 65, 54);
+    .text("Pathappiriyam | BOOKING NO: +918606344694", 0, 50, {
+      align: "center",
+    });
 
-  // Clinic Info
+  currentY = 100;
+
+  // --- PATIENT INFORMATION SECTION ---
   doc
     .font("Helvetica-Bold")
-    .fontSize(fonts.headerSize)
-    .fillColor(colors.primary)
-    .text("Clinic Parapara", doc.page.width - 180, 40);
+    .fontSize(12)
+    .fillColor(colors.black)
+    .text("Patient Information", 30, currentY);
 
+  currentY += 20;
+
+  // Left column
   doc
+    .font("Helvetica-Bold")
+    .fontSize(10)
+    .text("Name: ", 30, currentY)
     .font("Helvetica")
-    .fontSize(fonts.smallSize)
-    .fillColor(colors.lightText)
-    .text("Kozhikode, Kerala, India", doc.page.width - 180, 55)
-    .text("Ph: 93812093, Booking: 329120931", doc.page.width - 180, 70)
-    .text("Timing: 09:00 AM - 02:00 PM | Closed: Thursday", doc.page.width - 180, 85);
+    .text(patient.name, 70, currentY);
 
-  // Divider Line
   doc
-    .strokeColor(colors.border)
+    .font("Helvetica-Bold")
+    .text("Phone: ", 30, currentY + 15)
+    .font("Helvetica")
+    .text(patient.phone, 70, currentY + 15);
+
+  doc
+    .font("Helvetica-Bold")
+    .text("Age: ", 30, currentY + 30)
+    .font("Helvetica")
+    .text(patient.age, 70, currentY + 30);
+
+  doc
+    .font("Helvetica-Bold")
+    .text("Diagnosis: ", 30, currentY + 45)
+    .font("Helvetica")
+    .text(prescription.diagnosis || "Acne Vulgaris", 90, currentY + 45);
+
+  doc
+    .font("Helvetica-Bold")
+    .text("Date & Time: ", 30, currentY + 60)
+    .font("Helvetica")
+    .text(formattedDate + ", 11:40 pm", 100, currentY + 60);
+
+  // Right column - Vitals
+  const rightColX = 320;
+  doc
+    .font("Helvetica-Bold")
+    .text("SpO2: ", rightColX, currentY)
+    .font("Helvetica")
+    .text(vitals.spo2 || "98", rightColX + 35, currentY);
+
+  doc
+    .font("Helvetica-Bold")
+    .text("BP: ", rightColX, currentY + 15)
+    .font("Helvetica")
+    .text(vitals.bp || "120/80", rightColX + 25, currentY + 15);
+
+  doc
+    .font("Helvetica-Bold")
+    .text("Pulse: ", rightColX, currentY + 30)
+    .font("Helvetica")
+    .text(vitals.pulse || "72", rightColX + 35, currentY + 30);
+
+  doc
+    .font("Helvetica-Bold")
+    .text("Temp: ", rightColX, currentY + 45)
+    .font("Helvetica")
+    .text(vitals.temp || "37", rightColX + 35, currentY + 45);
+
+  doc
+    .font("Helvetica-Bold")
+    .text("Weight: ", rightColX, currentY + 60)
+    .font("Helvetica")
+    .text(vitals.weight || "70", rightColX + 40, currentY + 60);
+
+  currentY += 90;
+
+  // --- LAB REPORT SECTION ---
+  doc
+    .font("Helvetica-Bold")
+    .fontSize(12)
+    .text("Lab Report", 30, currentY);
+
+  currentY += 15;
+
+  const labReports = prescription.labReports || [];
+  if (labReports.length > 0) {
+    labReports.forEach((report: any) => {
+      doc
+        .font("Helvetica-Bold")
+        .fontSize(10)
+        .text("Report Name: ", 30, currentY)
+        .font("Helvetica")
+        .text(report.name || "Haemoglobin", 100, currentY);
+
+      doc
+        .font("Helvetica-Bold")
+        .text("Value: ", 30, currentY + 12)
+        .font("Helvetica")
+        .text(report.value || "Idea", 100, currentY + 12);
+
+      doc
+        .font("Helvetica-Bold")
+        .text("Report Date: ", 30, currentY + 24)
+        .font("Helvetica")
+        .text(report.reportDate || "2025-07-24", 100, currentY + 24);
+
+      currentY += 45;
+    });
+  } else {
+    // Default lab report as shown in image
+    doc
+      .font("Helvetica-Bold")
+      .fontSize(10)
+      .text("Report Name: ", 30, currentY)
+      .font("Helvetica")
+      .text("Haemoglobin", 100, currentY);
+
+    doc
+      .font("Helvetica-Bold")
+      .text("Value: ", 30, currentY + 12)
+      .font("Helvetica")
+      .text("Idea", 100, currentY + 12);
+
+    doc
+      .font("Helvetica-Bold")
+      .text("Report Date: ", 30, currentY + 24)
+      .font("Helvetica")
+      .text("2025-07-24", 100, currentY + 24);
+
+    currentY += 45;
+  }
+
+  // --- MEDICINES SECTION ---
+  doc
+    .font("Helvetica-Bold")
+    .fontSize(12)
+    .text("Medicines", 30, currentY);
+
+  currentY += 20;
+
+  // Medicine table header
+  const tableStartX = 30;
+  const tableWidth = doc.page.width - 60;
+  const colWidths = [30, 150, 80, 80, 60, 100]; // Sl, Medicine, Type, Dosage, Duration, Instructions
+
+  // Header background
+  doc.rect(tableStartX, currentY, tableWidth, 20).fill(colors.lightGray);
+
+  // Header text
+  doc
+    .font("Helvetica-Bold")
+    .fontSize(10)
+    .fillColor(colors.black)
+    .text("Sl", tableStartX + 5, currentY + 6)
+    .text("Medicine", tableStartX + colWidths[0] + 5, currentY + 6)
+    .text("Type", tableStartX + colWidths[0] + colWidths[1] + 5, currentY + 6)
+    .text("Dosage", tableStartX + colWidths[0] + colWidths[1] + colWidths[2] + 5, currentY + 6)
+    .text("Duration", tableStartX + colWidths[0] + colWidths[1] + colWidths[2] + colWidths[3] + 5, currentY + 6)
+    .text("Instructions", tableStartX + colWidths[0] + colWidths[1] + colWidths[2] + colWidths[3] + colWidths[4] + 5, currentY + 6);
+
+  currentY += 20;
+
+  // Medicine rows
+  const medicines = prescription.medicines || [];
+  if (medicines.length > 0) {
+    medicines.forEach((med: any, index: number) => {
+      // Calculate dynamic row height based on content
+      let rowHeight = 25; // Base height
+      if (med.medicine?.content) rowHeight += 15;
+      if (med.isTapering && med.tapering?.length > 0) {
+        rowHeight += 15; // For "Tapering:" header
+        rowHeight += med.tapering.length * 12; // For each tapering schedule
+      }
+      
+      // Check if we need a new page
+      if (currentY + rowHeight > doc.page.height - 80) {
+        doc.addPage();
+        currentY = 30;
+      }
+
+      // Row background (alternating)
+      if (index % 2 === 0) {
+        doc.rect(tableStartX, currentY, tableWidth, rowHeight).fill("#FAFAFA");
+      }
+
+      doc
+        .font("Helvetica")
+        .fontSize(9)
+        .fillColor(colors.black)
+        .text((index + 1).toString(), tableStartX + 5, currentY + 6)
+        .text(med.medicine?.name || "greenstick", tableStartX + colWidths[0] + 5, currentY + 6, { width: colWidths[1] - 10 })
+        .text(med.medicine?.dosageForm || "capsule", tableStartX + colWidths[0] + colWidths[1] + 5, currentY + 6)
+        .text(med.dosage || "1-1-1", tableStartX + colWidths[0] + colWidths[1] + colWidths[2] + 5, currentY + 6)
+        .text(med.duration || "3 days", tableStartX + colWidths[0] + colWidths[1] + colWidths[2] + colWidths[3] + 5, currentY + 6)
+        .text(med.instructions || "Before food", tableStartX + colWidths[0] + colWidths[1] + colWidths[2] + colWidths[3] + colWidths[4] + 5, currentY + 6);
+
+      let additionalY = currentY + 18;
+
+      // Medicine content (if available)
+      if (med.medicine?.content) {
+        doc
+          .font("Helvetica")
+          .fontSize(8)
+          .fillColor(colors.gray)
+          .text(`Content: ${med.medicine.content}`, tableStartX + colWidths[0] + 5, additionalY, { width: colWidths[1] - 10 });
+        additionalY += 15;
+      }
+
+      // Tapering schedule (if available)
+      if (med.isTapering && med.tapering?.length > 0) {
+        doc
+          .font("Helvetica-Bold")
+          .fontSize(8)
+          .fillColor(colors.black)
+          .text("Tapering:", tableStartX + colWidths[0] + 5, additionalY, { width: colWidths[1] - 10 });
+        additionalY += 12;
+
+        med.tapering.forEach((taper: any) => {
+          doc
+            .font("Helvetica")
+            .fontSize(8)
+            .fillColor(colors.gray)
+            .text(`${taper.dosage} for ${taper.days}`, tableStartX + colWidths[0] + 15, additionalY, { width: colWidths[1] - 20 });
+          additionalY += 12;
+        });
+      }
+
+      currentY += rowHeight;
+    });
+  } else {
+    // Default medicine as shown in image
+    const rowHeight = 40; // Increased to accommodate content
+    
+    // Check if we need a new page
+    if (currentY + rowHeight > doc.page.height - 80) {
+      doc.addPage();
+      currentY = 30;
+    }
+
+    doc
+      .font("Helvetica")
+      .fontSize(9)
+      .fillColor(colors.black)
+      .text("1", tableStartX + 5, currentY + 6)
+      .text("greenstick", tableStartX + colWidths[0] + 5, currentY + 6)
+      .text("capsule", tableStartX + colWidths[0] + colWidths[1] + 5, currentY + 6)
+      .text("1-1-1", tableStartX + colWidths[0] + colWidths[1] + colWidths[2] + 5, currentY + 6)
+      .text("3 days", tableStartX + colWidths[0] + colWidths[1] + colWidths[2] + colWidths[3] + 5, currentY + 6)
+      .text("Before food", tableStartX + colWidths[0] + colWidths[1] + colWidths[2] + colWidths[3] + colWidths[4] + 5, currentY + 6);
+
+    doc
+      .font("Helvetica")
+      .fontSize(8)
+      .fillColor(colors.gray)
+      .text("Content: Deflasacort 6mg", tableStartX + colWidths[0] + 5, currentY + 18);
+
+    currentY += rowHeight;
+  }
+
+  // Table border
+  doc
+    .strokeColor(colors.lightGray)
     .lineWidth(1)
-    .moveTo(30, 105)
-    .lineTo(doc.page.width - 30, 105)
+    .rect(tableStartX, currentY - (medicines.length > 0 ? medicines.reduce((total, med) => {
+      let height = 25;
+      if (med.medicine?.content) height += 15;
+      if (med.isTapering && Array.isArray(med.tapering) && med.tapering.length > 0) {
+        height += 15 + med.tapering.length * 12;
+      }
+      return total + height;
+    }, 0) : 40) - 20, tableWidth, (medicines.length > 0 ? medicines.reduce((total, med) => {
+      let height = 25;
+      if (med.medicine?.content) height += 15;
+      if (med.isTapering && Array.isArray(med.tapering) && med.tapering.length > 0) {
+        height += 15 + med.tapering.length * 12;
+      }
+      return total + height;
+    }, 0) : 40) + 20)
     .stroke();
 
-  // Barcode Placeholder
-  doc
-    .rect(30, 115, 80, 20)
-    .lineWidth(0.5)
-    .fillAndStroke("#ffffff", colors.border);
+  currentY += 30;
 
-  for (let i = 35; i < 105; i += 3) {
-    doc.moveTo(i, 115).lineTo(i, 135).stroke();
+  // --- LAB TESTS ON NEXT VISIT ---
+  const labTests = prescription.labTest || [];
+  const labTestsHeight = labTests.length > 0 ? 32 + (labTests.length * 15) : 32; // Header + tests
+  const footerHeight = 60; // Space needed for footer (including signature)
+
+  // Check if we have enough space for lab tests section + footer
+  if (currentY + labTestsHeight + footerHeight > doc.page.height - 30) {
+    doc.addPage();
+    currentY = 30;
   }
 
-  // Prescription Date
   doc
     .font("Helvetica-Bold")
-    .fontSize(fonts.smallSize)
-    .fillColor(colors.text)
-    .text(
-      `Date: ${prescriptionDate.toLocaleDateString()} ${new Date().toLocaleTimeString([], {
-        hour: "2-digit",
-        minute: "2-digit",
-      })}`,
-      doc.page.width - 200,
-      120,
-      { align: "right" }
-    );
+    .fontSize(12)
+    .text("Lab Tests On Next Visit", 30, currentY);
 
-  // Patient Details
-  doc
-    .font("Helvetica-Bold")
-    .fontSize(fonts.smallSize)
-    .fillColor(colors.text)
-    .text(`ID: ${patient.patientId || "N/A"} - ${patient.name} (${patient.gender}) / ${patient.age || "N/A"} Y`, 30, 145);
+  currentY += 20;
 
-  doc
-    .font("Helvetica")
-    .fontSize(fonts.smallSize)
-    .fillColor(colors.lightText)
-    .text(`Address: ${patient.address || "N/A"}`, 30, 160);
-
-  // Vitals if available
-  if (patient.weight || patient.height || patient.bp) {
-    const vitals = [`Weight(kg): ${patient.weight || "N/A"}`];
-    if (patient.height) vitals.push(`Height (cms): ${patient.height}`);
-    if (patient.bp) vitals.push(`BP: ${patient.bp}`);
-    doc.text(vitals.join(", "), 30, 175);
+  if (labTests.length > 0) {
+    labTests.forEach((test: string) => {
+      doc.font("Helvetica").fontSize(10).text(`• ${test}`, 30, currentY);
+      currentY += 15;
+    });
   }
 
-  // Referring Doctor
-  if (doctor.referredBy) {
-    doc.text(`Referred By: ${doctor.referredBy}`, 30, 190);
-  }
-
-  doc.moveDown(0.5);
-
-  // Known History Section
-  drawSectionDivider(doc, colors);
-  doc
-    .font("Helvetica-Bold")
-    .fontSize(fonts.smallSize)
-    .fillColor(colors.text)
-    .text("Known History Of", 30, doc.y + 10);
-
-  const history = doctor.patientHistory || ["* PQR"];
+  // --- FOOTER WITH SIGNATURE SECTION ---
+  // Footer positioned at bottom with signature included
+  const footerY = doc.page.height - 60;
+  
+  // Left side - Software attribution
   doc
     .font("Helvetica")
-    .fontSize(fonts.smallSize)
-    .text(history[0] || "* PQR", 30, doc.y + 15);
+    .fontSize(8)
+    .fillColor(colors.gray)
+    .text("Prescription Generated by Suhaim Software", 30, footerY)
+    .text("Visit us: www.clinicppm.site", 30, footerY + 15);
 
-  // Chief Complaints & Clinical Findings (Two Columns)
-  drawSectionDivider(doc, colors);
-  const colWidth = (doc.page.width - 60) / 2;
-
+  // Right side - Signature
+  const signatureX = doc.page.width - 200;
+  
+  // Draw signature line
   doc
-    .font("Helvetica-Bold")
-    .fontSize(fonts.smallSize)
-    .text("Chief Complaints", 30, doc.y + 20)
-    .text("Clinical Findings", 30 + colWidth, doc.y - 12);
-
-
-  // Notes
-  drawSectionDivider(doc, colors);
-  doc
-    .font("Helvetica-Bold")
-    .fontSize(fonts.smallSize)
-    .text("Notes:", 30, doc.y + 20)
-    .font("Helvetica")
-    .text(prescription.notes || "SAMPLE INTERNAL NOTE", 30, doc.y + 15);
-
-  // Diagnosis
-  drawSectionDivider(doc, colors);
-  doc
-    .font("Helvetica-Bold")
-    .fontSize(fonts.smallSize)
-    .text("Diagnosis:", 30, doc.y + 20)
-    .font("Helvetica")
-    .text(`* ${prescription.diagnosis || "FEVER"}`, 30, doc.y + 15);
-
- 
-
-  // Medication Table
-  drawSectionDivider(doc, colors);
-  doc
-    .font("Helvetica-Bold")
-    .fontSize(fonts.bodySize)
-    .text("R", 30, doc.y + 20);
-
-  const medicineY = doc.y + 35;
-  const medColWidths = [(doc.page.width - 60) * 0.4, (doc.page.width - 60) * 0.35, (doc.page.width - 60) * 0.25];
-
-  doc
-    .font("Helvetica-Bold")
-    .fontSize(fonts.smallSize)
-    .text("Medicine Name", 30, medicineY)
-    .text("Dosage", 30 + medColWidths[0], medicineY)
-    .text("Duration", 30 + medColWidths[0] + medColWidths[1], medicineY);
-
-  doc
-    .strokeColor(colors.border)
-    .lineWidth(0.5)
-    .moveTo(30, medicineY + 15)
-    .lineTo(doc.page.width - 30, medicineY + 15)
+    .strokeColor(colors.black)
+    .lineWidth(1)
+    .moveTo(signatureX, footerY + 10)
+    .lineTo(doc.page.width - 50, footerY + 10)
     .stroke();
 
-  let currentY = medicineY + 25;
-  prescription.medicines.forEach((med, idx) => {
-    const name = typeof med.medicine === "object" && "name" in med.medicine
-      ? (med.medicine as any).name
-      : med.medicine?.toString() ?? `DEMO MEDICINE ${idx + 1}`;
-
-    const dosage = med.dosage || (idx % 2 === 0
-      ? "1 Morning, 1 Night\n(Before Food)"
-      : "1 Morning, 1 Night\n(After Food)");
-
-    const duration = med.duration || `8 Days\n(${idx % 2 === 0 ? "Tab" : "Cap"}:20 ${idx % 2 === 0 ? "Tab" : "Cap"})`;
-
-    doc
-      .font("Helvetica")
-      .fontSize(fonts.smallSize)
-      .text(`${idx + 1}) ${name}`, 30, currentY)
-      .text(dosage, 30 + medColWidths[0], currentY)
-      .text(duration, 30 + medColWidths[0] + medColWidths[1], currentY);
-
-    currentY += 40;
-
-    doc
-      .strokeColor(colors.border)
-      .lineWidth(0.25)
-      .dash(1, { space: 1 })
-      .moveTo(30, currentY - 10)
-      .lineTo(doc.page.width - 30, currentY - 10)
-      .stroke()
-      .undash();
-  });
-
-  // Investigations
-  drawSectionDivider(doc, colors);
+  // Signature text and doctor name
   doc
-    .font("Helvetica-Bold")
-    .fontSize(fonts.smallSize)
-    .text("Investigations:", 30, currentY + 10);
-
-  const investigations = prescription.labReports?.map((r) => r.name) || ["X-RAY", "P-53"];
-  let invY = currentY + 25;
-
-  investigations.forEach((inv, idx) => {
-    doc
-      .font("Helvetica")
-      .fontSize(fonts.smallSize)
-      .text(`* ${inv}`, 30, invY + idx * 15);
-  });
-
-  // Advice Given
-  invY += 40;
-  drawSectionDivider(doc, colors);
-  doc
-    .font("Helvetica-Bold")
-    .fontSize(fonts.smallSize)
-    .text("Advice Given:", 30, invY + 10)
     .font("Helvetica")
-    .text(`* ${"AVOID OILY AND SPICY FOOD"}`, 30, invY + 25);
-
-  // Follow-up Date
-  invY += 50;
-  drawSectionDivider(doc, colors);
-  const followUpDate = new Date(prescriptionDate);
-  followUpDate.setDate(followUpDate.getDate() + 15);
-
-  doc
+    .fontSize(8)
+    .fillColor(colors.black)
+    .text("Signature: ", signatureX - 50, footerY + 5)
     .font("Helvetica-Bold")
-    .fontSize(fonts.smallSize)
-    .text("Follow Up:", 30, invY + 10)
-    .font("Helvetica")
-    .text(followUpDate.toLocaleDateString(), 30, invY + 25);
-
-  // Signature
-  doc
-    .font("Helvetica-Bold")
-    .fontSize(fonts.smallSize)
-    .text("Signature", doc.page.width - 100, invY + 40, { align: "center" })
-    .text("Dr. Onkar Bhave", doc.page.width - 100, invY + 65, { align: "center" })
-    .font("Helvetica")
-    .text("M.B.B.S., M.D., M.S.", doc.page.width - 100, invY + 80, { align: "center" });
-
-  // Legal Disclaimer
-  const footerTop = doc.page.height - 50;
-  doc
-    .fontSize(fonts.smallSize - 1)
-    .fillColor(colors.lightText)
-    .text(
-      "This prescription is valid only when signed by the issuing doctor. Please follow all medication instructions carefully.",
-      40,
-      footerTop,
-      { width: doc.page.width - 80, align: "center" }
-    );
 
   doc.end();
 
@@ -321,16 +443,4 @@ async function generatePrescriptionPDF(prescription: IPrescription): Promise<str
     stream.on("finish", () => resolve(tempFilePath));
     stream.on("error", reject);
   });
-}
-
-/**
- * Draws a divider line below the current Y position.
- */
-function drawSectionDivider(doc: PDFKit.PDFDocument, colors: Record<string, string>) {
-  doc
-    .strokeColor(colors.border)
-    .lineWidth(0.75)
-    .moveTo(30, doc.y + 10)
-    .lineTo(doc.page.width - 30, doc.y + 10)
-    .stroke();
 }
