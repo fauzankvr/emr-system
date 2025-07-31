@@ -2154,7 +2154,7 @@ const Prescription = () => {
                     vitals={vitals}
                   />
                 }
-                fileName="prescription.pdf"
+                fileName={`${patient.name}-prescription.pdf`}
               >
                 {({ loading }) =>
                   loading ? (

@@ -392,7 +392,7 @@ const PrescriptionPDF = memo(
           {/* Signature Placeholder */}
           <View style={styles.signature}>
             <Text style={{ fontStyle: "italic" }}>
-              Signature: _____________________
+              Signature: 
             </Text>
             <Text style={{ fontWeight: "bold" }}>DR MANSOOR ALI V.P</Text>
           </View>
@@ -545,7 +545,7 @@ const PrescriptionModal = ({ prescriptionId, onClose }) => {
                   vitals={prescription.vitals}
                 />
               }
-              fileName={`prescription-${prescription._id}.pdf`}
+              fileName={`${prescription.patient.name}-prescription.pdf`}
             >
               {({ loading }) =>
                 loading ? (
