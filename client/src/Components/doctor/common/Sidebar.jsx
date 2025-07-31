@@ -7,6 +7,7 @@ import {
   FaStethoscope,
   FaSignOutAlt,
   FaFileAlt,
+  FaSync,
 } from "react-icons/fa";
 import NavLink from "./NavLink";
 // import { axiosInstance } from "../../../API/axiosInstance";
@@ -39,6 +40,12 @@ function Sidebar() {
     <aside className="w-20 md:w-72 bg-blue-900 h-screen text-white flex flex-col py-6 px-2 md:px-4 transition-all duration-300">
       {/* Logo and Doctor Info */}
       <div className="flex flex-col items-center mb-10">
+      <button
+  className="text-xl cursor-pointer absolute top-5 left-5 "
+  onClick={() => window.location.reload()} // Refresh page on click
+>
+  <FaSync />
+</button>
         <div className="w-12 h-12 md:w-20 md:h-20 bg-white rounded-full flex items-center justify-center shadow-md">
           <img
             className="w-full h-full object-cover rounded-full border-2 border-white"

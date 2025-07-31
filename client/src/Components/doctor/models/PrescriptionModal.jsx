@@ -139,17 +139,18 @@ const PrescriptionPDF = memo(
       regNo: "35083",
       contact: "9895353078",
     },
-    patient = { name: "John Doe", mobile: "1234567890", age: "30" },
-    diagnosis = "Fever",
+    patient = { name: " ", mobile: " ", age: " " },
+    diagnosis = " ",
+    notes = " ",
     medicines = [],
     labReports = [],
     labTest = [],
     vitals = {
-      spo2: "98%",
-      bp: "120/80",
-      pulse: "72",
-      temp: "37.5°C",
-      weight: "70kg",
+      spo2: " ",
+      bp: " ",
+      pulse: " ",
+      temp: " ",
+      weight: " ",
     },
   }) => {
     const today = new Date();
@@ -198,6 +199,10 @@ const PrescriptionPDF = memo(
                   <Text style={styles.label}>Diagnosis:</Text>{" "}
                   {diagnosis || "N/A"}
                 </Text>
+                <Text>
+                <Text style={styles.label}>Additional Notes:</Text>{" "}
+                {notes || "N/A"}
+              </Text>
                 <Text>
                   <Text style={styles.label}>Date & Time:</Text> {formattedDate}
                 </Text>
@@ -511,6 +516,7 @@ const PrescriptionModal = ({ prescriptionId, onClose }) => {
                   age: prescription.patient.age,
                 }}
                 diagnosis={prescription.diagnosis}
+                notes={prescription.notes}
                 medicines={prescription.medicines}
                 labReports={prescription.labReports}
                 labTest={prescription.labTest}

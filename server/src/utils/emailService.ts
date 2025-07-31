@@ -10,8 +10,8 @@ export async function sendEmailWithPDFAttachment(to: string, prescription: IPres
       pass: process.env.MAIL_PASS,
     },
   });
-
-  const patient = typeof prescription.patient === 'object' ? prescription.patient : { _id: prescription.patient };
+  
+  const patient = typeof prescription.patient === 'object' ? prescription.patient : { _id: prescription.patient, name: prescription.patient };
   const doctor = typeof prescription.doctor === 'object' ? prescription.doctor : { _id: prescription.doctor };
   
   const currentDate = new Date().toLocaleDateString('en-US', {
@@ -19,12 +19,11 @@ export async function sendEmailWithPDFAttachment(to: string, prescription: IPres
     month: 'long',
     day: 'numeric'
   });
-
-  const textContent = `Dear Patient,
+  
+  // DR MANSOOR ALI.VP has requested to provide feedback and share your clinic visit experience with us. please call 9895353078
+  const textContent = `Dear ${(patient as any)?.name || "Patient"},
 
 Here is Prescription file prescribed by Dr MANSOOR ALI.VP
-
-DR MANSOOR ALI.VP has requested to provide feedback and share your clinic visit experience with us. please call 9895353078
 
 Warm regards,
 Dr. MANSOOR ALI.VP`;
@@ -34,9 +33,9 @@ Dr. MANSOOR ALI.VP`;
     Math.random().toString(36).substring(2, 8).toUpperCase();
     try {
       await transporter.sendMail({
-        from: `"CLINIC PPM Health" <${process.env.MAIL_USER}>`,
+        from: `"CLINIC PPM" <${process.env.MAIL_USER}>`,
         to,
-        subject: "Your Prescription from CLINIC PPM Health",
+        subject: "Your Prescription from CLINIC PPM",
         text: textContent,
         attachments: [
           {

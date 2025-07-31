@@ -139,7 +139,7 @@ export class PrescriptionController {
           .json({ success: false, message: "No file uploaded" });
       }
 
-      const reportImageUrl = `/uploads/labReports/${req.file.filename}`;
+      const reportImageUrl = `https://res.cloudinary.com/dnxz7tkcb/${req.file.filename}`;
       
       return res
         .status(HttpStatusCode.OK)

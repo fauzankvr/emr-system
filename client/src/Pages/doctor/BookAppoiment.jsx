@@ -297,9 +297,7 @@ export default function AppointmentBookingForm() {
 
           <p className="text-gray-600 mb-6">
             {selectedPatient.name} has been scheduled with Dr.{" "}
-            {selectedDoctor.name} on{" "}
-            {new Date(selectedSlot.day).toLocaleDateString()} at{" "}
-            {selectedSlot.startTime}
+            {selectedDoctor.name} 
           </p>
 
           <button

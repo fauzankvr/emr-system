@@ -125,7 +125,7 @@ const Navbar = ({ theme, setTheme }) => {
           </li>
         </ul>
 
-        <div className="relative inline-block w-14 h-7 md:w-12 md:h-6">
+        {/* <div className="relative inline-block w-14 h-7 md:w-12 md:h-6">
           <input
             type="checkbox"
             id="theme-toggle"
@@ -160,7 +160,7 @@ const Navbar = ({ theme, setTheme }) => {
               </svg>
             </span>
           </label>
-        </div>
+        </div> */}
 
         <button
           className="md:hidden flex flex-col gap-1.5 cursor-pointer p-2 focus:outline-none focus:ring-2 focus:ring-[#00a896] focus:ring-opacity-50"

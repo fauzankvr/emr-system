@@ -55,20 +55,34 @@ async function generatePrescriptionPDF(
   };
 
   const patient = (prescription.patient as any) || {
-    name: "John Doe",
-    phone: "1234567890",
-    age: "30",
+    name: " ",
+    phone: " ",
+    age: " ",
     vitals: {
-      spo2: "98",
-      bp: "120/80",
-      pulse: "72",
-      temp: "37",
-      weight: "70",
+      spo2: " ",
+      bp: " ",
+      pulse: " ",
+      temp: " ",
+      weight: " ",
     },
   };
   const vitals = patient?.vitals || {};
   const prescriptionDate = new Date(prescription.createdAt || Date.now());
-  const formattedDate = prescriptionDate.toLocaleDateString("en-GB");
+
+// Date and time (12-hour format)
+const formattedDateTime = convertDate(prescriptionDate);
+
+function convertDate(date:Date){
+return date.toLocaleString("en-GB", {
+day: "2-digit",
+month: "2-digit",
+year: "numeric",
+hour: "2-digit",
+minute: "2-digit",
+hour12: true,
+timeZone: "Asia/Kolkata", 
+})}
+
 
   let currentY = 30;
 
@@ -87,14 +101,14 @@ async function generatePrescriptionPDF(
     .font("Helvetica")
     .fontSize(10)
     .text(
-      `General Practitioner | Reg No: ${doctor.regNo} | +91 ${doctor.contact}`,
+      `General Practitioner | Reg No: 35083 | +91 9895353078`,
       0,
       35,
       { align: "center" }
     );
 
   doc
-    .text("Pathappiriyam | BOOKING NO: +918606344694", 0, 50, {
+    .text("Pathappiriyam | BOOKING NO: +91 8606344694", 0, 50, {
       align: "center",
     });
 
@@ -129,17 +143,27 @@ async function generatePrescriptionPDF(
     .font("Helvetica")
     .text(patient.age, 70, currentY + 30);
 
-  doc
-    .font("Helvetica-Bold")
-    .text("Diagnosis: ", 30, currentY + 45)
-    .font("Helvetica")
-    .text(prescription.diagnosis || "Acne Vulgaris", 90, currentY + 45);
+  // Diagnosis
+doc
+.font("Helvetica-Bold")
+.text("Diagnosis: ", 30, currentY + 45)
+.font("Helvetica")
+.text(prescription.diagnosis || "-", 90, currentY + 45);
 
-  doc
-    .font("Helvetica-Bold")
-    .text("Date & Time: ", 30, currentY + 60)
-    .font("Helvetica")
-    .text(formattedDate + ", 11:40 pm", 100, currentY + 60);
+// Additional Notes (below Diagnosis)
+doc
+.font("Helvetica-Bold")
+.text("Additional Notes: ", 30, currentY + 60) 
+.font("Helvetica")
+.text(prescription.notes || "-", 120, currentY + 60);
+
+// Date & Time (after Notes)
+doc
+.font("Helvetica-Bold")
+.text("Date & Time: ", 30, currentY + 75) 
+.font("Helvetica")
+.text(formattedDateTime, 120, currentY + 75);
+
 
   // Right column - Vitals
   const rightColX = 320;
@@ -147,31 +171,31 @@ async function generatePrescriptionPDF(
     .font("Helvetica-Bold")
     .text("SpO2: ", rightColX, currentY)
     .font("Helvetica")
-    .text(vitals.spo2 || "98", rightColX + 35, currentY);
+    .text(vitals.spo2 || "", rightColX + 35, currentY);
 
   doc
     .font("Helvetica-Bold")
     .text("BP: ", rightColX, currentY + 15)
     .font("Helvetica")
-    .text(vitals.bp || "120/80", rightColX + 25, currentY + 15);
+    .text(vitals.bp || "", rightColX + 25, currentY + 15);
 
   doc
     .font("Helvetica-Bold")
     .text("Pulse: ", rightColX, currentY + 30)
     .font("Helvetica")
-    .text(vitals.pulse || "72", rightColX + 35, currentY + 30);
+    .text(vitals.pulse || "", rightColX + 35, currentY + 30);
 
   doc
     .font("Helvetica-Bold")
     .text("Temp: ", rightColX, currentY + 45)
     .font("Helvetica")
-    .text(vitals.temp || "37", rightColX + 35, currentY + 45);
+    .text(vitals.temp || "", rightColX + 35, currentY + 45);
 
   doc
     .font("Helvetica-Bold")
     .text("Weight: ", rightColX, currentY + 60)
     .font("Helvetica")
-    .text(vitals.weight || "70", rightColX + 40, currentY + 60);
+    .text(vitals.weight || "", rightColX + 40, currentY + 60);
 
   currentY += 90;
 
@@ -191,19 +215,19 @@ async function generatePrescriptionPDF(
         .fontSize(10)
         .text("Report Name: ", 30, currentY)
         .font("Helvetica")
-        .text(report.name || "Haemoglobin", 100, currentY);
+        .text(report.name || " ", 100, currentY);
 
       doc
         .font("Helvetica-Bold")
         .text("Value: ", 30, currentY + 12)
         .font("Helvetica")
-        .text(report.value || "Idea", 100, currentY + 12);
+        .text(report.value || " ", 100, currentY + 12);
 
       doc
         .font("Helvetica-Bold")
         .text("Report Date: ", 30, currentY + 24)
         .font("Helvetica")
-        .text(report.reportDate || "2025-07-24", 100, currentY + 24);
+        .text(convertDate(report.reportDate) || " ", 100, currentY + 24);
 
       currentY += 45;
     });
@@ -214,19 +238,19 @@ async function generatePrescriptionPDF(
       .fontSize(10)
       .text("Report Name: ", 30, currentY)
       .font("Helvetica")
-      .text("Haemoglobin", 100, currentY);
+      .text(" ", 100, currentY);
 
     doc
       .font("Helvetica-Bold")
       .text("Value: ", 30, currentY + 12)
       .font("Helvetica")
-      .text("Idea", 100, currentY + 12);
+      .text(" ", 100, currentY + 12);
 
     doc
       .font("Helvetica-Bold")
       .text("Report Date: ", 30, currentY + 24)
       .font("Helvetica")
-      .text("2025-07-24", 100, currentY + 24);
+      .text(" ", 100, currentY + 24);
 
     currentY += 45;
   }
@@ -289,11 +313,11 @@ async function generatePrescriptionPDF(
         .fontSize(9)
         .fillColor(colors.black)
         .text((index + 1).toString(), tableStartX + 5, currentY + 6)
-        .text(med.medicine?.name || "greenstick", tableStartX + colWidths[0] + 5, currentY + 6, { width: colWidths[1] - 10 })
-        .text(med.medicine?.dosageForm || "capsule", tableStartX + colWidths[0] + colWidths[1] + 5, currentY + 6)
-        .text(med.dosage || "1-1-1", tableStartX + colWidths[0] + colWidths[1] + colWidths[2] + 5, currentY + 6)
-        .text(med.duration || "3 days", tableStartX + colWidths[0] + colWidths[1] + colWidths[2] + colWidths[3] + 5, currentY + 6)
-        .text(med.instructions || "Before food", tableStartX + colWidths[0] + colWidths[1] + colWidths[2] + colWidths[3] + colWidths[4] + 5, currentY + 6);
+        .text(med.medicine?.name || " ", tableStartX + colWidths[0] + 5, currentY + 6, { width: colWidths[1] - 10 })
+        .text(med.medicine?.dosageForm || "-", tableStartX + colWidths[0] + colWidths[1] + 5, currentY + 6)
+        .text(med.dosage || " ", tableStartX + colWidths[0] + colWidths[1] + colWidths[2] + 5, currentY + 6)
+        .text(med.duration || " ", tableStartX + colWidths[0] + colWidths[1] + colWidths[2] + colWidths[3] + 5, currentY + 6)
+        .text(med.instructions || " ", tableStartX + colWidths[0] + colWidths[1] + colWidths[2] + colWidths[3] + colWidths[4] + 5, currentY + 6);
 
       let additionalY = currentY + 18;
 
@@ -313,7 +337,7 @@ async function generatePrescriptionPDF(
           .font("Helvetica-Bold")
           .fontSize(8)
           .fillColor(colors.black)
-          .text("Tapering:", tableStartX + colWidths[0] + 5, additionalY, { width: colWidths[1] - 10 });
+          .text(`Tapering: ${med.tapering.length}`, tableStartX + colWidths[0] + 5, additionalY, { width: colWidths[1] - 10 });
         additionalY += 12;
 
         med.tapering.forEach((taper: any) => {
@@ -342,18 +366,18 @@ async function generatePrescriptionPDF(
       .font("Helvetica")
       .fontSize(9)
       .fillColor(colors.black)
-      .text("1", tableStartX + 5, currentY + 6)
-      .text("greenstick", tableStartX + colWidths[0] + 5, currentY + 6)
-      .text("capsule", tableStartX + colWidths[0] + colWidths[1] + 5, currentY + 6)
-      .text("1-1-1", tableStartX + colWidths[0] + colWidths[1] + colWidths[2] + 5, currentY + 6)
-      .text("3 days", tableStartX + colWidths[0] + colWidths[1] + colWidths[2] + colWidths[3] + 5, currentY + 6)
-      .text("Before food", tableStartX + colWidths[0] + colWidths[1] + colWidths[2] + colWidths[3] + colWidths[4] + 5, currentY + 6);
+      .text(" ", tableStartX + 5, currentY + 6)
+      .text(" ", tableStartX + colWidths[0] + 5, currentY + 6)
+      .text(" ", tableStartX + colWidths[0] + colWidths[1] + 5, currentY + 6)
+      .text(" ", tableStartX + colWidths[0] + colWidths[1] + colWidths[2] + 5, currentY + 6)
+      .text(" ", tableStartX + colWidths[0] + colWidths[1] + colWidths[2] + colWidths[3] + 5, currentY + 6)
+      .text(" ", tableStartX + colWidths[0] + colWidths[1] + colWidths[2] + colWidths[3] + colWidths[4] + 5, currentY + 6);
 
     doc
       .font("Helvetica")
       .fontSize(8)
       .fillColor(colors.gray)
-      .text("Content: Deflasacort 6mg", tableStartX + colWidths[0] + 5, currentY + 18);
+      .text(" ", tableStartX + colWidths[0] + 5, currentY + 18);
 
     currentY += rowHeight;
   }

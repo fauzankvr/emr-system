@@ -105,17 +105,18 @@ const styles = StyleSheet.create({
 
 const PrescriptionPDF = ({
   doctor = { name: "Dr MANSOOR ALI.VP", regNo: "35083", contact: "9895353078" },
-  patient = { name: "John Doe", mobile: "1234567890", age: "30" },
-  diagnosis = "Fever",
+  patient = { name: "-", mobile: "-", age: "-" },
+  diagnosis = "-",
+  notes = "-",
   medicines = [],
   labReports = [],
   labTest = [],
   vitals = {
-    spo2: "98%",
-    bp: "120/80",
-    pulse: "72",
-    temp: "37.5°C",
-    weight: "70kg",
+    spo2: "-",
+    bp: "-",
+    pulse: "-",
+    temp: "-",
+    weight: "-",
   },
 }) => {
   const today = new Date();
@@ -162,6 +163,10 @@ const PrescriptionPDF = ({
               <Text>
                 <Text style={styles.label}>Diagnosis:</Text>{" "}
                 {diagnosis || "N/A"}
+              </Text>
+              <Text>
+                <Text style={styles.label}>Additional Notes:</Text>{" "}
+                {notes || "N/A"}
               </Text>
               <Text>
                 <Text style={styles.label}>Date & Time:</Text> {formattedDate}
@@ -363,12 +368,16 @@ const PrescriptionPDF = ({
 
 const Prescription = () => {
   const [loading, setLoading] = useState(false);
+  const [labReportLoading, setLabReportLoading] = useState(false);
   const [prescriptionId, setPrescriptionId] = useState(null);
   const [doctor, setDoctor] = useState(null);
   const [patient, setPatient] = useState(null);
   const [diagnosis, setDiagnosis] = useState("");
   const [customDiagnosis, setCustomDiagnosis] = useState("");
   const [notes, setNotes] = useState("");
+  const [selectedSymptom, setSelectedSymptom] = useState("");
+  const [customSymptom, setCustomSymptom] = useState("");
+  const [symptomCustomMode, setSymptomCustomMode] = useState(false);
   const [medicines, setMedicines] = useState([]);
   const [labReports, setLabReports] = useState([]);
   const [vitals, setVitals] = useState({
@@ -456,7 +465,27 @@ const Prescription = () => {
     "Gastroenteritis",
     "GERD (Gastroesophageal Reflux Disease)",
     "Glaucoma",
-    "Custom",
+  ];
+
+  const symptomOptions = [
+    "Fever",
+    "Cough",
+    "Headache",
+    "Sore Throat",
+    "Fatigue",
+    "Nausea",
+    "Vomiting",
+    "Diarrhea",
+    "Shortness of Breath",
+    "Chest Pain",
+    "Dizziness",
+    "Skin Rash",
+    "Muscle Pain",
+    "Joint Pain",
+    "Abdominal Pain",
+    "Back Pain",
+    "Loss of Smell",
+    "Loss of Taste",
   ];
 
   const [frequencyCustomMode, setFrequencyCustomMode] = useState(false);
@@ -680,43 +709,51 @@ const Prescription = () => {
       return;
     }
     
-    let reportImageUrl = "";
-    if (newLabReportFile) {
-      try {
-        // Create FormData for file upload
-        const formData = new FormData();
-        formData.append("reportFile", newLabReportFile);
-        
-        // Upload file to server
-        const response = await axiosInstance.post("/api/prescription/upload-lab-report", formData, {
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
-        });
-        
-        if (response.data.success) {
-          reportImageUrl = response.data.data.reportImageUrl;
-        } else {
+    setLabReportLoading(true);
+    try {
+      let reportImageUrl = "";
+      if (newLabReportFile) {
+        try {
+          // Create FormData for file upload
+          const formData = new FormData();
+          formData.append("reportFile", newLabReportFile);
+          
+          // Upload file to server
+          const response = await axiosInstance.post("/api/prescription/upload-lab-report", formData, {
+            headers: {
+              "Content-Type": "multipart/form-data",
+            },
+          });
+          
+          if (response.data.success) {
+            reportImageUrl = response.data.data.reportImageUrl;
+          } else {
+            toast.error("Failed to upload file");
+            return;
+          }
+        } catch (error) {
+          console.error("File upload error:", error);
           toast.error("Failed to upload file");
           return;
         }
-      } catch (error) {
-        console.error("File upload error:", error);
-        toast.error("Failed to upload file");
-        return;
       }
+      
+      const labReportToAdd = {
+        name: newLabReport.name,
+        values: newLabReport.values,
+        reportDate: newLabReport.reportDate,
+        reportImageUrl,
+      };
+      
+      setLabReports([...labReports, labReportToAdd]);
+      setNewLabReport({ name: "", values: "", reportDate: "" });
+      setNewLabReportFile(null);
+    } catch (error) {
+      console.error("Error adding lab report:", error);
+      toast.error("Failed to add lab report");
+    } finally {
+      setLabReportLoading(false);
     }
-    
-    const labReportToAdd = {
-      name: newLabReport.name,
-      values: newLabReport.values,
-      reportDate: newLabReport.reportDate,
-      reportImageUrl,
-    };
-    
-    setLabReports([...labReports, labReportToAdd]);
-    setNewLabReport({ name: "", values: "", reportDate: "" });
-    setNewLabReportFile(null);
   };
 
   const handleRemoveLabReport = (index) => {
@@ -750,10 +787,10 @@ const Prescription = () => {
   };
 
   const handleSaveMedicine = () => {
-    if (!newMedicine.medicine) {
-      toast.error("Please select a medicine");
-      return;
-    }
+    // if (!newMedicine.medicine) {
+    //   toast.error("Please select a medicine");
+    //   return;
+    // }
   
     // Validate tapering schedule if isTapering is true
     if (newMedicine.isTapering) {
@@ -791,12 +828,7 @@ const Prescription = () => {
         }))
       : [];
   
-    // Validate required fields
-    if (!frequencyValue) {
-      toast.error("Please provide a frequency");
-      return;
-    }
-  
+
     const medicineToAdd = {
       medicine: {
         _id: newMedicine.medicine._id,
@@ -812,8 +844,17 @@ const Prescription = () => {
       ...(newMedicine.isTapering && { tapering: taperingValue }),
     };
   
-    // Update medicines state
-    setMedicines([...medicines, medicineToAdd]);
+    // Check if we're editing an existing medicine or adding a new one
+    if (editMedicineIndex !== null) {
+      // Update existing medicine
+      const updatedMedicines = [...medicines];
+      updatedMedicines[editMedicineIndex] = medicineToAdd;
+      setMedicines(updatedMedicines);
+      setEditMedicineIndex(null); // Reset edit index
+    } else {
+      // Add new medicine
+      setMedicines([...medicines, medicineToAdd]);
+    }
   
     // Reset form
     setNewMedicine({
@@ -839,19 +880,19 @@ const Prescription = () => {
       toast.error("Doctor or Patient ID is missing");
       return;
     }
+    // console.log(diagnosis,customDiagnosisValue)
+    // if (!diagnosis|| !customDiagnosisValue ) {
+    //   toast.error("Please select or enter a diagnosis");
+    //   return;
+    // }
 
-    if (!diagnosis || (diagnosis === "Custom" && !customDiagnosisValue)) {
-      toast.error("Please select or enter a diagnosis");
-      return;
-    }
-
-    if (medicines.length === 0) {
-      toast.error("Please add at least one medicine");
-      return;
-    }
+    // if (medicines.length === 0) {
+    //   toast.error("Please add at least one medicine");
+    //   return;
+    // }
 
     const diagnosisValue = diagnosisCustomMode ? customDiagnosisValue : diagnosis;
-    console.log("ls")
+
 
     // Update patient vitals before saving prescription
     try {
@@ -1231,19 +1272,68 @@ const Prescription = () => {
               </div>
               <div>
                 <label
-                  htmlFor="notes"
+                  htmlFor="symptom"
                   className="block text-sm font-medium text-gray-700 mb-1"
                 >
-                  Notes
+                  Additional Notes
                 </label>
-                <textarea
-                  id="notes"
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Additional notes"
-                  rows={2}
-                />
+                <div className="relative">
+                  {/* {!symptomCustomMode ? ( */}
+                    {/* <>
+                      <select
+                        id="symptom"
+                        value={selectedSymptom}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          setSelectedSymptom(value);
+                          if (value === "Custom") {
+                            setSymptomCustomMode(true);
+                            setSelectedSymptom("");
+                          } else {
+                            setNotes(value);
+                          }
+                        }}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      >
+                        <option value="">-- Select Symptom --</option>
+                        {symptomOptions.map((option) => (
+                          <option key={option} value={option}>
+                            {option}
+                          </option>
+                        ))}
+                      </select>
+                      <button
+                        type="button"
+                        className="absolute right-2 top-2 text-xs px-2 py-1 bg-gray-200 rounded"
+                        onClick={() => setSymptomCustomMode(true)}
+                      >
+                        Custom
+                      </button>
+                    </>
+                  ) : ( */}
+                    <>
+                      <input
+                        type="text"
+                        value={notes}
+                        onChange={(e) => setNotes(e.target.value)
+                          // setNotes(customSymptom)
+                        }
+                        placeholder="Enter Additional Notes"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md mt-2"
+                      />
+                      {/* <button
+                        type="button"
+                        className="absolute right-2 top-2 text-xs px-2 py-1 bg-gray-200 rounded"
+                        onClick={() => {
+                          setSymptomCustomMode(false);
+                          setNotes(customSymptom);
+                        }}
+                      >
+                        Select
+                      </button> */}
+                    </>
+                  {/* )} */}
+                </div>
               </div>
             </div>
           </div>
@@ -1678,7 +1768,7 @@ const Prescription = () => {
                       Medicine
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Content
+                    Frequency
                     </th>
 
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -1717,7 +1807,7 @@ const Prescription = () => {
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {medicine.medicine.content || "-"}
+                          {medicine.dosage || "-"}
                         </td>
 
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
@@ -1836,10 +1926,24 @@ const Prescription = () => {
               <div className="flex items-end">
                 <button
                   onClick={handleAddLabReport}
-                  className="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md flex items-center justify-center"
+                  disabled={labReportLoading}
+                  className={`w-full px-4 py-2 rounded-md flex items-center justify-center ${
+                    labReportLoading
+                      ? "bg-gray-400 cursor-not-allowed"
+                      : "bg-blue-600 hover:bg-blue-700"
+                  } text-white`}
                 >
-                  <Plus size={16} className="mr-2" />
-                  Add Lab Report
+                  {labReportLoading ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      Loading...
+                    </>
+                  ) : (
+                    <>
+                      <Plus size={16} className="mr-2" />
+                      Add Lab Report
+                    </>
+                  )}
                 </button>
               </div>
             </div>
@@ -1856,6 +1960,9 @@ const Prescription = () => {
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Report Date
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Report File
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Action
@@ -1885,8 +1992,11 @@ const Prescription = () => {
                           {report.reportDate
                             ? new Date(report.reportDate).toLocaleDateString()
                             : "-"}
-                          {report.reportImageUrl && (
-                  <a href={`${backendUrl}${report.reportImageUrl}`} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline ml-2">View File</a>
+                  
+                        </td>
+                        <td>
+                        {report.reportImageUrl && (
+                  <a href={report.reportImageUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline ml-2">View File</a>
                         )}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
@@ -1914,7 +2024,7 @@ const Prescription = () => {
           {/* Lab Test Advised */}
           <div className="p-4 md:p-6 border-t">
             <h2 className="text-lg font-semibold text-gray-700 mb-4">
-              Lab Test Advised
+              Lab Tests On Next Visit
             </h2>
 
             {labTest.map((test, index) => (
@@ -1981,7 +2091,7 @@ const Prescription = () => {
                       doctor={doctor}
                       patient={patient}
                       diagnosis={
-                        diagnosis === "Custom" ? customDiagnosisValue : diagnosis
+                        diagnosisCustomMode ? customDiagnosisValue : diagnosis
                       }
                       medicines={medicines}
                       labReports={labReports}
@@ -2016,7 +2126,12 @@ const Prescription = () => {
                   doctor={doctor}
                   patient={patient}
                   diagnosis={
-                    diagnosis === "Custom" ? customDiagnosisValue : diagnosis
+                    diagnosisCustomMode ? customDiagnosisValue : diagnosis
+                  }
+                  notes={
+                    // symptomCustomMode ? customSymptom : notes
+                    // customSymptom
+                    notes
                   }
                   medicines={medicines}
                   labReports={labReports}
@@ -2032,7 +2147,7 @@ const Prescription = () => {
                     doctor={doctor}
                     patient={patient}
                     diagnosis={
-                      diagnosis === "Custom" ? customDiagnosisValue : diagnosis
+                      diagnosisCustomMode ? customDiagnosisValue : diagnosis
                     }
                     medicines={medicines}
                     labReports={labReports}
@@ -2066,7 +2181,7 @@ const Prescription = () => {
           onClose={() => setShowTemplateModal(false)}
           prescriptionData={{
             medicines,
-            diagnosis: diagnosis === "Custom" ? customDiagnosisValue : diagnosis,
+            diagnosis:  diagnosisCustomMode ? customDiagnosisValue : diagnosis,
             notes,
             labReports,
             labTest

@@ -12,15 +12,15 @@ export class PrescriptionService {
         throw new Error("Invalid or missing patient ID.");
       }
 
-      if (!Array.isArray(data.medicines) || data.medicines.length === 0) {
-        throw new Error("At least one medicine is required.");
-      }
+      // if (!Array.isArray(data.medicines) || data.medicines.length === 0) {
+      //   throw new Error("At least one medicine is required.");
+      // }
 
-      for (const [index, med] of data.medicines.entries()) {
-        if (!med.medicine) {
-          throw new Error(`Invalid medicine ID at index ${index}.`);
-        }
-      }
+      // for (const [index, med] of data.medicines.entries()) {
+      //   if (!med.medicine) {
+      //     throw new Error(`Invalid medicine ID at index ${index}.`);
+      //   }
+      // }
 
       const patient = await PatientModel.findById(data.patient).select("email");
       if (!patient?.email) {
@@ -30,12 +30,12 @@ export class PrescriptionService {
       const newPrescription = new Prescription({
         doctor: data.doctor,
         patient: data.patient,
-        medicines: data.medicines,
+        medicines: data.medicines||[],
         diagnosis: data.diagnosis || "",
         notes: data.notes || "",
         labReports: data.labReports || [],
         labTest: data.labTest || "",
-        // vitals removed
+       
       });
 
       await newPrescription.save();

@@ -216,7 +216,7 @@ export default function MedicinePage() {
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                    S.No
+                    Sl.No
                   </th>
                   <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
                     Medicine Name
@@ -225,7 +225,7 @@ export default function MedicinePage() {
                     Type/Form
                   </th>
                   <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                    Content/Strength
+                  Content/Strength
                   </th>
                   <th className="px-6 py-4 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">
                     Actions

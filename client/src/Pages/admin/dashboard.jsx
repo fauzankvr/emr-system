@@ -6,7 +6,8 @@ import {
   FaStethoscope,
   FaEye,
   FaTrash,
-  FaBell,
+  // FaBell,
+  // FaSync,
 } from "react-icons/fa";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css"; // Added for toast styling
@@ -37,6 +38,7 @@ function DashboardPage() {
           bookingResponse.data?.data?.filter(
             (item) => item.status === "booked"
           ) || [];
+      
 
         if (!appointmentsData.length) {
           setDashboardData({
@@ -59,11 +61,15 @@ function DashboardPage() {
             .filter((appt) => appt.patientId && appt.patientId._id)
             .map((appt) => appt.patientId._id)
         ).size;
+        
+        const completedData = appointmentsData.filter(
+          (item) => item.status === "completed"
+        ) || [];
 
         setDashboardData({
           totalPatients: uniquePatients,
           todayAppointments: todayAppointmentsCount,
-          consultations: appointmentsData.length,
+          consultations: completedData.length,
           appointments: appointmentsData,
         });
         setLoading(false);
@@ -147,18 +153,16 @@ function DashboardPage() {
       <div className="flex flex-col md:flex-row justify-between items-center mb-6">
         <h1 className="text-2xl font-bold mb-4 md:mb-0">Doctor Dashboard</h1>
         <div className="flex gap-3 items-center">
-          <input
+          {/* <input
             type="text"
             placeholder="Search patients..."
             className="px-4 py-2 rounded-full border focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
+          /> */}
           <div className="relative">
-            <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full px-1">
+            {/* <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full px-1">
               {dashboardData.todayAppointments}
-            </span>
-            <button className="text-xl">
-              <FaBell />
-            </button>
+            </span> */}
+       
           </div>
         </div>
       </div>
@@ -187,9 +191,9 @@ function DashboardPage() {
       <div className="bg-white rounded-lg shadow p-4">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-lg font-bold">Appointment Schedule</h2>
-          <Link to="/doctor/appointment" className="text-blue-600 font-medium">
+          {/* <Link to="/doctor/appointment" className="text-blue-600 font-medium">
             View All
-          </Link>
+          </Link> */}
         </div>
 
         {loading ? (

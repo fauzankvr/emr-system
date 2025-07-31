@@ -141,6 +141,7 @@ const PatientList = () => {
       toast.error("Patient name is required");
       return;
     }
+    addForm.gender = addForm.gender.toLowerCase();
     setAddLoading(true);
     try {
       await axiosInstance.post("/api/patient", addForm);
