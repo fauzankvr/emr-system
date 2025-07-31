@@ -125,8 +125,8 @@ const styles = StyleSheet.create({
   },
   signature: {
     position: "absolute",
-    bottom: 40,
-    right: 15,
+    bottom:50,
+    right: 20,
     textAlign: "right",
   },
 });
@@ -271,7 +271,7 @@ const PrescriptionPDF = memo(
                   <Text style={styles.tableCellHeader}>Type</Text>
                 </View>
                 <View style={[styles.tableColHeader, { width: "15%" }]}>
-                  <Text style={styles.tableCellHeader}>Dosage</Text>
+                  <Text style={styles.tableCellHeader}>Frequency</Text>
                 </View>
                 <View style={[styles.tableColHeader, { width: "10%" }]}>
                   <Text style={styles.tableCellHeader}>Duration</Text>

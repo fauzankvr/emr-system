@@ -279,7 +279,7 @@ doc
     .text("Sl", tableStartX + 5, currentY + 6)
     .text("Medicine", tableStartX + colWidths[0] + 5, currentY + 6)
     .text("Type", tableStartX + colWidths[0] + colWidths[1] + 5, currentY + 6)
-    .text("Dosage", tableStartX + colWidths[0] + colWidths[1] + colWidths[2] + 5, currentY + 6)
+    .text("Frequency", tableStartX + colWidths[0] + colWidths[1] + colWidths[2] + 5, currentY + 6)
     .text("Duration", tableStartX + colWidths[0] + colWidths[1] + colWidths[2] + colWidths[3] + 5, currentY + 6)
     .text("Instructions", tableStartX + colWidths[0] + colWidths[1] + colWidths[2] + colWidths[3] + colWidths[4] + 5, currentY + 6);
 
@@ -445,21 +445,18 @@ doc
   // Right side - Signature
   const signatureX = doc.page.width - 200;
   
-  // Draw signature line
-  doc
-    .strokeColor(colors.black)
-    .lineWidth(1)
-    .moveTo(signatureX, footerY + 10)
-    .lineTo(doc.page.width - 50, footerY + 10)
-    .stroke();
+ // Signature text
+doc
+.font("Helvetica")
+.fontSize(8)
+.fillColor(colors.black)
+.text("Signed by:", signatureX, footerY + 5);
 
-  // Signature text and doctor name
-  doc
-    .font("Helvetica")
-    .fontSize(8)
-    .fillColor(colors.black)
-    .text("Signature: ", signatureX - 50, footerY + 5)
-    .font("Helvetica-Bold")
+// Doctor name on the next line
+doc
+.font("Helvetica-Bold")
+.fontSize(8)
+.text("Dr Mansoor Ali V.P", signatureX, footerY + 15);
 
   doc.end();
 

@@ -97,8 +97,8 @@ const styles = StyleSheet.create({
   },
   signature: {
     position: "absolute",
-    bottom: 40,
-    right: 15,
+    bottom: 50,
+    right: 20,
     textAlign: "right",
   },
 });
@@ -236,7 +236,7 @@ const PrescriptionPDF = ({
                 <Text style={styles.tableCellHeader}>Type</Text>
               </View>
               <View style={[styles.tableColHeader, { width: "15%" }]}>
-                <Text style={styles.tableCellHeader}>Dosage</Text>
+                <Text style={styles.tableCellHeader}>Frequency</Text>
               </View>
               <View style={[styles.tableColHeader, { width: "10%" }]}>
                 <Text style={styles.tableCellHeader}>Duration</Text>
@@ -351,7 +351,7 @@ const PrescriptionPDF = ({
         {/* Signature Placeholder */}
         <View style={styles.signature}>
           <Text style={{ fontStyle: "italic" }}>
-            Signature: _____________________
+            Signed by
           </Text>
           <Text style={{ fontWeight: "bold" }}>DR MANSOOR ALI V.P</Text>
         </View>
@@ -2098,8 +2098,8 @@ const Prescription = () => {
                       labTest={labTest}
                       vitals={vitals}
                     />
-                  }
-                  fileName="prescription.pdf"
+                  }  
+                  fileName={`${patient.name}-prescription.pdf`}
                 >
                   {({ loading }) =>
                     loading ? (
