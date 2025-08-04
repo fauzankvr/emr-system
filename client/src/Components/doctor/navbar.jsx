@@ -76,14 +76,14 @@ const Navbar = ({ theme, setTheme }) => {
       ref={navRef}
       aria-label="Main navigation"
     >
-      <Link
-        to="/"
+      <a
+        href="#home"
         className="text-2xl font-bold text-[#f1faee] flex items-center"
         aria-label="Suhaim Soft Home"
       >
-        <i className="fas fa-laptop-medical text-[#00a896] mr-2"></i>
+        <img src="/main_icon.png"  width={"30px"} height={"30px"} className="mr-2"/>
         SUHAIM SOFT
-      </Link>
+      </a>
 
       <div className="flex items-center gap-4 md:gap-6">
         <ul

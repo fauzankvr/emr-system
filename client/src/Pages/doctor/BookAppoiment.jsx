@@ -97,6 +97,7 @@ export default function AppointmentBookingForm() {
       );
 
       setSearchResults(response.data.data);
+
     } catch (error) {
       console.error("Error searching patients:", error);
     } finally {
@@ -161,8 +162,8 @@ export default function AppointmentBookingForm() {
   // Handle patient selection
 
   const handlePatientSelect = (patient) => {
+    setVitals({...patient.vitals});
     setSelectedPatient(patient);
-
     setShowNewPatientForm(false);
   };
 

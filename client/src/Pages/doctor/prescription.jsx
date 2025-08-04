@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from "react";
-import { Search, Plus, Trash2, FileText, Download, Pencil } from "lucide-react";
+import { Search, Plus, Trash2, FileText, Download, Pencil, Send } from "lucide-react";
 import { axiosInstance } from "../../API/axiosInstance";
 import { useLocation } from "react-router-dom";
 import { ToastContainer, toast } from "react-toastify";
 import { Document, Page, Text, View, StyleSheet } from "@react-pdf/renderer";
 import { PDFDownloadLink, PDFViewer } from "@react-pdf/renderer";
 import TemplateModal from "../../Components/doctor/models/TemplateModal";
+import AddItemModal from "../../Components/doctor/models/AddItemModal";
 const backendUrl = import.meta.env.VITE_BACKEND_URL;
-console.log(backendUrl  )
 
 const styles = StyleSheet.create({
   page: {
@@ -376,8 +376,8 @@ const Prescription = () => {
   const [customDiagnosis, setCustomDiagnosis] = useState("");
   const [notes, setNotes] = useState("");
   const [selectedSymptom, setSelectedSymptom] = useState("");
-  const [customSymptom, setCustomSymptom] = useState("");
-  const [symptomCustomMode, setSymptomCustomMode] = useState(false);
+
+
   const [medicines, setMedicines] = useState([]);
   const [labReports, setLabReports] = useState([]);
   const [vitals, setVitals] = useState({
@@ -398,6 +398,19 @@ const Prescription = () => {
   const [showTemplateModal, setShowTemplateModal] = useState(false);
   const [showPatientModal, setShowPatientModal] = useState(false);
   const [showDoctorModal, setShowDoctorModal] = useState(false);
+  const[patientId, setPatientId] = useState(null);
+  const[doctorId, setDoctorId] = useState(null);
+  
+  // New state for dynamic data
+  const [diagnoses, setDiagnoses] = useState([]);
+  const [frequencies, setFrequencies] = useState([]);
+  const [instructions, setInstructions] = useState([]);
+  const [days, setDays] = useState([]);
+  
+  // Modal states
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [modalType, setModalType] = useState('');
+  const [editItem, setEditItem] = useState(null);
   const [availablePatients, setAvailablePatients] = useState([]);
   const [availableDoctors, setAvailableDoctors] = useState([]);
   const [patientSearchQuery, setPatientSearchQuery] = useState('');
@@ -488,22 +501,50 @@ const Prescription = () => {
     "Loss of Taste",
   ];
 
-  const [frequencyCustomMode, setFrequencyCustomMode] = useState(false);
-  const [customFrequency, setCustomFrequency] = useState("");
-  const [durationCustomMode, setDurationCustomMode] = useState(false);
-  const [customDuration, setCustomDuration] = useState("");
-  const [instructionsCustomMode, setInstructionsCustomMode] = useState(false);
-  const [customInstructions, setCustomInstructions] = useState("");
   const [taperingCustomModes, setTaperingCustomModes] = useState([]); // [{ freq: false, days: false, freqVal: '', daysVal: '' }, ...]
-  const [diagnosisCustomMode, setDiagnosisCustomMode] = useState(false);
-  const [customDiagnosisValue, setCustomDiagnosisValue] = useState("");
+
+  useEffect(() => {
+    const queryParams = new URLSearchParams(location.search);
+    const patientIdParams = queryParams.get("patientId");
+    const doctorIdParams = queryParams.get("doctorId");
+    
+    if (patientIdParams) {
+      setPatientId(patientIdParams);
+    }
+    if (doctorIdParams) {
+      setDoctorId(doctorIdParams);
+    }
+  }, [location.search]); // Add location.search as dependency
 
   const queryParams = new URLSearchParams(location.search);
-  const patientId = queryParams.get("patientId");
-  const doctorId = queryParams.get("doctorId");
+  // let patientIdParams = queryParams.get("patientId");
+  // setPatientId(patientIdParams);
+  // let doctorIdParmas = queryParams.get("doctorId");
+  // setDoctorId(doctorIdParmas);
   const appointmentId = queryParams.get("appointmentId");
   const templateId = queryParams.get("templateId");
   const saveAsTemplate = queryParams.get("saveAsTemplate");
+  useEffect(()=>{
+   async function fetchData (){
+      if (doctorId) {
+        const doctorResponse = await axiosInstance.get(
+          `/api/doctor/${doctorId}`
+        );
+        setDoctor(doctorResponse.data.data);
+      }
+  
+      if (patientId) {
+        const patientResponse = await axiosInstance.get(
+          `/api/patient/${patientId}`
+        );
+        setPatient(patientResponse.data.data);
+        if (patientResponse?.data?.data?.vitals) {
+          setVitals(patientResponse.data.data.vitals);
+        }
+      }
+    }
+    fetchData()
+  },[doctorId, patientId])
 
   useEffect(() => {
     const fetchInitialData = async () => {
@@ -513,25 +554,38 @@ const Prescription = () => {
       }
       setLoading(true);
       try {
-        if (doctorId) {
-          const doctorResponse = await axiosInstance.get(
-            `/api/doctor/${doctorId}`
-          );
-          setDoctor(doctorResponse.data.data);
-        }
+        // if (doctorId) {
+        //   const doctorResponse = await axiosInstance.get(
+        //     `/api/doctor/${doctorId}`
+        //   );
+        //   setDoctor(doctorResponse.data.data);
+        // }
 
-        if (patientId) {
-          const patientResponse = await axiosInstance.get(
-            `/api/patient/${patientId}`
-          );
-          setPatient(patientResponse.data.data);
-          if (patientResponse?.data?.data?.vitals) {
-            setVitals(patientResponse.data.data.vitals);
-          }
-        }
+        // if (patientId) {
+        //   const patientResponse = await axiosInstance.get(
+        //     `/api/patient/${patientId}`
+        //   );
+        //   setPatient(patientResponse.data.data);
+        //   if (patientResponse?.data?.data?.vitals) {
+        //     setVitals(patientResponse.data.data.vitals);
+        //   }
+        // }
 
         const medicinesResponse = await axiosInstance.get("/api/medicine");
         setAvailableMedicines(medicinesResponse.data);
+
+        // Fetch dynamic data from backend
+        const [diagnosesResponse, frequenciesResponse, instructionsResponse, daysResponse] = await Promise.all([
+          axiosInstance.get("/api/diagnosis"),
+          axiosInstance.get("/api/frequency"),
+          axiosInstance.get("/api/instruction"),
+          axiosInstance.get("/api/days")
+        ]);
+
+        setDiagnoses(diagnosesResponse.data.data || []);
+        setFrequencies(frequenciesResponse.data.data || []);
+        setInstructions(instructionsResponse.data.data || []);
+        setDays(daysResponse.data.data || []);
 
         const urlParams = new URLSearchParams(window.location.search);
         const prescId =
@@ -581,7 +635,7 @@ const Prescription = () => {
     };
 
     fetchInitialData();
-  }, [doctorId, patientId]);
+  }, []);
 
   useEffect(() => {
     if (searchTerm.trim() === "") {
@@ -630,9 +684,9 @@ const Prescription = () => {
     }
 
     // Use custom value if in custom mode, otherwise use select value
-    const frequencyValue = frequencyCustomMode ? customFrequency : newMedicine.dosage;
-    const durationValue = durationCustomMode ? customDuration : newMedicine.duration;
-    const instructionsValue = instructionsCustomMode ? customInstructions : newMedicine.instructions;
+    const frequencyValue = newMedicine.dosage;
+    const durationValue = newMedicine.duration;
+    const instructionsValue = newMedicine.instructions;
     const taperingValue = newMedicine.isTapering && newMedicine.tapering
       ? newMedicine.tapering.map((tap, tIdx) => ({
           ...tap,
@@ -666,13 +720,7 @@ const Prescription = () => {
       tapering: [{ dosage: "", days: "" }],
     });
     setSearchTerm("");
-    // Reset custom modes and values
-    setFrequencyCustomMode(false);
-    setCustomFrequency("");
-    setDurationCustomMode(false);
-    setCustomDuration("");
-    setInstructionsCustomMode(false);
-    setCustomInstructions("");
+
     setTaperingCustomModes([]);
   };
 
@@ -809,12 +857,10 @@ const Prescription = () => {
       // }
     }
   
-    // Use custom values if in custom mode, otherwise use select values
-    const frequencyValue = frequencyCustomMode ? customFrequency : newMedicine.dosage;
-    const durationValue = durationCustomMode ? customDuration : newMedicine.duration;
-    const instructionsValue = instructionsCustomMode
-      ? customInstructions
-      : newMedicine.instructions;
+    // Use select values
+    const frequencyValue = newMedicine.dosage;
+    const durationValue = newMedicine.duration;
+    const instructionsValue = newMedicine.instructions;
   
     // Process tapering schedule with custom values
     const taperingValue = newMedicine.isTapering
@@ -866,12 +912,7 @@ const Prescription = () => {
       tapering: [{ dosage: "", days: "" }],
     });
     setSearchTerm("");
-    setFrequencyCustomMode(false);
-    setCustomFrequency("");
-    setDurationCustomMode(false);
-    setCustomDuration("");
-    setInstructionsCustomMode(false);
-    setCustomInstructions("");
+
     setTaperingCustomModes([]);
   };
 
@@ -891,7 +932,7 @@ const Prescription = () => {
     //   return;
     // }
 
-    const diagnosisValue = diagnosisCustomMode ? customDiagnosisValue : diagnosis;
+    const diagnosisValue = diagnosis;
 
 
     // Update patient vitals before saving prescription
@@ -944,6 +985,143 @@ const Prescription = () => {
     }
   };
 
+  // New handler for saving prescription without sending email
+  const handleSave = async () => {
+    if (!doctorId || !patientId) {
+      toast.error("Doctor or Patient ID is missing");
+      return;
+    }
+
+    const diagnosisValue = diagnosis;
+
+    // Update patient vitals before saving prescription
+    try {
+      await axiosInstance.patch(`/api/patient/${patientId}/vitals`, { vitals });
+    } catch (error) {
+      console.error("Error updating patient vitals:", error);
+      toast.error("Failed to update patient vitals");
+      return;
+    }
+
+    const prescriptionData = {
+      doctor: doctorId,
+      patient: patientId,
+      diagnosis: diagnosisValue,
+      notes,
+      medicines: medicines.map((med) => ({
+        medicine: med.medicine,
+        dosage: med.dosage,
+        duration: med.duration,
+        instructions: med.instructions,
+        isTapering: med.isTapering,
+        ...(med.isTapering && { tapering: med.tapering }),
+      })),
+      labReports: labReports.map(r => ({ ...r, values: r.values || r.value })),
+      labTest
+    };
+
+    try {
+      let response;
+      if (prescriptionId) {
+        // Update existing prescription
+        response = await axiosInstance.put(
+          `/api/prescription/${prescriptionId}`,
+          prescriptionData
+        );
+        toast.success("Prescription updated successfully");
+      } else {
+        // Save new prescription without sending email
+        response = await axiosInstance.post(
+          "/api/prescription/save",
+          prescriptionData
+        );
+        if(appointmentId){
+          await axiosInstance.patch(`/api/booking/complete/${appointmentId}`);
+        }else{
+          await axiosInstance.patch(`/api/booking/complete/${patientId}`);
+        }
+        localStorage.setItem("currentPrescriptionId", response.data.data._id);
+        setPrescriptionId(response.data.data._id);
+        toast.success("Prescription saved successfully");
+      }
+    } catch (error) {
+      console.error("Error saving prescription:", error);
+      toast.error("Failed to save prescription");
+    }
+  };
+
+  // New handler for updating prescription
+  const handleUpdate = async () => {
+    if (!prescriptionId) {
+      toast.error("No prescription ID found for update");
+      return;
+    }
+
+    if (!doctorId || !patientId) {
+      toast.error("Doctor or Patient ID is missing");
+      return;
+    }
+
+    const diagnosisValue = diagnosis;
+
+    // Update patient vitals before updating prescription
+    try {
+      await axiosInstance.patch(`/api/patient/${patientId}/vitals`, { vitals });
+    } catch (error) {
+      console.error("Error updating patient vitals:", error);
+      toast.error("Failed to update patient vitals");
+      return;
+    }
+
+    const prescriptionData = {
+      doctor: doctorId,
+      patient: patientId,
+      diagnosis: diagnosisValue,
+      notes,
+      medicines: medicines.map((med) => ({
+        medicine: med.medicine,
+        dosage: med.dosage,
+        duration: med.duration,
+        instructions: med.instructions,
+        isTapering: med.isTapering,
+        ...(med.isTapering && { tapering: med.tapering }),
+      })),
+      labReports: labReports.map(r => ({ ...r, values: r.values || r.value })),
+      labTest
+    };
+
+    try {
+      const response = await axiosInstance.put(
+        `/api/prescription/${prescriptionId}`,
+        prescriptionData
+      );
+      toast.success("Prescription updated successfully");
+    } catch (error) {
+      console.error("Error updating prescription:", error);
+      toast.error("Failed to update prescription");
+    }
+  };
+
+  // New handler for sending prescription email
+  const handleSend = async () => {
+    const currentPrescriptionId = prescriptionId || localStorage.getItem("currentPrescriptionId");
+    
+    if (!currentPrescriptionId) {
+      toast.error("No prescription found to send. Please save the prescription first.");
+      return;
+    }
+
+    try {
+      const response = await axiosInstance.post(
+        `/api/prescription/${currentPrescriptionId}/send-email`
+      );
+      toast.success("Prescription email sent successfully");
+    } catch (error) {
+      console.error("Error sending prescription email:", error);
+      toast.error("Failed to send prescription email");
+    }
+  };
+
   const handleSaveAsTemplate = () => {
     if (medicines.length === 0) {
       toast.error("At least one medicine is required to save as template");
@@ -971,6 +1149,84 @@ const Prescription = () => {
     } catch (error) {
       toast.error('Failed to fetch patients');
     }
+  };
+
+  // Functions to handle modal operations
+  const handleOpenAddModal = (type) => {
+    setModalType(type);
+    setEditItem(null);
+    setShowAddModal(true);
+  };
+
+  const handleCloseAddModal = () => {
+    setShowAddModal(false);
+    setEditItem(null);
+    setModalType('');
+  };
+
+  const handleItemAdded = (newItem) => {
+    switch (modalType) {
+      case 'diagnosis':
+        setDiagnoses([...diagnoses, newItem]);
+        break;
+      case 'frequency':
+        setFrequencies([...frequencies, newItem]);
+        break;
+      case 'instruction':
+        setInstructions([...instructions, newItem]);
+        break;
+      case 'days':
+        setDays([...days, newItem]);
+        break;
+      default:
+        break;
+    }
+  };
+
+  const handleItemUpdated = (updatedItem) => {
+    if (!updatedItem) {
+      // Item was deleted
+      switch (modalType) {
+        case 'diagnosis':
+          setDiagnoses(diagnoses.filter(item => item._id !== editItem._id));
+          break;
+        case 'frequency':
+          setFrequencies(frequencies.filter(item => item._id !== editItem._id));
+          break;
+        case 'instruction':
+          setInstructions(instructions.filter(item => item._id !== editItem._id));
+          break;
+        case 'days':
+          setDays(days.filter(item => item._id !== editItem._id));
+          break;
+        default:
+          break;
+      }
+    } else {
+      // Item was updated
+      switch (modalType) {
+        case 'diagnosis':
+          setDiagnoses(diagnoses.map(item => item._id === updatedItem._id ? updatedItem : item));
+          break;
+        case 'frequency':
+          setFrequencies(frequencies.map(item => item._id === updatedItem._id ? updatedItem : item));
+          break;
+        case 'instruction':
+          setInstructions(instructions.map(item => item._id === updatedItem._id ? updatedItem : item));
+          break;
+        case 'days':
+          setDays(days.map(item => item._id === updatedItem._id ? updatedItem : item));
+          break;
+        default:
+          break;
+      }
+    }
+  };
+
+  const handleEditItem = (item, type) => {
+    setEditItem(item);
+    setModalType(type);
+    setShowAddModal(true);
   };
 
   useEffect(() => {
@@ -1007,11 +1263,19 @@ const Prescription = () => {
               <div className="flex space-x-2 mt-4 md:mt-0">
                 <button
                   className="bg-blue-700 hover:bg-blue-800 text-white px-4 py-2 rounded-md flex items-center"
-                  onClick={handleSavePrescription}
+                  onClick={prescriptionId ? handleUpdate : handleSave}
                   disabled={templateId && (!doctor || !patient)}
                 >
                   <FileText size={16} className="mr-2" />
-                  Save
+                  {prescriptionId ? "Update" : "Save"}
+                </button>
+                <button
+                  className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md flex items-center"
+                  onClick={handleSend}
+                  disabled={!prescriptionId && !localStorage.getItem("currentPrescriptionId")}
+                >
+                  <Send size={16} className="mr-2" />
+                  Send
                 </button>
                 <button
                   className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md flex items-center"
@@ -1053,7 +1317,7 @@ const Prescription = () => {
                       <div
                         key={doc._id}
                         className="p-2 hover:bg-blue-100 cursor-pointer rounded"
-                        onClick={() => setDoctor(doc)}
+                        onClick={() => {setDoctor(doc); setDoctorId(doc._id)}}
                       >
                         <span className="font-medium">{doc.name}</span>
                         <span className="ml-2 text-xs text-gray-500">{doc.email}</span>
@@ -1098,6 +1362,7 @@ const Prescription = () => {
                         className="p-2 hover:bg-blue-100 cursor-pointer rounded"
                         onClick={() => {
                           setPatient(pat);
+                          setPatientId(pat._id);
                           if(pat.vitals){
                             setVitals(pat.vitals);
                           }
@@ -1229,46 +1494,45 @@ const Prescription = () => {
           <div className="p-4 md:p-6 border-t">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="relative mb-4">
-                <label htmlFor="diagnosis" className="block text-sm font-medium text-gray-700 mb-1">Diagnosis</label>
-                {!diagnosisCustomMode ? (
-                  <>
-                    <select
-                      id="diagnosis"
-                      value={diagnosis}
-                      onChange={e => setDiagnosis(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option value="">Select diagnosis</option>
-                      {diagnosisOptions.map(opt => (
-                        <option key={opt} value={opt}>{opt}</option>
-                      ))}
-                    </select>
-                    <button
-                      type="button"
-                      className="absolute right-2 top-2 text-xs px-2 py-1 bg-gray-200 rounded"
-                      onClick={() => setDiagnosisCustomMode(true)}
-                    >
-                      Custom
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <input
-                      type="text"
-                      value={customDiagnosisValue}
-                      onChange={e => setCustomDiagnosisValue(e.target.value)}
-                      placeholder="Enter custom diagnosis"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md mt-2"
-                    />
-                    <button
-                      type="button"
-                      className="absolute right-2 top-2 text-xs px-2 py-1 bg-gray-200 rounded"
-                      onClick={() => setDiagnosisCustomMode(false)}
-                    >
-                      Select
-                    </button>
-                  </>
-                )}
+                <div className="flex items-center justify-between mb-1">
+                  <label htmlFor="diagnosis" className="block text-sm font-medium text-gray-700">Diagnosis</label>
+                  <button
+                    type="button"
+                    onClick={() => handleOpenAddModal('diagnosis')}
+                    className="text-blue-600 hover:text-blue-800 text-sm flex items-center"
+                  >
+                    <Plus size={14} className="mr-1" />
+                    Add New
+                  </button>
+                </div>
+                <select
+                  id="diagnosis"
+                  value={diagnosis}
+                  onChange={e => setDiagnosis(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">Select diagnosis</option>
+                  {diagnoses.map(diag => (
+                    <option key={diag._id} value={diag.name}>{diag.name}</option>
+                  ))}
+                  {diagnosisOptions.map(opt => (
+                    <option key={opt} value={opt}>{opt}</option>
+                  ))}
+                </select>
+                <div className="absolute right-2 top-8 flex space-x-1">
+                  <button
+                    type="button"
+                    className="text-xs px-2 py-1 bg-blue-200 rounded hover:bg-blue-300"
+                    onClick={() => {
+                      const selectedDiag = diagnoses.find(d => d.name === diagnosis);
+                      if (selectedDiag) {
+                        handleEditItem(selectedDiag, 'diagnosis');
+                      }
+                    }}
+                  >
+                    <Pencil size={12} />
+                  </button>
+                </div>
               </div>
               <div>
                 <label
@@ -1287,7 +1551,7 @@ const Prescription = () => {
                           const value = e.target.value;
                           setSelectedSymptom(value);
                           if (value === "Custom") {
-                            setSymptomCustomMode(true);
+    
                             setSelectedSymptom("");
                           } else {
                             setNotes(value);
@@ -1305,7 +1569,7 @@ const Prescription = () => {
                       <button
                         type="button"
                         className="absolute right-2 top-2 text-xs px-2 py-1 bg-gray-200 rounded"
-                        onClick={() => setSymptomCustomMode(true)}
+
                       >
                         Custom
                       </button>
@@ -1325,8 +1589,8 @@ const Prescription = () => {
                         type="button"
                         className="absolute right-2 top-2 text-xs px-2 py-1 bg-gray-200 rounded"
                         onClick={() => {
-                          setSymptomCustomMode(false);
-                          setNotes(customSymptom);
+  
+                          setNotes("");
                         }}
                       >
                         Select
@@ -1405,178 +1669,175 @@ const Prescription = () => {
               </div>
 
               <div>
-                <label
-                  htmlFor="dosage"
-                  className="block text-sm font-medium text-gray-700 mb-1"
-                >
-                  Frequency
-                </label>
+                <div className="flex items-center justify-between mb-1">
+                  <label
+                    htmlFor="dosage"
+                    className="block text-sm font-medium text-gray-700"
+                  >
+                    Frequency
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => handleOpenAddModal('frequency')}
+                    className="text-blue-600 hover:text-blue-800 text-sm flex items-center"
+                  >
+                    <Plus size={14} className="mr-1" />
+                    Add New
+                  </button>
+                </div>
                 <div className="relative">
-                  {!frequencyCustomMode ? (
-                    <>
-                      <select
-                        id="dosage"
-                        value={newMedicine.dosage}
-                        onChange={e => setNewMedicine({ ...newMedicine, dosage: e.target.value })}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      >
-                        <option value="">Select frequency</option>
-                        <option value="1-0-0">1-0-0 (Morning only)</option>
-                        <option value="0-1-0">0-1-0 (Afternoon only)</option>
-                        <option value="0-0-1">0-0-1 (Night only)</option>
-                        <option value="1-1-0">1-1-0 (Morning & Afternoon)</option>
-                        <option value="1-0-1">1-0-1 (Morning & Night)</option>
-                        <option value="0-1-1">0-1-1 (Afternoon & Night)</option>
-                        <option value="1-1-1">1-1-1 (Three times daily)</option>
-                        <option value="2-0-0">2-0-0 (Two in morning)</option>
-                        <option value="0-2-0">0-2-0 (Two in afternoon)</option>
-                        <option value="0-0-2">0-0-2 (Two at night)</option>
-                        <option value="2-1-1">
-                          2-1-1 (Two morning, one afternoon & night)
-                        </option>
-                        <option value="1-2-1">
-                          1-2-1 (One morning, two afternoon, one night)
-                        </option>
-                        <option value="1-1-2">
-                          1-1-2 (One morning & afternoon, two night)
-                        </option>
-                        <option value="2-2-2">
-                          2-2-2 (Two tablets three times daily)
-                        </option>
-                        <option value="SOS">SOS (As needed)</option>
-                        <option value="STAT">STAT (Immediately)</option>
-                      </select>
-                      <button
-                        type="button"
-                        className="absolute right-2 top-2 text-xs px-2 py-1 bg-gray-200 rounded"
-                        onClick={() => setFrequencyCustomMode(true)}
-                      >
-                        Custom
-                      </button>
-                    </>
-                  ) : (
-                    <>
-                      <input
-                        type="text"
-                        value={customFrequency}
-                        onChange={e => setCustomFrequency(e.target.value)}
-                        placeholder="Enter custom frequency"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md mt-2"
-                      />
-                      <button
-                        type="button"
-                        className="absolute right-2 top-2 text-xs px-2 py-1 bg-gray-200 rounded"
-                        onClick={() => setFrequencyCustomMode(false)}
-                      >
-                        Select
-                      </button>
-                    </>
-                  )}
+                  <select
+                    id="dosage"
+                    value={newMedicine.dosage}
+                    onChange={e => setNewMedicine({ ...newMedicine, dosage: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">Select frequency</option>
+                    {frequencies.map(freq => (
+                      <option key={freq._id} value={freq.name}>{freq.name}</option>
+                    ))}
+                    <option value="1-0-0">1-0-0 (Morning only)</option>
+                    <option value="0-1-0">0-1-0 (Afternoon only)</option>
+                    <option value="0-0-1">0-0-1 (Night only)</option>
+                    <option value="1-1-0">1-1-0 (Morning & Afternoon)</option>
+                    <option value="1-0-1">1-0-1 (Morning & Night)</option>
+                    <option value="0-1-1">0-1-1 (Afternoon & Night)</option>
+                    <option value="1-1-1">1-1-1 (Three times daily)</option>
+                    <option value="2-0-0">2-0-0 (Two in morning)</option>
+                    <option value="0-2-0">0-2-0 (Two in afternoon)</option>
+                    <option value="0-0-2">0-0-2 (Two at night)</option>
+                    <option value="2-1-1">
+                      2-1-1 (Two morning, one afternoon & night)
+                    </option>
+                    <option value="1-2-1">
+                      1-2-1 (One morning, two afternoon, one night)
+                    </option>
+                    <option value="1-1-2">
+                      1-1-2 (One morning & afternoon, two night)
+                    </option>
+                    <option value="2-2-2">
+                      2-2-2 (Two tablets three times daily)
+                    </option>
+                    <option value="SOS">SOS (As needed)</option>
+                    <option value="STAT">STAT (Immediately)</option>
+                  </select>
+                  <div className="absolute right-2 top-2 flex space-x-1">
+                    <button
+                      type="button"
+                      className="text-xs px-2 py-1 bg-blue-200 rounded hover:bg-blue-300"
+                      onClick={() => {
+                        const selectedFreq = frequencies.find(f => f.name === newMedicine.dosage);
+                        if (selectedFreq) {
+                          handleEditItem(selectedFreq, 'frequency');
+                        }
+                      }}
+                    >
+                      <Pencil size={12} />
+                    </button>
+                  </div>
                 </div>
               </div>
 
               <div>
-                <label
-                  htmlFor="duration"
-                  className="block text-sm font-medium text-gray-700 mb-1"
-                >
-                  Duration
-                </label>
+                <div className="flex items-center justify-between mb-1">
+                  <label
+                    htmlFor="duration"
+                    className="block text-sm font-medium text-gray-700"
+                  >
+                    Duration
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => handleOpenAddModal('days')}
+                    className="text-blue-600 hover:text-blue-800 text-sm flex items-center"
+                  >
+                    <Plus size={14} className="mr-1" />
+                    Add New
+                  </button>
+                </div>
                 <div className="relative">
-                  {!durationCustomMode ? (
-                    <>
-                      <select
-                        id="duration"
-                        value={newMedicine.duration}
-                        onChange={e => setNewMedicine({ ...newMedicine, duration: e.target.value })}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      >
-                        <option value="">Select duration</option>
-                        <option value="1 day">1 day</option>
-                        <option value="3 days">3 days</option>
-                        <option value="5 days">5 days</option>
-                        <option value="7 days">7 days</option>
-                        <option value="14 days">14 days</option>
-                        <option value="30 days">30 days</option>
-                      </select>
-                      <button
-                        type="button"
-                        className="absolute right-2 top-2 text-xs px-2 py-1 bg-gray-200 rounded"
-                        onClick={() => setDurationCustomMode(true)}
-                      >
-                        Custom
-                      </button>
-                    </>
-                  ) : (
-                    <>
-                      <input
-                        type="text"
-                        value={customDuration}
-                        onChange={e => setCustomDuration(e.target.value)}
-                        placeholder="Enter custom duration"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md mt-2"
-                      />
-                      <button
-                        type="button"
-                        className="absolute right-2 top-2 text-xs px-2 py-1 bg-gray-200 rounded"
-                        onClick={() => setDurationCustomMode(false)}
-                      >
-                        Select
-                      </button>
-                    </>
-                  )}
+                  <select
+                    id="duration"
+                    value={newMedicine.duration}
+                    onChange={e => setNewMedicine({ ...newMedicine, duration: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">Select duration</option>
+                    {days.map(day => (
+                      <option key={day._id} value={day.name}>{day.name}</option>
+                    ))}
+                    <option value="1 day">1 day</option>
+                    <option value="3 days">3 days</option>
+                    <option value="5 days">5 days</option>
+                    <option value="7 days">7 days</option>
+                    <option value="14 days">14 days</option>
+                    <option value="30 days">30 days</option>
+                  </select>
+                  <div className="absolute right-2 top-2 flex space-x-1">
+                    <button
+                      type="button"
+                      className="text-xs px-2 py-1 bg-blue-200 rounded hover:bg-blue-300"
+                      onClick={() => {
+                        const selectedDay = days.find(d => d.name === newMedicine.duration);
+                        if (selectedDay) {
+                          handleEditItem(selectedDay, 'days');
+                        }
+                      }}
+                    >
+                      <Pencil size={12} />
+                    </button>
+                  </div>
                 </div>
               </div>
 
               <div>
-                <label
-                  htmlFor="instructions"
-                  className="block text-sm font-medium text-gray-700 mb-1"
-                >
-                  Instructions
-                </label>
+                <div className="flex items-center justify-between mb-1">
+                  <label
+                    htmlFor="instructions"
+                    className="block text-sm font-medium text-gray-700"
+                  >
+                    Instructions
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => handleOpenAddModal('instruction')}
+                    className="text-blue-600 hover:text-blue-800 text-sm flex items-center"
+                  >
+                    <Plus size={14} className="mr-1" />
+                    Add New
+                  </button>
+                </div>
                 <div className="relative">
-                  {!instructionsCustomMode ? (
-                    <>
-                      <select
-                        id="instructions"
-                        value={newMedicine.instructions}
-                        onChange={e => setNewMedicine({ ...newMedicine, instructions: e.target.value })}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      >
-                        <option value="">Select instructions</option>
-                        <option value="Before food">Before food</option>
-                        <option value="After food">After food</option>
-                        <option value="With food">With food</option>
-                        <option value="Empty stomach">Empty stomach</option>
-                        <option value="As needed">As needed</option>
-                      </select>
-                      <button
-                        type="button"
-                        className="absolute right-2 top-2 text-xs px-2 py-1 bg-gray-200 rounded"
-                        onClick={() => setInstructionsCustomMode(true)}
-                      >
-                        Custom
-                      </button>
-                    </>
-                  ) : (
-                    <>
-                      <input
-                        type="text"
-                        value={customInstructions}
-                        onChange={e => setCustomInstructions(e.target.value)}
-                        placeholder="Enter custom instructions"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md mt-2"
-                      />
-                      <button
-                        type="button"
-                        className="absolute right-2 top-2 text-xs px-2 py-1 bg-gray-200 rounded"
-                        onClick={() => setInstructionsCustomMode(false)}
-                      >
-                        Select
-                      </button>
-                    </>
-                  )}
+                  <select
+                    id="instructions"
+                    value={newMedicine.instructions}
+                    onChange={e => setNewMedicine({ ...newMedicine, instructions: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">Select instructions</option>
+                    {instructions.map(inst => (
+                      <option key={inst._id} value={inst.name}>{inst.name}</option>
+                    ))}
+                    <option value="Before food">Before food</option>
+                    <option value="After food">After food</option>
+                    <option value="With food">With food</option>
+                    <option value="Empty stomach">Empty stomach</option>
+                    <option value="As needed">As needed</option>
+                  </select>
+                  <div className="absolute right-2 top-2 flex space-x-1">
+                    <button
+                      type="button"
+                      className="text-xs px-2 py-1 bg-blue-200 rounded hover:bg-blue-300"
+                      onClick={() => {
+                        const selectedInst = instructions.find(i => i.name === newMedicine.instructions);
+                        if (selectedInst) {
+                          handleEditItem(selectedInst, 'instruction');
+                        }
+                      }}
+                    >
+                      <Pencil size={12} />
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -1593,7 +1854,17 @@ const Prescription = () => {
                   >
                     {/* Frequency */}
                     <div>
-                      <label htmlFor={`tapering-dosage-${index}`} className="block text-sm font-medium text-gray-700 mb-1">Frequency</label>
+                      <div className="flex items-center justify-between mb-1">
+                        <label htmlFor={`tapering-dosage-${index}`} className="block text-sm font-medium text-gray-700">Frequency</label>
+                        <button
+                          type="button"
+                          onClick={() => handleOpenAddModal('frequency')}
+                          className="text-blue-600 hover:text-blue-800 text-sm flex items-center"
+                        >
+                          <Plus size={14} className="mr-1" />
+                          Add New
+                        </button>
+                      </div>
                       <div className="relative">
                         {!taperingCustomModes[index]?.freq ? (
                           <>
@@ -1604,6 +1875,9 @@ const Prescription = () => {
                               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                             >
                               <option value="">Select frequency</option>
+                              {frequencies.map(freq => (
+                                <option key={freq._id} value={freq.name}>{freq.name}</option>
+                              ))}
                               <option value="1-0-0">1-0-0 (Morning only)</option>
                               <option value="0-1-0">0-1-0 (Afternoon only)</option>
                               <option value="0-0-1">0-0-1 (Night only)</option>
@@ -1621,17 +1895,31 @@ const Prescription = () => {
                               <option value="SOS">SOS (As needed)</option>
                               <option value="STAT">STAT (Immediately)</option>
                             </select>
-                            <button
-                              type="button"
-                              className="absolute right-2 top-2 text-xs px-2 py-1 bg-gray-200 rounded"
-                              onClick={() => {
-                                const arr = [...taperingCustomModes];
-                                arr[index] = { ...arr[index], freq: true };
-                                setTaperingCustomModes(arr);
-                              }}
-                            >
-                              Custom
-                            </button>
+                            <div className="absolute right-2 top-2 flex space-x-1">
+                              <button
+                                type="button"
+                                className="text-xs px-2 py-1 bg-gray-200 rounded hover:bg-gray-300"
+                                onClick={() => {
+                                  const arr = [...taperingCustomModes];
+                                  arr[index] = { ...arr[index], freq: true };
+                                  setTaperingCustomModes(arr);
+                                }}
+                              >
+                                Custom
+                              </button>
+                              <button
+                                type="button"
+                                className="text-xs px-2 py-1 bg-blue-200 rounded hover:bg-blue-300"
+                                onClick={() => {
+                                  const selectedFreq = frequencies.find(f => f.name === schedule.dosage);
+                                  if (selectedFreq) {
+                                    handleEditItem(selectedFreq, 'frequency');
+                                  }
+                                }}
+                              >
+                                <Pencil size={12} />
+                              </button>
+                            </div>
                           </>
                         ) : (
                           <>
@@ -1663,7 +1951,17 @@ const Prescription = () => {
                     </div>
                     {/* Days */}
                     <div>
-                      <label htmlFor={`tapering-days-${index}`} className="block text-sm font-medium text-gray-700 mb-1">Days</label>
+                      <div className="flex items-center justify-between mb-1">
+                        <label htmlFor={`tapering-days-${index}`} className="block text-sm font-medium text-gray-700">Days</label>
+                        <button
+                          type="button"
+                          onClick={() => handleOpenAddModal('days')}
+                          className="text-blue-600 hover:text-blue-800 text-sm flex items-center"
+                        >
+                          <Plus size={14} className="mr-1" />
+                          Add New
+                        </button>
+                      </div>
                       <div className="relative">
                         {!taperingCustomModes[index]?.days ? (
                           <>
@@ -1674,23 +1972,40 @@ const Prescription = () => {
                               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                             >
                               <option value="">Select days</option>
+                              {days.map(day => (
+                                <option key={day._id} value={day.name}>{day.name}</option>
+                              ))}
                               <option value="3 days">3 days</option>
                               <option value="5 days">5 days</option>
                               <option value="7 days">7 days</option>
                               <option value="10 days">10 days</option>
                               <option value="14 days">14 days</option>
                             </select>
-                            <button
-                              type="button"
-                              className="absolute right-2 top-2 text-xs px-2 py-1 bg-gray-200 rounded"
-                              onClick={() => {
-                                const arr = [...taperingCustomModes];
-                                arr[index] = { ...arr[index], days: true };
-                                setTaperingCustomModes(arr);
-                              }}
-                            >
-                              Custom
-                            </button>
+                            <div className="absolute right-2 top-2 flex space-x-1">
+                              <button
+                                type="button"
+                                className="text-xs px-2 py-1 bg-gray-200 rounded hover:bg-gray-300"
+                                onClick={() => {
+                                  const arr = [...taperingCustomModes];
+                                  arr[index] = { ...arr[index], days: true };
+                                  setTaperingCustomModes(arr);
+                                }}
+                              >
+                                Custom
+                              </button>
+                              <button
+                                type="button"
+                                className="text-xs px-2 py-1 bg-blue-200 rounded hover:bg-blue-300"
+                                onClick={() => {
+                                  const selectedDay = days.find(d => d.name === schedule.days);
+                                  if (selectedDay) {
+                                    handleEditItem(selectedDay, 'days');
+                                  }
+                                }}
+                              >
+                                <Pencil size={12} />
+                              </button>
+                            </div>
                           </>
                         ) : (
                           <>
@@ -2090,9 +2405,7 @@ const Prescription = () => {
                     <PrescriptionPDF
                       doctor={doctor}
                       patient={patient}
-                      diagnosis={
-                        diagnosisCustomMode ? customDiagnosisValue : diagnosis
-                      }
+                      diagnosis={diagnosis}
                       medicines={medicines}
                       labReports={labReports}
                       labTest={labTest}
@@ -2125,14 +2438,8 @@ const Prescription = () => {
                 <PrescriptionPDF
                   doctor={doctor}
                   patient={patient}
-                  diagnosis={
-                    diagnosisCustomMode ? customDiagnosisValue : diagnosis
-                  }
-                  notes={
-                    // symptomCustomMode ? customSymptom : notes
-                    // customSymptom
-                    notes
-                  }
+                  diagnosis={diagnosis}
+                                      notes={notes}
                   medicines={medicines}
                   labReports={labReports}
                   labTest={labTest}
@@ -2146,9 +2453,7 @@ const Prescription = () => {
                   <PrescriptionPDF
                     doctor={doctor}
                     patient={patient}
-                    diagnosis={
-                      diagnosisCustomMode ? customDiagnosisValue : diagnosis
-                    }
+                    diagnosis={diagnosis}
                     medicines={medicines}
                     labReports={labReports}
                     vitals={vitals}
@@ -2162,9 +2467,9 @@ const Prescription = () => {
                   ) : (
                     <button
                       className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md flex items-center"
-                      onClick={handleSavePrescription}
+                      onClick={prescriptionId ? handleUpdate : handleSave}
                     >
-                      Save Prescription and send Email
+                      {prescriptionId ? "Update" : "Save"} Prescription
                     </button>
                   )
                 }
@@ -2181,7 +2486,7 @@ const Prescription = () => {
           onClose={() => setShowTemplateModal(false)}
           prescriptionData={{
             medicines,
-            diagnosis:  diagnosisCustomMode ? customDiagnosisValue : diagnosis,
+            diagnosis: diagnosis,
             notes,
             labReports,
             labTest
@@ -2190,6 +2495,18 @@ const Prescription = () => {
             toast.success('Template saved successfully!');
             setShowTemplateModal(false);
           }}
+        />
+      )}
+
+      {/* Add Item Modal */}
+      {showAddModal && (
+        <AddItemModal
+          isOpen={showAddModal}
+          onClose={handleCloseAddModal}
+          type={modalType}
+          onItemAdded={handleItemAdded}
+          editItem={editItem}
+          onItemUpdated={handleItemUpdated}
         />
       )}
     </>

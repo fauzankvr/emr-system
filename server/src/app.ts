@@ -8,6 +8,10 @@ import bookingRoutes from './routes/booking.routes';
 import medicineRoutes from "./routes/medicine.routes";
 import prescriptionRoutes from "./routes/prescrition.routes"
 import templateRoutes from "./routes/template.routes"
+import diagnosisRoutes from "./routes/diagnosis.routes"
+import frequencyRoutes from "./routes/frequency.routes"
+import instructionRoutes from "./routes/instruction.routes"
+import daysRoutes from "./routes/days.routes"
 dotenv.config();
 
 const app = express();
@@ -34,5 +38,9 @@ app.use('/api/booking', bookingRoutes);
 app.use('/api/medicine', medicineRoutes);
 app.use('/api/prescription', prescriptionRoutes);
 app.use('/api/template', templateRoutes);
+app.use('/api/diagnosis', diagnosisRoutes);
+app.use('/api/frequency', frequencyRoutes);
+app.use('/api/instruction', instructionRoutes);
+app.use('/api/days', daysRoutes);
 
 export default app;

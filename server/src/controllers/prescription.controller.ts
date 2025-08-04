@@ -156,4 +156,45 @@ export class PrescriptionController {
         .json({ success: false, message: error.message });
     }
   }
+
+  // New method to save prescription without sending email
+  static async savePrescription(req: Request, res: Response) {
+    if (req.file && req.body.labReports) {
+      try {
+        const labReports = JSON.parse(req.body.labReports);
+        if (labReports.length > 0) {
+          labReports[0].reportImageUrl = `/labReports/${req.file.filename}`;
+        }
+        req.body.labReports = labReports;
+      } catch (e) {
+        req.body.labReports[0].reportImageUrl = `/labReports/${req.file.filename}`;
+      }
+    }
+    try {
+      const { body } = req;
+      const prescription = await PrescriptionService.savePrescription(body);
+      return res
+        .status(HttpStatusCode.CREATED)
+        .json({ success: true, data: prescription });
+    } catch (error: any) {
+      return res
+        .status(HttpStatusCode.BAD_REQUEST)
+        .json({ success: false, message: error.message });
+    }
+  }
+
+  // New method to send prescription email only
+  static async sendEmail(req: Request, res: Response) {
+    try {
+      const { prescriptionId } = req.params;
+      const result = await PrescriptionService.sendPrescriptionEmail(prescriptionId);
+      return res
+        .status(HttpStatusCode.OK)
+        .json({ success: true, data: result });
+    } catch (error: any) {
+      return res
+        .status(HttpStatusCode.BAD_REQUEST)
+        .json({ success: false, message: error.message });
+    }
+  }
 }

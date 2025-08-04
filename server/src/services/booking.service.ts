@@ -113,9 +113,11 @@ export class BookingService {
   }
 
   static async completeBooking(id: string, notes: string): Promise<IBooking> {
-    const booking = await BookingModel.findById(id);
+    let booking = await BookingModel.findById(id);
+    if (!booking) {
+      booking = await BookingModel.findOne({patientId: id,status: 'booked'});
+    }
     if (!booking) throw new Error('Booking not found');
-
     booking.status = 'completed';
     booking.notes = notes || 'no nots';
     await booking.save();

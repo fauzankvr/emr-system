@@ -61,7 +61,7 @@ export class PrescriptionService {
       console.log(error);
       throw new Error(`Failed to create prescription: ${error.message}`);
     }
-  }
+  }              
 
   static async getAllPrescriptions() {
     return await Prescription.find().populate(
@@ -99,5 +99,79 @@ export class PrescriptionService {
   static async deletePrescription(id: string) {
     if (!Types.ObjectId.isValid(id)) throw new Error("Invalid prescription ID");
     return await Prescription.findByIdAndDelete(id);
+  }
+
+  // New method to save prescription without sending email
+  static async savePrescription(data: Partial<IPrescription>) {
+    try {
+      if (!data.doctor || !Types.ObjectId.isValid(data.doctor)) {
+        throw new Error("Invalid or missing doctor ID.");
+      }
+      if (!data.patient || !Types.ObjectId.isValid(data.patient)) {
+        throw new Error("Invalid or missing patient ID.");
+      }
+
+      const newPrescription = new Prescription({
+        doctor: data.doctor,
+        patient: data.patient,
+        medicines: data.medicines || [],
+        diagnosis: data.diagnosis || "",
+        notes: data.notes || "",
+        labReports: data.labReports || [],
+        labTest: data.labTest || "",
+      });
+
+      await newPrescription.save();
+
+      const populatedPrescription = await Prescription.findById(
+        newPrescription._id
+      )
+        .populate("doctor", "name specialization email phone")
+        .populate("patient")
+        .populate("medicines.medicine", "name");
+
+      if (!populatedPrescription) {
+        throw new Error("Failed to populate prescription details.");
+      }
+
+      return populatedPrescription;
+    } catch (error: any) {
+      console.log(error);
+      throw new Error(`Failed to save prescription: ${error.message}`);
+    }
+  }
+
+  // New method to send prescription email only
+  static async sendPrescriptionEmail(prescriptionId: string) {
+    try {
+      if (!Types.ObjectId.isValid(prescriptionId)) {
+        throw new Error("Invalid prescription ID.");
+      }
+
+      const prescription = await Prescription.findById(prescriptionId)
+        .populate("doctor", "name specialization email phone")
+        .populate("patient")
+        .populate("medicines.medicine", "name");
+
+      if (!prescription) {
+        throw new Error("Prescription not found.");
+      }
+
+      const patient = await PatientModel.findById(prescription.patient).select("email");
+      if (!patient?.email) {
+        throw new Error("Patient not found or email not registered.");
+      }
+
+      const result = prescriptionEmitter.emit(
+        "prescription:created",
+        patient.email,
+        prescription
+      );
+
+      return { success: true, message: "Email sent successfully", prescription };
+    } catch (error: any) {
+      console.log(error);
+      throw new Error(`Failed to send prescription email: ${error.message}`);
+    }
   }
 }

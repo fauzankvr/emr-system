@@ -309,7 +309,7 @@ const PrescriptionPDF = memo(
                               },
                             ]}
                           >
-                            Note: {med.medicine.content}
+                            Content: {med.medicine.content}
                           </Text>
                         )}
 

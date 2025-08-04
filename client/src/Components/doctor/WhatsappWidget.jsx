@@ -17,7 +17,7 @@ const WhatsAppWidget = () => {
       >
         <div className="bg-[#075E54] text-white p-4 flex items-center relative">
           <img
-            src="https://i.postimg.cc/Zn1bCpCN/suahim-soft-profile.jpg"
+            src="/main_icon.png"
             alt="SUHAIM SOFT Profile"
             className="w-12 h-12 rounded-full mr-4 border-2 border-white object-cover"
           />
