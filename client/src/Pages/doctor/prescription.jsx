@@ -1342,57 +1342,80 @@ const Prescription = () => {
             </div>
             {/* Patient Selection */}
             <div className="border rounded-lg p-4 bg-gray-50">
-              <h2 className="text-lg font-semibold text-gray-700 mb-3">Patient</h2>
-              {(!patient && templateId) ? (
-                <>
-                  <input
-                    type="text"
-                    placeholder="Search patient..."
-                    value={patientSearchQuery}
-                    onChange={e => {
-                      setPatientSearchQuery(e.target.value);
-                      fetchPatients(e.target.value);
-                    }}
-                    className="w-full p-2 border border-gray-300 rounded-lg mb-2"
-                  />
-                  <div className="max-h-40 overflow-y-auto">
-                    {availablePatients.map(pat => (
-                      <div
-                        key={pat._id}
-                        className="p-2 hover:bg-blue-100 cursor-pointer rounded"
-                        onClick={() => {
-                          setPatient(pat);
-                          setPatientId(pat._id);
-                          if(pat.vitals){
-                            setVitals(pat.vitals);
-                          }
-                        }}
-                      >
-                        <span className="font-medium">{pat.name}</span>
-                        <span className="ml-2 text-xs text-gray-500">{pat.email}</span>
-                      </div>
-                    ))}
+  <h2 className="text-lg font-semibold text-gray-700 mb-3">Patient</h2>
 
-                  </div>
-                </>
-              ) : patient ? (
-                <div className="space-y-2">
-                  <p className="text-gray-800"><span className="font-medium">Name:</span> {patient.name}</p>
-                  <p className="text-gray-800"><span className="font-medium">ID:</span> {patient._id}</p>
-                  {patient.age && (
-                    <p className="text-gray-800"><span className="font-medium">Age:</span> {patient.age}</p>
-                  )}
-                  {patient.gender && (
-                    <p className="text-gray-800"><span className="font-medium">Gender:</span> {patient.gender}</p>
-                  )}
-                  {patient.contact && (
-                    <p className="text-gray-800"><span className="font-medium">Contact:</span> {patient.contact}</p>
-                  )}
-                </div>
-              ) : (
-                <p className="text-gray-500">Loading patient details...</p>
-              )}
-            </div>
+  {(!patient && templateId) ? (
+    <>
+      <input
+        type="text"
+        placeholder="Search patient..."
+        value={patientSearchQuery}
+        onChange={e => {
+          setPatientSearchQuery(e.target.value);
+          fetchPatients(e.target.value);
+        }}
+        className="w-full p-2 border border-gray-300 rounded-lg mb-2"
+      />
+      <div className="max-h-40 overflow-y-auto">
+        {availablePatients.map(pat => (
+          <div
+            key={pat._id}
+            className="p-2 hover:bg-blue-100 cursor-pointer rounded"
+            onClick={() => {
+              setPatient(pat);
+              setPatientId(pat._id);
+              if (pat.vitals) {
+                setVitals(pat.vitals);
+              }
+            }}
+          >
+            <span className="font-medium">{pat.name}</span>
+            <span className="ml-2 text-xs text-gray-500">{pat.email}</span>
+          </div>
+        ))}
+      </div>
+    </>
+  ) : patient ? (
+    <div className="space-y-2">
+      <p className="text-gray-800">
+        <span className="font-medium">Name:</span> {patient.name}
+      </p>
+      <p className="text-gray-800">
+        <span className="font-medium">ID:</span> {patient._id}
+      </p>
+      {patient.age && (
+        <p className="text-gray-800">
+          <span className="font-medium">Age:</span> {patient.age}
+        </p>
+      )}
+      {patient.gender && (
+        <p className="text-gray-800">
+          <span className="font-medium">Gender:</span> {patient.gender}
+        </p>
+      )}
+      {patient.contact && (
+        <p className="text-gray-800">
+          <span className="font-medium">Contact:</span> {patient.contact}
+        </p>
+      )}
+
+      {/* ✅ Remove Button */}
+      <button
+        onClick={() => {
+          setPatient(null);
+          setPatientId(null);
+          setVitals({}); // clear vitals if needed
+        }}
+        className="mt-3 px-3 py-1 bg-red-500 text-white text-sm rounded hover:bg-red-600"
+      >
+        Remove Patient
+      </button>
+    </div>
+  ) : (
+    <p className="text-gray-500">Loading patient details...</p>
+  )}
+</div>
+
           </div>
 
           {/* Vitals */}
@@ -1896,7 +1919,7 @@ const Prescription = () => {
                               <option value="STAT">STAT (Immediately)</option>
                             </select>
                             <div className="absolute right-2 top-2 flex space-x-1">
-                              <button
+                              {/* <button
                                 type="button"
                                 className="text-xs px-2 py-1 bg-gray-200 rounded hover:bg-gray-300"
                                 onClick={() => {
@@ -1906,7 +1929,7 @@ const Prescription = () => {
                                 }}
                               >
                                 Custom
-                              </button>
+                              </button> */}
                               <button
                                 type="button"
                                 className="text-xs px-2 py-1 bg-blue-200 rounded hover:bg-blue-300"
@@ -1982,7 +2005,7 @@ const Prescription = () => {
                               <option value="14 days">14 days</option>
                             </select>
                             <div className="absolute right-2 top-2 flex space-x-1">
-                              <button
+                              {/* <button
                                 type="button"
                                 className="text-xs px-2 py-1 bg-gray-200 rounded hover:bg-gray-300"
                                 onClick={() => {
@@ -1992,7 +2015,7 @@ const Prescription = () => {
                                 }}
                               >
                                 Custom
-                              </button>
+                              </button> */}
                               <button
                                 type="button"
                                 className="text-xs px-2 py-1 bg-blue-200 rounded hover:bg-blue-300"
@@ -2393,7 +2416,7 @@ const Prescription = () => {
 
       {/* PDF Modal */}
       {showPDFModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 w-full max-w-4xl">
             <div className="flex flex-wrap justify-between items-center gap-2 mb-4">
               <h2 className="text-lg font-semibold text-gray-800">
@@ -2406,6 +2429,7 @@ const Prescription = () => {
                       doctor={doctor}
                       patient={patient}
                       diagnosis={diagnosis}
+                      notes={notes}
                       medicines={medicines}
                       labReports={labReports}
                       labTest={labTest}
@@ -2439,7 +2463,7 @@ const Prescription = () => {
                   doctor={doctor}
                   patient={patient}
                   diagnosis={diagnosis}
-                                      notes={notes}
+                  notes={notes}
                   medicines={medicines}
                   labReports={labReports}
                   labTest={labTest}
@@ -2451,12 +2475,14 @@ const Prescription = () => {
               <PDFDownloadLink
                 document={
                   <PrescriptionPDF
-                    doctor={doctor}
-                    patient={patient}
-                    diagnosis={diagnosis}
-                    medicines={medicines}
-                    labReports={labReports}
-                    vitals={vitals}
+                  doctor={doctor}
+                  patient={patient}
+                  diagnosis={diagnosis}
+                  notes={notes}
+                  medicines={medicines}
+                  labReports={labReports}
+                  labTest={labTest}
+                  vitals={vitals}
                   />
                 }
                 fileName={`${patient.name}-prescription.pdf`}

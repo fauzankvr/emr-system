@@ -69,20 +69,20 @@ async function generatePrescriptionPDF(
   const vitals = patient?.vitals || {};
   const prescriptionDate = new Date(prescription.createdAt || Date.now());
 
-// Date and time (12-hour format)
-const formattedDateTime = convertDate(prescriptionDate);
+  // Date and time (12-hour format)
+  const formattedDateTime = convertDate(prescriptionDate);
 
-function convertDate(date:Date){
-return date.toLocaleString("en-GB", {
-day: "2-digit",
-month: "2-digit",
-year: "numeric",
-hour: "2-digit",
-minute: "2-digit",
-hour12: true,
-timeZone: "Asia/Kolkata", 
-})}
-
+  function convertDate(date: Date) {
+    return date.toLocaleString("en-GB", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true,
+      timeZone: "Asia/Kolkata",
+    });
+  }
 
   let currentY = 30;
 
@@ -144,26 +144,25 @@ timeZone: "Asia/Kolkata",
     .text(patient.age, 70, currentY + 30);
 
   // Diagnosis
-doc
-.font("Helvetica-Bold")
-.text("Diagnosis: ", 30, currentY + 45)
-.font("Helvetica")
-.text(prescription.diagnosis || "-", 90, currentY + 45);
+  doc
+    .font("Helvetica-Bold")
+    .text("Diagnosis: ", 30, currentY + 45)
+    .font("Helvetica")
+    .text(prescription.diagnosis || "-", 90, currentY + 45);
 
-// Additional Notes (below Diagnosis)
-doc
-.font("Helvetica-Bold")
-.text("Additional Notes: ", 30, currentY + 60) 
-.font("Helvetica")
-.text(prescription.notes || "-", 120, currentY + 60);
+  // Additional Notes (below Diagnosis)
+  doc
+    .font("Helvetica-Bold")
+    .text("Additional Notes: ", 30, currentY + 60)
+    .font("Helvetica")
+    .text(prescription.notes || "-", 120, currentY + 60);
 
-// Date & Time (after Notes)
-doc
-.font("Helvetica-Bold")
-.text("Date & Time: ", 30, currentY + 75) 
-.font("Helvetica")
-.text(formattedDateTime, 120, currentY + 75);
-
+  // Date & Time (after Notes)
+  doc
+    .font("Helvetica-Bold")
+    .text("Date & Time: ", 30, currentY + 75)
+    .font("Helvetica")
+    .text(formattedDateTime, 120, currentY + 75);
 
   // Right column - Vitals
   const rightColX = 320;
@@ -285,16 +284,33 @@ doc
 
   currentY += 20;
 
+  // Helper function to calculate text height
+  function calculateTextHeight(text: string, availableWidth: number, fontSize: number): number {
+    const averageCharWidth = fontSize * 0.6; // Approximate character width
+    const charactersPerLine = Math.floor(availableWidth / averageCharWidth);
+    const estimatedLines = Math.ceil(text.length / charactersPerLine);
+    const lineHeight = fontSize * 1.2; // Line height is typically 1.2 times font size
+    return Math.max(estimatedLines * lineHeight, fontSize + 5); // Minimum height
+  }
+
   // Medicine rows
   const medicines = prescription.medicines || [];
   if (medicines.length > 0) {
     medicines.forEach((med: any, index: number) => {
       // Calculate dynamic row height based on content
       let rowHeight = 25; // Base height
-      if (med.medicine?.content) rowHeight += 15;
+      
+      if (med.medicine?.content) {
+        const contentText = `Content: ${med.medicine.content}`;
+        const availableWidth = colWidths[1] - 10;
+        const contentHeight = calculateTextHeight(contentText, availableWidth, 8);
+        rowHeight += contentHeight + 8; // Add content height plus spacing
+      }
+      
       if (med.isTapering && med.tapering?.length > 0) {
-        rowHeight += 15; // For "Tapering:" header
-        rowHeight += med.tapering.length * 12; // For each tapering schedule
+        rowHeight += 20; // For "Tapering:" header with spacing
+        rowHeight += med.tapering.length * 15; // For each tapering schedule with better spacing
+        rowHeight += 5; // Extra buffer
       }
       
       // Check if we need a new page
@@ -308,6 +324,7 @@ doc
         doc.rect(tableStartX, currentY, tableWidth, rowHeight).fill("#FAFAFA");
       }
 
+      // Main row content
       doc
         .font("Helvetica")
         .fontSize(9)
@@ -319,16 +336,21 @@ doc
         .text(med.duration || " ", tableStartX + colWidths[0] + colWidths[1] + colWidths[2] + colWidths[3] + 5, currentY + 6)
         .text(med.instructions || " ", tableStartX + colWidths[0] + colWidths[1] + colWidths[2] + colWidths[3] + colWidths[4] + 5, currentY + 6);
 
-      let additionalY = currentY + 18;
+      let additionalY = currentY + 20; // Start additional content below main row
 
-      // Medicine content (if available)
+      // Medicine content (if available) - with improved spacing
       if (med.medicine?.content) {
+        const contentText = `Content: ${med.medicine.content}`;
+        const availableWidth = colWidths[1] - 10;
+        const contentHeight = calculateTextHeight(contentText, availableWidth, 8);
+        
         doc
           .font("Helvetica")
           .fontSize(8)
           .fillColor(colors.gray)
-          .text(`Content: ${med.medicine.content}`, tableStartX + colWidths[0] + 5, additionalY, { width: colWidths[1] - 10 });
-        additionalY += 15;
+          .text(contentText, tableStartX + colWidths[0] + 5, additionalY, { width: availableWidth });
+        
+        additionalY += contentHeight + 10; // Increased spacing from content to next section
       }
 
       // Tapering schedule (if available)
@@ -338,15 +360,15 @@ doc
           .fontSize(8)
           .fillColor(colors.black)
           .text(`Tapering: ${med.tapering.length}`, tableStartX + colWidths[0] + 5, additionalY, { width: colWidths[1] - 10 });
-        additionalY += 12;
+        additionalY += 18; // Increased spacing after tapering header
 
-        med.tapering.forEach((taper: any) => {
+        med.tapering.forEach((taper: any, taperIndex: number) => {
           doc
             .font("Helvetica")
             .fontSize(8)
             .fillColor(colors.gray)
             .text(`${taper.dosage} for ${taper.days}`, tableStartX + colWidths[0] + 15, additionalY, { width: colWidths[1] - 20 });
-          additionalY += 12;
+          additionalY += 15; // Increased spacing between tapering items
         });
       }
 
@@ -354,7 +376,7 @@ doc
     });
   } else {
     // Default medicine as shown in image
-    const rowHeight = 40; // Increased to accommodate content
+    const rowHeight = 40;
     
     // Check if we need a new page
     if (currentY + rowHeight > doc.page.height - 80) {
@@ -382,33 +404,39 @@ doc
     currentY += rowHeight;
   }
 
+  // Calculate total table height for border
+  let totalTableHeight = 20; // Header height
+  if (medicines.length > 0) {
+    medicines.forEach((med: any) => {
+      let rowHeight = 25;
+      if (med.medicine?.content) {
+        const contentText = `Content: ${med.medicine.content}`;
+        const availableWidth = colWidths[1] - 10;
+        const contentHeight = calculateTextHeight(contentText, availableWidth, 8);
+        rowHeight += contentHeight + 8;
+      }
+      if (med.isTapering && Array.isArray(med.tapering) && med.tapering.length > 0) {
+        rowHeight += 20 + med.tapering.length * 15 + 5;
+      }
+      totalTableHeight += rowHeight;
+    });
+  } else {
+    totalTableHeight += 40;
+  }
+
   // Table border
   doc
     .strokeColor(colors.lightGray)
     .lineWidth(1)
-    .rect(tableStartX, currentY - (medicines.length > 0 ? medicines.reduce((total, med) => {
-      let height = 25;
-      if (med.medicine?.content) height += 15;
-      if (med.isTapering && Array.isArray(med.tapering) && med.tapering.length > 0) {
-        height += 15 + med.tapering.length * 12;
-      }
-      return total + height;
-    }, 0) : 40) - 20, tableWidth, (medicines.length > 0 ? medicines.reduce((total, med) => {
-      let height = 25;
-      if (med.medicine?.content) height += 15;
-      if (med.isTapering && Array.isArray(med.tapering) && med.tapering.length > 0) {
-        height += 15 + med.tapering.length * 12;
-      }
-      return total + height;
-    }, 0) : 40) + 20)
+    .rect(tableStartX, currentY - totalTableHeight, tableWidth, totalTableHeight)
     .stroke();
 
   currentY += 30;
 
   // --- LAB TESTS ON NEXT VISIT ---
   const labTests = prescription.labTest || [];
-  const labTestsHeight = labTests.length > 0 ? 32 + (labTests.length * 15) : 32; // Header + tests
-  const footerHeight = 60; // Space needed for footer (including signature)
+  const labTestsHeight = labTests.length > 0 ? 32 + (labTests.length * 15) : 32;
+  const footerHeight = 80; // Increased footer height
 
   // Check if we have enough space for lab tests section + footer
   if (currentY + labTestsHeight + footerHeight > doc.page.height - 30) {
@@ -432,7 +460,7 @@ doc
 
   // --- FOOTER WITH SIGNATURE SECTION ---
   // Footer positioned at bottom with signature included
-  const footerY = doc.page.height - 60;
+  const footerY = doc.page.height - 80;
   
   // Left side - Software attribution
   doc
@@ -445,18 +473,18 @@ doc
   // Right side - Signature
   const signatureX = doc.page.width - 200;
   
- // Signature text
-doc
-.font("Helvetica")
-.fontSize(8)
-.fillColor(colors.black)
-.text("Signed by:", signatureX, footerY + 5);
+  // Signature text
+  doc
+    .font("Helvetica")
+    .fontSize(8)
+    .fillColor(colors.black)
+    .text("Signed by:", signatureX, footerY + 5);
 
-// Doctor name on the next line
-doc
-.font("Helvetica-Bold")
-.fontSize(8)
-.text("Dr Mansoor Ali V.P", signatureX, footerY + 15);
+  // Doctor name on the next line
+  doc
+    .font("Helvetica-Bold")
+    .fontSize(8)
+    .text("Dr Mansoor Ali V.P", signatureX, footerY + 15);
 
   doc.end();
 

@@ -1,7 +1,8 @@
     import React, { useState } from 'react';
     import { X, Plus, Edit, Trash2,Pencil } from 'lucide-react';
     import { axiosInstance } from '../../../API/axiosInstance';
-    import { toast } from 'react-toastify';
+    import { toast, ToastContainer } from 'react-toastify';
+import ConfirmToast from '../ConfirmModal';
 
     const AddItemModal = ({ 
 isOpen, 
@@ -118,50 +119,89 @@ name: ''
   };
 
   const handleDeleteItem = async (item) => {
-    if (!window.confirm('Are you sure you want to delete this item?')) {
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const endpoint = getApiEndpoint();
-      await axiosInstance.delete(`${endpoint}/${item._id}`);
-      toast.success(`${type.charAt(0).toUpperCase() + type.slice(1)} deleted successfully`);
-      fetchExistingItems(); // Refresh the list
-    } catch (error) {
-      console.error('Error deleting item:', error);
-      toast.error(error.response?.data?.message || 'Failed to delete item');
-    } finally {
-      setLoading(false);
-    }
+    return new Promise((resolve) => {
+      const confirmToast = toast.info(
+        <ConfirmToast
+          message="Are you sure you want to delete this item?"
+          onConfirm={async () => {
+            toast.dismiss(confirmToast); // close confirmation
+            setLoading(true);
+            try {
+              const endpoint = getApiEndpoint();
+              await axiosInstance.delete(`${endpoint}/${item._id}`);
+              toast.success(
+                `${type.charAt(0).toUpperCase() + type.slice(1)} deleted successfully`
+              );
+              fetchExistingItems(); // Refresh the list
+            } catch (error) {
+              console.error("Error deleting item:", error);
+              toast.error(error.response?.data?.message || "Failed to delete item");
+            } finally {
+              setLoading(false);
+              resolve();
+            }
+          }}
+          onCancel={() => toast.dismiss(confirmToast)}
+        />,
+        {
+          position: "top-center",
+          autoClose: false,
+          closeOnClick: false,
+          closeButton: false,
+          draggable: false,
+        }
+      );
+    });
   };
 
-    const handleDelete = async () => {
-        if (!editItem) return;
-        
-        if (!window.confirm('Are you sure you want to delete this item?')) {
-        return;
+  const handleDelete = async () => {
+    if (!editItem) return;
+  
+    return new Promise((resolve) => {
+      const confirmToast = toast.info(
+        <ConfirmToast
+          message="Are you sure you want to delete this item?"
+          onConfirm={async () => {
+            toast.dismiss(confirmToast); // Close confirmation toast
+            setLoading(true);
+            try {
+              const endpoint = getApiEndpoint();
+              await axiosInstance.delete(`${endpoint}/${editItem._id}`);
+              toast.success(
+                `${type.charAt(0).toUpperCase() + type.slice(1)} deleted successfully`
+              );
+              onItemUpdated(null); // Signal deletion
+              onClose(); // Close modal or UI
+            } catch (error) {
+              console.error("Error deleting item:", error);
+              toast.error(error.response?.data?.message || "Failed to delete item");
+            } finally {
+              setLoading(false);
+              resolve();
+            }
+          }}
+          onCancel={() => {
+            toast.dismiss(confirmToast);
+            resolve();
+          }}
+        />,
+        {
+          position: "top-center",
+          autoClose: false,
+          closeOnClick: false,
+          closeButton: false,
+          draggable: false,
         }
-
-        setLoading(true);
-        try {
-        const endpoint = getApiEndpoint();
-        await axiosInstance.delete(`${endpoint}/${editItem._id}`);
-        toast.success(`${type.charAt(0).toUpperCase() + type.slice(1)} deleted successfully`);
-        onItemUpdated(null); // Signal deletion
-        onClose();
-        } catch (error) {
-        console.error('Error deleting item:', error);
-        toast.error(error.response?.data?.message || 'Failed to delete item');
-        } finally {
-        setLoading(false);
-        }
-    };
+      );
+    });
+  };
+  
 
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50">
+        <ToastContainer/>
         <div className="bg-white rounded-lg p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-4">
             <h2 className="text-lg font-semibold text-gray-800">{getTitle()}</h2>
@@ -233,7 +273,7 @@ name: ''
                 // Add mode - show existing items and add form
                 <div className="space-y-4">
                     {/* Existing Items */}
-                    {showExistingItems && existingItems.length > 0 && (
+                    {/* {showExistingItems && existingItems.length > 0 && (
                         <div>
                             <h3 className="text-sm font-medium text-gray-700 mb-2">Existing {type.charAt(0).toUpperCase() + type.slice(1)}s</h3>
                             <div className="max-h-40 overflow-y-auto border border-gray-200 rounded-md">
@@ -260,7 +300,7 @@ name: ''
                                 ))}
                             </div>
                         </div>
-                    )}
+                    )} */}
 
                     {/* Add New Form */}
                     <div className="border-t pt-4">
