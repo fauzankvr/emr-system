@@ -10,7 +10,6 @@ export class FrequencyService {
       if (existingFrequency) {
         throw new ApiError(400, "Frequency with this name or code already exists");
       }
-      
       return await Frequency.create(data);
     } catch (error) {
       if (error instanceof ApiError) throw error;

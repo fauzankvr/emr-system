@@ -12,6 +12,7 @@ import diagnosisRoutes from "./routes/diagnosis.routes"
 import frequencyRoutes from "./routes/frequency.routes"
 import instructionRoutes from "./routes/instruction.routes"
 import daysRoutes from "./routes/days.routes"
+import dosageRoutes from "./routes/dosage.routes"
 dotenv.config();
 
 const app = express();
@@ -42,5 +43,6 @@ app.use('/api/diagnosis', diagnosisRoutes);
 app.use('/api/frequency', frequencyRoutes);
 app.use('/api/instruction', instructionRoutes);
 app.use('/api/days', daysRoutes);
+app.use('/api/dosage', dosageRoutes);
 
 export default app;

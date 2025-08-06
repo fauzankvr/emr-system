@@ -148,14 +148,14 @@ async function generatePrescriptionPDF(
     .font("Helvetica-Bold")
     .text("Diagnosis: ", 30, currentY + 45)
     .font("Helvetica")
-    .text(prescription.diagnosis || "-", 90, currentY + 45);
+    .text(prescription.diagnosis || "-", 90, currentY + 45, { width: 230 });
 
   // Additional Notes (below Diagnosis)
   doc
     .font("Helvetica-Bold")
     .text("Additional Notes: ", 30, currentY + 60)
     .font("Helvetica")
-    .text(prescription.notes || "-", 120, currentY + 60);
+    .text(prescription.notes || "-", 120, currentY + 60, { width: 200 });
 
   // Date & Time (after Notes)
   doc
@@ -214,13 +214,13 @@ async function generatePrescriptionPDF(
         .fontSize(10)
         .text("Report Name: ", 30, currentY)
         .font("Helvetica")
-        .text(report.name || " ", 100, currentY);
+        .text(report.name || " ", 100, currentY, { width: 400 });
 
       doc
         .font("Helvetica-Bold")
         .text("Value: ", 30, currentY + 12)
         .font("Helvetica")
-        .text(report.value || " ", 100, currentY + 12);
+        .text(report.value || " ", 100, currentY + 12, { width: 400 });
 
       doc
         .font("Helvetica-Bold")
@@ -231,7 +231,6 @@ async function generatePrescriptionPDF(
       currentY += 45;
     });
   } else {
-    // Default lab report as shown in image
     doc
       .font("Helvetica-Bold")
       .fontSize(10)
@@ -265,7 +264,7 @@ async function generatePrescriptionPDF(
   // Medicine table header
   const tableStartX = 30;
   const tableWidth = doc.page.width - 60;
-  const colWidths = [30, 150, 80, 80, 60, 100]; // Sl, Medicine, Type, Dosage, Duration, Instructions
+  const colWidths = [30, 120, 60, 60, 60, 60, 90]; // Sl, Medicine, Dosage, Type, Frequency, Duration, Instructions
 
   // Header background
   doc.rect(tableStartX, currentY, tableWidth, 20).fill(colors.lightGray);
@@ -277,10 +276,11 @@ async function generatePrescriptionPDF(
     .fillColor(colors.black)
     .text("Sl", tableStartX + 5, currentY + 6)
     .text("Medicine", tableStartX + colWidths[0] + 5, currentY + 6)
-    .text("Type", tableStartX + colWidths[0] + colWidths[1] + 5, currentY + 6)
-    .text("Frequency", tableStartX + colWidths[0] + colWidths[1] + colWidths[2] + 5, currentY + 6)
-    .text("Duration", tableStartX + colWidths[0] + colWidths[1] + colWidths[2] + colWidths[3] + 5, currentY + 6)
-    .text("Instructions", tableStartX + colWidths[0] + colWidths[1] + colWidths[2] + colWidths[3] + colWidths[4] + 5, currentY + 6);
+    .text("Dosage", tableStartX + colWidths[0] + colWidths[1] + 5, currentY + 6)
+    .text("Type", tableStartX + colWidths[0] + colWidths[1] + colWidths[2] + 5, currentY + 6)
+    .text("Frequency", tableStartX + colWidths[0] + colWidths[1] + colWidths[2] + colWidths[3] + 5, currentY + 6)
+    .text("Duration", tableStartX + colWidths[0] + colWidths[1] + colWidths[2] + colWidths[3] + colWidths[4] + 5, currentY + 6)
+    .text("Instructions", tableStartX + colWidths[0] + colWidths[1] + colWidths[2] + colWidths[3] + colWidths[4] + colWidths[5] + 5, currentY + 6);
 
   currentY += 20;
 
@@ -300,19 +300,45 @@ async function generatePrescriptionPDF(
       // Calculate dynamic row height based on content
       let rowHeight = 25; // Base height
       
+      // Calculate heights for each column with wrapping
+      const medicineText = med.medicine?.name || " ";
+      const dosageText = med.dosageAmount || "-";
+      const typeText = med.medicine?.dosageForm || "-";
+      const frequencyText = med.dosage || " ";
+      const durationText = med.duration || " ";
+      const instructionsText = med.instructions || " ";
+
+      const medicineHeight = calculateTextHeight(medicineText, colWidths[1] - 10, 9);
+      const dosageHeight = calculateTextHeight(dosageText, colWidths[2] - 10, 9);
+      const typeHeight = calculateTextHeight(typeText, colWidths[3] - 10, 9);
+      const frequencyHeight = calculateTextHeight(frequencyText, colWidths[4] - 10, 9);
+      const durationHeight = calculateTextHeight(durationText, colWidths[5] - 10, 9);
+      const instructionsHeight = calculateTextHeight(instructionsText, colWidths[6] - 10, 9);
+
+      let contentHeight = 0;
       if (med.medicine?.content) {
         const contentText = `Content: ${med.medicine.content}`;
-        const availableWidth = colWidths[1] - 10;
-        const contentHeight = calculateTextHeight(contentText, availableWidth, 8);
+        contentHeight = calculateTextHeight(contentText, colWidths[1] - 10, 8);
         rowHeight += contentHeight + 8; // Add content height plus spacing
       }
       
       if (med.isTapering && med.tapering?.length > 0) {
         rowHeight += 20; // For "Tapering:" header with spacing
-        rowHeight += med.tapering.length * 15; // For each tapering schedule with better spacing
+        rowHeight += med.tapering.length * 15; // For each tapering schedule
         rowHeight += 5; // Extra buffer
       }
-      
+
+      // Use the maximum height among all columns
+      rowHeight = Math.max(
+        rowHeight,
+        medicineHeight,
+        dosageHeight,
+        typeHeight,
+        frequencyHeight,
+        durationHeight,
+        instructionsHeight
+      );
+
       // Check if we need a new page
       if (currentY + rowHeight > doc.page.height - 80) {
         doc.addPage();
@@ -324,33 +350,31 @@ async function generatePrescriptionPDF(
         doc.rect(tableStartX, currentY, tableWidth, rowHeight).fill("#FAFAFA");
       }
 
-      // Main row content
+      // Main row content with wrapping
       doc
         .font("Helvetica")
         .fontSize(9)
         .fillColor(colors.black)
-        .text((index + 1).toString(), tableStartX + 5, currentY + 6)
-        .text(med.medicine?.name || " ", tableStartX + colWidths[0] + 5, currentY + 6, { width: colWidths[1] - 10 })
-        .text(med.medicine?.dosageForm || "-", tableStartX + colWidths[0] + colWidths[1] + 5, currentY + 6)
-        .text(med.dosage || " ", tableStartX + colWidths[0] + colWidths[1] + colWidths[2] + 5, currentY + 6)
-        .text(med.duration || " ", tableStartX + colWidths[0] + colWidths[1] + colWidths[2] + colWidths[3] + 5, currentY + 6)
-        .text(med.instructions || " ", tableStartX + colWidths[0] + colWidths[1] + colWidths[2] + colWidths[3] + colWidths[4] + 5, currentY + 6);
+        .text((index + 1).toString(), tableStartX + 5, currentY + 6, { width: colWidths[0] - 10 })
+        .text(medicineText, tableStartX + colWidths[0] + 5, currentY + 6, { width: colWidths[1] - 10 })
+        .text(dosageText, tableStartX + colWidths[0] + colWidths[1] + 5, currentY + 6, { width: colWidths[2] - 10 })
+        .text(typeText, tableStartX + colWidths[0] + colWidths[1] + colWidths[2] + 5, currentY + 6, { width: colWidths[3] - 10 })
+        .text(frequencyText, tableStartX + colWidths[0] + colWidths[1] + colWidths[2] + colWidths[3] + 5, currentY + 6, { width: colWidths[4] - 10 })
+        .text(durationText, tableStartX + colWidths[0] + colWidths[1] + colWidths[2] + colWidths[3] + colWidths[4] + 5, currentY + 6, { width: colWidths[5] - 10 })
+        .text(instructionsText, tableStartX + colWidths[0] + colWidths[1] + colWidths[2] + colWidths[3] + colWidths[4] + colWidths[5] + 5, currentY + 6, { width: colWidths[6] - 10 });
 
       let additionalY = currentY + 20; // Start additional content below main row
 
-      // Medicine content (if available) - with improved spacing
+      // Medicine content (if available)
       if (med.medicine?.content) {
         const contentText = `Content: ${med.medicine.content}`;
-        const availableWidth = colWidths[1] - 10;
-        const contentHeight = calculateTextHeight(contentText, availableWidth, 8);
-        
         doc
           .font("Helvetica")
           .fontSize(8)
           .fillColor(colors.gray)
-          .text(contentText, tableStartX + colWidths[0] + 5, additionalY, { width: availableWidth });
+          .text(contentText, tableStartX + colWidths[0] + 5, additionalY, { width: colWidths[1] - 10 });
         
-        additionalY += contentHeight + 10; // Increased spacing from content to next section
+        additionalY += contentHeight + 10;
       }
 
       // Tapering schedule (if available)
@@ -360,7 +384,7 @@ async function generatePrescriptionPDF(
           .fontSize(8)
           .fillColor(colors.black)
           .text(`Tapering: ${med.tapering.length}`, tableStartX + colWidths[0] + 5, additionalY, { width: colWidths[1] - 10 });
-        additionalY += 18; // Increased spacing after tapering header
+        additionalY += 18;
 
         med.tapering.forEach((taper: any, taperIndex: number) => {
           doc
@@ -368,17 +392,15 @@ async function generatePrescriptionPDF(
             .fontSize(8)
             .fillColor(colors.gray)
             .text(`${taper.dosage} for ${taper.days}`, tableStartX + colWidths[0] + 15, additionalY, { width: colWidths[1] - 20 });
-          additionalY += 15; // Increased spacing between tapering items
+          additionalY += 15;
         });
       }
 
       currentY += rowHeight;
     });
   } else {
-    // Default medicine as shown in image
     const rowHeight = 40;
     
-    // Check if we need a new page
     if (currentY + rowHeight > doc.page.height - 80) {
       doc.addPage();
       currentY = 30;
@@ -393,7 +415,8 @@ async function generatePrescriptionPDF(
       .text(" ", tableStartX + colWidths[0] + colWidths[1] + 5, currentY + 6)
       .text(" ", tableStartX + colWidths[0] + colWidths[1] + colWidths[2] + 5, currentY + 6)
       .text(" ", tableStartX + colWidths[0] + colWidths[1] + colWidths[2] + colWidths[3] + 5, currentY + 6)
-      .text(" ", tableStartX + colWidths[0] + colWidths[1] + colWidths[2] + colWidths[3] + colWidths[4] + 5, currentY + 6);
+      .text(" ", tableStartX + colWidths[0] + colWidths[1] + colWidths[2] + colWidths[3] + colWidths[4] + 5, currentY + 6)
+      .text(" ", tableStartX + colWidths[0] + colWidths[1] + colWidths[2] + colWidths[3] + colWidths[4] + colWidths[5] + 5, currentY + 6);
 
     doc
       .font("Helvetica")
@@ -409,10 +432,33 @@ async function generatePrescriptionPDF(
   if (medicines.length > 0) {
     medicines.forEach((med: any) => {
       let rowHeight = 25;
+      const medicineText = med.medicine?.name || " ";
+      const dosageText = med.dosageAmount || "-";
+      const typeText = med.medicine?.dosageForm || "-";
+      const frequencyText = med.dosage || " ";
+      const durationText = med.duration || " ";
+      const instructionsText = med.instructions || " ";
+
+      const medicineHeight = calculateTextHeight(medicineText, colWidths[1] - 10, 9);
+      const dosageHeight = calculateTextHeight(dosageText, colWidths[2] - 10, 9);
+      const typeHeight = calculateTextHeight(typeText, colWidths[3] - 10, 9);
+      const frequencyHeight = calculateTextHeight(frequencyText, colWidths[4] - 10, 9);
+      const durationHeight = calculateTextHeight(durationText, colWidths[5] - 10, 9);
+      const instructionsHeight = calculateTextHeight(instructionsText, colWidths[6] - 10, 9);
+
+      rowHeight = Math.max(
+        rowHeight,
+        medicineHeight,
+        dosageHeight,
+        typeHeight,
+        frequencyHeight,
+        durationHeight,
+        instructionsHeight
+      );
+
       if (med.medicine?.content) {
         const contentText = `Content: ${med.medicine.content}`;
-        const availableWidth = colWidths[1] - 10;
-        const contentHeight = calculateTextHeight(contentText, availableWidth, 8);
+        const contentHeight = calculateTextHeight(contentText, colWidths[1] - 10, 8);
         rowHeight += contentHeight + 8;
       }
       if (med.isTapering && Array.isArray(med.tapering) && med.tapering.length > 0) {
@@ -436,9 +482,8 @@ async function generatePrescriptionPDF(
   // --- LAB TESTS ON NEXT VISIT ---
   const labTests = prescription.labTest || [];
   const labTestsHeight = labTests.length > 0 ? 32 + (labTests.length * 15) : 32;
-  const footerHeight = 80; // Increased footer height
+  const footerHeight = 80;
 
-  // Check if we have enough space for lab tests section + footer
   if (currentY + labTestsHeight + footerHeight > doc.page.height - 30) {
     doc.addPage();
     currentY = 30;
@@ -453,16 +498,14 @@ async function generatePrescriptionPDF(
 
   if (labTests.length > 0) {
     labTests.forEach((test: string) => {
-      doc.font("Helvetica").fontSize(10).text(`• ${test}`, 30, currentY);
+      doc.font("Helvetica").fontSize(10).text(`• ${test}`, 30, currentY, { width: 500 });
       currentY += 15;
     });
   }
 
   // --- FOOTER WITH SIGNATURE SECTION ---
-  // Footer positioned at bottom with signature included
   const footerY = doc.page.height - 80;
   
-  // Left side - Software attribution
   doc
     .font("Helvetica")
     .fontSize(8)
@@ -470,17 +513,14 @@ async function generatePrescriptionPDF(
     .text("Prescription Generated by Suhaim Software", 30, footerY)
     .text("Visit us: www.clinicppm.site", 30, footerY + 15);
 
-  // Right side - Signature
   const signatureX = doc.page.width - 200;
   
-  // Signature text
   doc
     .font("Helvetica")
     .fontSize(8)
     .fillColor(colors.black)
     .text("Signed by:", signatureX, footerY + 5);
 
-  // Doctor name on the next line
   doc
     .font("Helvetica-Bold")
     .fontSize(8)

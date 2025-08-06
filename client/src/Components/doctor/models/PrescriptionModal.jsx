@@ -35,14 +35,15 @@ class PDFErrorBoundary extends React.Component {
     return this.props.children;
   }
 }
-
 // PDF Styles
 const styles = StyleSheet.create({
   page: {
-    padding: 15,
     fontFamily: "Helvetica",
-    fontSize: 12,
+    fontSize: 10,
     backgroundColor: "#FFFFFF",
+  },
+  container: {
+    padding: 10, // New padding for elements other than header
   },
   header: {
     backgroundColor: "#009688",
@@ -51,11 +52,11 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
   },
   headerText: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: "bold",
   },
   subHeaderText: {
-    fontSize: 10,
+    fontSize: 8,
     marginTop: 2,
   },
   section: {
@@ -64,7 +65,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontWeight: "bold",
-    fontSize: 13,
+    fontSize: 11,
     marginBottom: 2,
   },
   row: {
@@ -95,16 +96,16 @@ const styles = StyleSheet.create({
   },
   tableCellHeader: {
     fontWeight: "bold",
-    fontSize: 11,
+    fontSize: 9,
   },
   tableCell: {
-    fontSize: 11,
+    fontSize: 9,
   },
   TapringHed: {
-    fontSize: 10,
+    fontSize: 8,
   },
   TapringP: {
-    fontSize: 10,
+    fontSize: 8,
   },
   label: {
     fontWeight: "bold",
@@ -121,11 +122,11 @@ const styles = StyleSheet.create({
     right: 15,
     backgroundColor: "#FAFAFA",
     padding: 5,
-    fontSize: 10,
+    fontSize: 8,
   },
   signature: {
     position: "absolute",
-    bottom:50,
+    bottom: 50,
     right: 20,
     textAlign: "right",
   },
@@ -139,18 +140,18 @@ const PrescriptionPDF = memo(
       regNo: "35083",
       contact: "9895353078",
     },
-    patient = { name: " ", mobile: " ", age: " " },
-    diagnosis = " ",
-    notes = " ",
+    patient = { name: "-", mobile: "-", age: "-" },
+    diagnosis = "-",
+    notes = "-",
     medicines = [],
     labReports = [],
     labTest = [],
     vitals = {
-      spo2: " ",
-      bp: " ",
-      pulse: " ",
-      temp: " ",
-      weight: " ",
+      spo2: "-",
+      bp: "-",
+      pulse: "-",
+      temp: "-",
+      weight: "-",
     },
   }) => {
     const today = new Date();
@@ -172,228 +173,239 @@ const PrescriptionPDF = memo(
               Dr.{doctor.name}, MD (PHYSICIAN)
             </Text>
             <Text style={styles.subHeaderText}>
-              General Practitioner | Reg No: {doctor.regNo} | +91{" "}
-              {doctor.contact}
+              General Practitioner | Reg No: 35083 | +91 9895353078
             </Text>
             <Text style={styles.subHeaderText}>
               Pathappiriyam | BOOKING NO: +918606344694
             </Text>
           </View>
 
-          {/* Patient Information */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Patient Information</Text>
-            <View style={styles.row}>
-              <View style={{ width: "60%" }}>
-                <Text>
-                  <Text style={styles.label}>Name:</Text> {patient.name}
-                </Text>
-                <Text>
-                  <Text style={styles.label}>Phone:</Text>{" "}
-                  {patient.mobile || patient.phone}
-                </Text>
-                <Text>
-                  <Text style={styles.label}>Age:</Text> {patient.age}
-                </Text>
-                <Text>
-                  <Text style={styles.label}>Diagnosis:</Text>{" "}
-                  {diagnosis || "N/A"}
-                </Text>
-                <Text>
-                <Text style={styles.label}>Additional Notes:</Text>{" "}
-                {notes || "N/A"}
-              </Text>
-                <Text>
-                  <Text style={styles.label}>Date & Time:</Text> {formattedDate}
-                </Text>
-              </View>
-              <View style={{ width: "30%" }}>
-                <Text>
-                  <Text style={styles.label}>SpO2:</Text> {vitals.spo2 || "-"}
-                </Text>
-                <Text>
-                  <Text style={styles.label}>BP:</Text> {vitals.bp || "-"}
-                </Text>
-                <Text>
-                  <Text style={styles.label}>Pulse:</Text> {vitals.pulse || "-"}
-                </Text>
-                <Text>
-                  <Text style={styles.label}>Temp:</Text> {vitals.temp || "-"}
-                </Text>
-                <Text>
-                  <Text style={styles.label}>Weight:</Text>{" "}
-                  {vitals.weight || "-"}
-                </Text>
+          {/* Container for other elements with padding */}
+          <View style={styles.container}>
+            {/* Patient Information */}
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Patient Information</Text>
+              <View style={styles.row}>
+                <View style={{ width: "60%" }}>
+                  <Text>
+                    <Text style={styles.label}>Name:</Text> {patient.name}
+                  </Text>
+                  <Text>
+                    <Text style={styles.label}>Phone:</Text>{" "}
+                    {patient.mobile || patient.contact}
+                  </Text>
+                  <Text>
+                    <Text style={styles.label}>Age:</Text> {patient.age}
+                  </Text>
+                  <Text>
+                    <Text style={styles.label}>Diagnosis:</Text>{" "}
+                    {diagnosis || "N/A"}
+                  </Text>
+                  <Text>
+                    <Text style={styles.label}>Additional Notes:</Text>{" "}
+                    {notes || "N/A"}
+                  </Text>
+                  <Text>
+                    <Text style={styles.label}>Date & Time:</Text> {formattedDate}
+                  </Text>
+                </View>
+                <View style={{ width: "30%" }}>
+                  <Text>
+                    <Text style={styles.label}>SpO2:</Text> {vitals.spo2}
+                  </Text>
+                  <Text>
+                    <Text style={styles.label}>BP:</Text> {vitals.bp}
+                  </Text>
+                  <Text>
+                    <Text style={styles.label}>Pulse:</Text> {vitals.pulse}
+                  </Text>
+                  <Text>
+                    <Text style={styles.label}>Temp:</Text> {vitals.temp}
+                  </Text>
+                  <Text>
+                    <Text style={styles.label}>Weight:</Text> {vitals.weight}
+                  </Text>
+                </View>
               </View>
             </View>
-          </View>
 
-          <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Lab Report</Text>
-          {labReports.length > 0 ? (
-            labReports.map((report, index) => (
-              <View key={index} style={{ marginBottom: 10 }}>
-                <Text>
-                  <Text style={styles.label}>Report Name:</Text> {report.name}
-                </Text>
-                <Text>
-                  <Text style={styles.label}>Value:</Text>{" "}
-                  {report.values || "-"}
-                </Text>
-                <Text>
-                  <Text style={styles.label}>Report Date:</Text>{" "}
-                  {report.reportDate || "-"}
-                </Text>
-                {/* {report?.reportImageUrl && (
-                  <a href={`${backendUrl}${report.reportImageUrl}`} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline ml-2">View File</a>
-                )} */}
-              </View>
-            ))
-          ) : (
-            <Text>-</Text>
-          )}
-        </View>
-
-          <View style={styles.hr} />
-
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Medicines</Text>
-            <View style={styles.table}>
-              {/* Table Header */}
-              <View style={styles.tableRow}>
-                <View style={[styles.tableColHeader, { width: "10%" }]}>
-                  <Text style={styles.tableCellHeader}>Sl</Text>
-                </View>
-                <View style={[styles.tableColHeader, { width: "35%" }]}>
-                  <Text style={styles.tableCellHeader}>Medicine</Text>
-                </View>
-                <View style={[styles.tableColHeader, { width: "15%" }]}>
-                  <Text style={styles.tableCellHeader}>Type</Text>
-                </View>
-                <View style={[styles.tableColHeader, { width: "15%" }]}>
-                  <Text style={styles.tableCellHeader}>Frequency</Text>
-                </View>
-                <View style={[styles.tableColHeader, { width: "10%" }]}>
-                  <Text style={styles.tableCellHeader}>Duration</Text>
-                </View>
-                <View style={[styles.tableColHeader, { width: "15%" }]}>
-                  <Text style={styles.tableCellHeader}>Instructions</Text>
-                </View>
-              </View>
-
-              {/* Table Rows */}
-              {medicines.length > 0 ? (
-                medicines.map((med, index) => (
-                  <View key={index}>
-                    {/* Main Row */}
-                    <View style={styles.tableRow}>
-                      <View style={[styles.tableCol, { width: "10%" }]}>
-                        <Text style={styles.tableCell}>{index + 1}</Text>
-                      </View>
-
-                      {/* Medicine Name + Content + Tapering */}
-                      <View style={[styles.tableCol, { width: "35%" }]}>
-                        <Text style={styles.tableCell}>
-                          {med.medicine?.name || "-"}
-                        </Text>
-
-                        {/* Content (Note) */}
-                        {med.medicine?.content && (
-                          <Text
-                            style={[
-                              styles.TapringHed,
-                              {
-                                fontStyle: "italic",
-                                color: "#4B5563",
-                                marginTop: 2,
-                              },
-                            ]}
-                          >
-                            Content: {med.medicine.content}
-                          </Text>
-                        )}
-
-                        {/* Tapering Schedule */}
-                        {med.isTapering && med.tapering?.length > 0 && (
-                          <>
-                            <Text
-                              style={[
-                                styles.TapringP,
-                                {
-                                  fontWeight: "bold",
-                                  marginTop: 4,
-                                  color: "#374151",
-                                },
-                              ]}
-                            >
-                              Tapering:
-                            </Text>
-                            {med.tapering.map((taper, tIndex) => (
-                              <Text
-                                key={tIndex}
-                                style={[
-                                  styles.TapringP,
-                                  { color: "#6B7280", marginLeft: 6 },
-                                ]}
-                              >
-                                - {taper.dosage || "-"} for {taper.days || "-"}
-                              </Text>
-                            ))}
-                          </>
-                        )}
-                      </View>
-
-                      {/* Other Columns */}
-                      <View style={[styles.tableCol, { width: "15%" }]}>
-                        <Text style={styles.tableCell}>
-                          {med.medicine?.dosageForm || "-"}
-                        </Text>
-                      </View>
-                      <View style={[styles.tableCol, { width: "15%" }]}>
-                        <Text style={styles.tableCell}>
-                          {med.dosage || "-"}
-                        </Text>
-                      </View>
-                      <View style={[styles.tableCol, { width: "10%" }]}>
-                        <Text style={styles.tableCell}>
-                          {med.duration || "-"}
-                        </Text>
-                      </View>
-                      <View style={[styles.tableCol, { width: "15%" }]}>
-                        <Text style={styles.tableCell}>
-                          {med.instructions || "-"}
-                        </Text>
-                      </View>
-                    </View>
+            {/* Lab Report */}
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Lab Report</Text>
+              {labReports.length > 0 ? (
+                labReports.map((report, index) => (
+                  <View key={index} style={{ marginBottom: 10 }}>
+                    <Text>
+                      <Text style={styles.label}>Report Name:</Text> {report.name}
+                    </Text>
+                    <Text>
+                      <Text style={styles.label}>Value:</Text>{" "}
+                      {report.values || "-"}
+                    </Text>
+                    <Text>
+                      <Text style={styles.label}>Report Date:</Text>{" "}
+                      {report.reportDate || "-"}
+                    </Text>
                   </View>
                 ))
               ) : (
+                <Text>-</Text>
+              )}
+            </View>
+
+            <View style={styles.hr} />
+
+            {/* Medicines */}
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Medicines</Text>
+              <View style={styles.table}>
+                {/* Table Header */}
                 <View style={styles.tableRow}>
-                  <View style={[styles.tableCol, { width: "100%" }]}>
-                    <Text style={styles.tableCell}>No Medicines</Text>
+                  <View style={[styles.tableColHeader, { width: "8%" }]}>
+                    <Text style={styles.tableCellHeader}>Sl</Text>
+                  </View>
+                  <View style={[styles.tableColHeader, { width: "25%" }]}>
+                    <Text style={styles.tableCellHeader}>Medicine</Text>
+                  </View>
+                  <View style={[styles.tableColHeader, { width: "12%" }]}>
+                    <Text style={styles.tableCellHeader}>Dosage</Text>
+                  </View>
+                  <View style={[styles.tableColHeader, { width: "12%" }]}>
+                    <Text style={styles.tableCellHeader}>Type</Text>
+                  </View>
+                  <View style={[styles.tableColHeader, { width: "12%" }]}>
+                    <Text style={styles.tableCellHeader}>Frequency</Text>
+                  </View>
+                  <View style={[styles.tableColHeader, { width: "10%" }]}>
+                    <Text style={styles.tableCellHeader}>Duration</Text>
+                  </View>
+                  <View style={[styles.tableColHeader, { width: "21%" }]}>
+                    <Text style={styles.tableCellHeader}>Instructions</Text>
                   </View>
                 </View>
+
+                {/* Table Rows */}
+                {medicines.length > 0 ? (
+                  medicines.map((med, index) => (
+                    <View key={index}>
+                      {/* Main Row */}
+                      <View style={styles.tableRow}>
+                        <View style={[styles.tableCol, { width: "8%" }]}>
+                          <Text style={styles.tableCell}>{index + 1}</Text>
+                        </View>
+
+                        {/* Medicine Name + Content + Tapering */}
+                        <View style={[styles.tableCol, { width: "25%" }]}>
+                          <Text style={styles.tableCell}>
+                            {med.medicine?.name || "-"}
+                          </Text>
+                          {/* Content (Note) */}
+                          {med.medicine?.content && (
+                            <Text
+                              style={[
+                                styles.TapringHed,
+                                {
+                                  fontStyle: "italic",
+                                  color: "#4B5563",
+                                  marginTop: 2,
+                                },
+                              ]}
+                            >
+                              Content: {med.medicine.content}
+                            </Text>
+                          )}
+
+                          {/* Tapering Schedule */}
+                          {med.isTapering && med.tapering?.length > 0 && (
+                            <>
+                              <Text
+                                style={[
+                                  styles.TapringP,
+                                  {
+                                    fontWeight: "bold",
+                                    marginTop: 4,
+                                    color: "#374151",
+                                  },
+                                ]}
+                              >
+                                Tapering:
+                              </Text>
+                              {med.tapering.map((taper, tIndex) => (
+                                <Text
+                                  key={tIndex}
+                                  style={[
+                                    styles.TapringP,
+                                    { color: "#6B7280", marginLeft: 6 },
+                                  ]}
+                                >
+                                  {taper.dosage || "-"} for {taper.days || "-"}
+                                </Text>
+                              ))}
+                            </>
+                          )}
+                        </View>
+
+                        {/* Dosage Column */}
+                        <View style={[styles.tableCol, { width: "12%" }]}>
+                          <Text style={styles.tableCell}>
+                            {med.dosageAmount || "-"}
+                          </Text>
+                        </View>
+
+                        {/* Type (Dosage Form) Column */}
+                        <View style={[styles.tableCol, { width: "12%" }]}>
+                          <Text style={styles.tableCell}>
+                            {med.medicine?.dosageForm || "-"}
+                          </Text>
+                        </View>
+
+                        {/* Frequency Column */}
+                        <View style={[styles.tableCol, { width: "12%" }]}>
+                          <Text style={styles.tableCell}>{med.dosage || "-"}</Text>
+                        </View>
+
+                        {/* Duration Column */}
+                        <View style={[styles.tableCol, { width: "10%" }]}>
+                          <Text style={styles.tableCell}>
+                            {med.duration || "-"}
+                          </Text>
+                        </View>
+
+                        {/* Instructions Column */}
+                        <View style={[styles.tableCol, { width: "21%" }]}>
+                          <Text style={styles.tableCell}>
+                            {med.instructions || "-"}
+                          </Text>
+                        </View>
+                      </View>
+                    </View>
+                  ))
+                ) : (
+                  <View style={styles.tableRow}>
+                    <View style={[styles.tableCol, { width: "100%" }]}>
+                      <Text style={styles.tableCell}>No Medicines</Text>
+                    </View>
+                  </View>
+                )}
+              </View>
+            </View>
+
+            {/* Lab Tests for Next Visit */}
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Lab Tests On Next Visit</Text>
+              {Array.isArray(labTest) && labTest.length > 0 && labTest[0] !== "" ? (
+                labTest.map((val, idx) => (
+                  <Text key={idx}>• {val}</Text>
+                ))
+              ) : (
+                <Text>-</Text>
               )}
             </View>
           </View>
 
-          {/* Lab Tests for Next Visit */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Lab Tests On Next Visit</Text>
-            {Array.isArray(labTest) &&
-            labTest.length > 0 &&
-            labTest[0] !== "" ? (
-              labTest.map((val, idx) => <Text key={idx}>• {val}</Text>)
-            ) : (
-              <Text>-</Text>
-            )}
-          </View>
-
           {/* Signature Placeholder */}
           <View style={styles.signature}>
-            <Text style={{ fontStyle: "italic" }}>
-              Signature: 
-            </Text>
+            <Text style={{ fontStyle: "italic" }}>Signed by</Text>
             <Text style={{ fontWeight: "bold" }}>DR MANSOOR ALI V.P</Text>
           </View>
 
@@ -407,7 +419,6 @@ const PrescriptionPDF = memo(
     );
   }
 );
-
 // PrescriptionModal Component
 const PrescriptionModal = ({ prescriptionId, onClose }) => {
   const [prescription, setPrescription] = useState(null);
@@ -539,10 +550,11 @@ const PrescriptionModal = ({ prescriptionId, onClose }) => {
                     age: prescription.patient.age,
                   }}
                   diagnosis={prescription.diagnosis}
+                  notes={prescription.notes}
                   medicines={prescription.medicines}
                   labReports={prescription.labReports}
                   labTest={prescription.labTest}
-                  vitals={prescription.vitals}
+                  vitals={prescription.patient.vitals}
                 />
               }
               fileName={`${prescription.patient.name}-prescription.pdf`}
