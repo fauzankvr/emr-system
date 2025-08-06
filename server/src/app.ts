@@ -19,7 +19,7 @@ dotenv.config();
 const app = express();
 const allowedOrigins = [
     'http://localhost:5173', 
-    'https://emr-system-yb1t.onrender.com', 
+    'https://emr-system-seven.vercel.app', 
   ];
   
   app.use(
