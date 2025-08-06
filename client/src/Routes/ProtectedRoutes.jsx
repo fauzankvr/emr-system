@@ -15,9 +15,12 @@ function ProtectedRoutes() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const token = localStorage.getItem("token");
-    console.log('token',token)
-    if (token) {
+    const accessToken = localStorage.getItem("accessToken");
+    const refreshToken = localStorage.getItem("refreshToken");
+    console.log('accessToken', accessToken);
+    console.log('refreshToken', refreshToken);
+    
+    if (accessToken && refreshToken) {
       setIsAuthenticated(true);
     }
     setLoading(false);

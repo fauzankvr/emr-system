@@ -13,10 +13,32 @@ import frequencyRoutes from "./routes/frequency.routes"
 import instructionRoutes from "./routes/instruction.routes"
 import daysRoutes from "./routes/days.routes"
 import dosageRoutes from "./routes/dosage.routes"
+import refreshTokenRoutes from "./routes/refreshToken.routes"
 dotenv.config();
 
 const app = express();
-app.use(cors());
+const allowedOrigins = [
+    'http://localhost:5173', 
+    'https://emr-system-yb1t.onrender.com', 
+  ];
+  
+  app.use(
+    cors({
+      origin: (origin, callback) => {
+        // Allow requests with no origin (e.g., mobile apps or curl)
+        if (!origin) return callback(null, true);
+        if (allowedOrigins.includes(origin)) {
+          callback(null, true);
+        } else {
+          callback(new Error('Not allowed by CORS'));
+        }
+      },
+      credentials: true, // Allow cookies, authorization headers, etc.
+    })
+  );
+
+
+
 app.use(express.json());
 
 // Serve static files from uploads directory
@@ -44,5 +66,6 @@ app.use('/api/frequency', frequencyRoutes);
 app.use('/api/instruction', instructionRoutes);
 app.use('/api/days', daysRoutes);
 app.use('/api/dosage', dosageRoutes);
+app.use('/api/auth', refreshTokenRoutes);
 
 export default app;

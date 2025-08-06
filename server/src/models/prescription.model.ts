@@ -28,6 +28,7 @@ export interface IPrescription extends Document {
   patient: Types.ObjectId;
   medicines: IMedicineEntry[];
   diagnosis?: string;
+  bookingNotes?: string;
   notes?: string;
   labReports?: ILabReport[];
   labTest?: string[];
@@ -70,6 +71,7 @@ const PrescriptionSchema = new Schema<IPrescription>(
       },
     ],
     diagnosis: { type: String },
+    bookingNotes:{type:String},
     notes: { type: String },
     labReports: [LabReportSchema],
     labTest: { type: [String], default: [] },

@@ -37,9 +37,6 @@ export class BookingController {
   static async getAvailableSlots(req: Request, res: Response) {
     try {
         const {doctorId, date} = req.query;
-        console.log("doctorId", doctorId);
-        console.log("date", date);
-
         // res.json({data: doctorId});
       const slots = await BookingService.getAvailableSlots(doctorId as string, date as string);
       res.json({ success: true, data: slots });

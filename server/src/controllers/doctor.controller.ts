@@ -29,6 +29,24 @@ export class DoctorController {
         }
     }
 
+    static async logout(req: AuthenticatedRequest, res: Response) {
+        try {
+            const { refreshToken } = req.body;
+            const userId = req.userId;
+
+            if (!refreshToken) {
+                return res.status(HttpStatusCode.BAD_REQUEST).json({
+                    message: 'Refresh token is required'
+                });
+            }
+
+            const result = await DoctorService.logout(userId!, refreshToken);
+            res.status(HttpStatusCode.OK).json(result);
+        } catch (error: any) {
+            res.status(HttpStatusCode.INTERNAL_SERVER_ERROR).json({ message: 'Internal server error', error: error.message });
+        }
+    }
+
     static async getDashboard(req: AuthenticatedRequest, res: Response) {
         try {
             const doctorId = req.userId;

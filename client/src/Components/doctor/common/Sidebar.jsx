@@ -10,7 +10,7 @@ import {
   FaSync,
 } from "react-icons/fa";
 import NavLink from "./NavLink";
-// import { axiosInstance } from "../../../API/axiosInstance";
+import { axiosInstance } from "../../../API/axiosInstance";
 import doctorImg from "../../../assets/doctor_img.jpg";
 function Sidebar() {
   const [doctorInfo, setDoctorInfo] = useState({
@@ -31,9 +31,22 @@ function Sidebar() {
     fetchDoctorInfo();
   }, []);
 
-  const handleLogout = () => {
-    localStorage.removeItem("token");
-    window.location.href = "/doctor/login";
+  const handleLogout = async () => {
+    try {
+      const refreshToken = localStorage.getItem("refreshToken");
+      if (refreshToken) {
+        await axiosInstance.post("/api/doctor/logout", {
+          refreshToken: refreshToken
+        });
+      }
+    } catch (error) {
+      console.error("Logout error:", error);
+    } finally {
+      localStorage.removeItem("accessToken");
+      localStorage.removeItem("refreshToken");
+      localStorage.removeItem("doctorData");
+      window.location.href = "/doctor/login";
+    }
   };
 
   return (

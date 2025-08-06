@@ -39,7 +39,7 @@ export default function AppointmentBookingForm() {
 
   const [selectedSlot, setSelectedSlot] = useState(null);
 
-  // const [bookingNotes, setBookingNotes] = useState("");
+  const [bookingNotes, setBookingNotes] = useState("");
 
   // const [bookingReason, setBookingReason] = useState("");
 
@@ -238,7 +238,7 @@ export default function AppointmentBookingForm() {
         timeSlot: selectedSlot,
         status: "booked",
         // reason: bookingReason,
-        // notes: bookingNotes,
+        notes: bookingNotes,
       };
       await axiosInstance.post("/api/booking", bookingData);
       setBookingSuccess(true);
@@ -262,7 +262,7 @@ export default function AppointmentBookingForm() {
 
     setSelectedSlot(null);
 
-    // setBookingNotes("");
+    setBookingNotes("");
 
     // setBookingReason("");
 
@@ -957,7 +957,7 @@ export default function AppointmentBookingForm() {
             ></textarea>
           </div> */}
 
-          {/* <div className="mb-6">
+          <div className="mb-6">
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Additional Notes
             </label>
@@ -968,7 +968,7 @@ export default function AppointmentBookingForm() {
               className="w-full border rounded-md p-2 h-16 focus:ring-blue-500 focus:border-blue-500"
               placeholder="Enter any additional information"
             ></textarea>
-          </div> */}
+          </div>
 
           {bookingError && (
             <div className="mb-4 p-3 bg-red-50 border-l-4 border-red-500 text-red-700">

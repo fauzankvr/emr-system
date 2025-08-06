@@ -21,7 +21,8 @@ const LoginPage = () => {
       });
 
       console.log(response.data.doctor);
-      localStorage.setItem("token", response.data.token);
+      localStorage.setItem("accessToken", response.data.accessToken);
+      localStorage.setItem("refreshToken", response.data.refreshToken);
       localStorage.setItem("doctorData", JSON.stringify(response.data.doctor)); // Stringify doctorData
 
       toast.success("Login successful!", {

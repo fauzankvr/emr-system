@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Plus, Edit, Trash2, Pencil } from 'lucide-react';
+import { X, Plus, Edit, Trash2 } from 'lucide-react';
 import { axiosInstance } from '../../../API/axiosInstance';
 import { toast, ToastContainer } from 'react-toastify';
 import ConfirmToast from '../ConfirmModal';
@@ -13,7 +13,9 @@ const AddItemModal = ({
   onItemUpdated 
 }) => {
   const [formData, setFormData] = useState({
-    name: ''
+    name: '',
+    dosageForm: '',
+    content: '',
   });
   const [loading, setLoading] = useState(false);
   const [existingItems, setExistingItems] = useState([]);
@@ -24,12 +26,16 @@ const AddItemModal = ({
     if (isOpen) {
       if (editItem) {
         setFormData({
-          name: editItem.name || ''
+          name: editItem.name || '',
+          dosageForm: editItem.dosageForm || '',
+          content: editItem.content || '',
         });
         setShowExistingItems(false);
       } else {
         setFormData({
-          name: ''
+          name: '',
+          dosageForm: '',
+          content: '',
         });
         setShowExistingItems(true);
         fetchExistingItems();
@@ -58,8 +64,10 @@ const AddItemModal = ({
         return `${action} Instruction`;
       case 'days':
         return `${action} Duration`;
-      case 'dosage':  // Added dosage support
+      case 'dosage':
         return `${action} Dosage`;
+      case 'medicine':
+        return `${action} Medicine`;
       default:
         return `${action} Item`;
     }
@@ -75,8 +83,10 @@ const AddItemModal = ({
         return '/api/instruction';
       case 'days':
         return '/api/days';
-      case 'dosage':  // Added dosage API endpoint
+      case 'dosage':
         return '/api/dosage';
+      case 'medicine':
+        return '/api/medicine';
       default:
         return '';
     }
@@ -95,14 +105,21 @@ const AddItemModal = ({
       const endpoint = getApiEndpoint();
       let response;
 
+      // Prepare data to send (omit empty optional fields for medicine)
+      const dataToSend = { name: formData.name };
+      if (type === 'medicine') {
+        if (formData.dosageForm.trim()) dataToSend.dosageForm = formData.dosageForm;
+        if (formData.content.trim()) dataToSend.content = formData.content;
+      }
+
       if (editItem) {
         // Update existing item
-        response = await axiosInstance.put(`${endpoint}/${editItem._id}`, formData);
+        response = await axiosInstance.put(`${endpoint}/${editItem._id}`, dataToSend);
         toast.success(`${type.charAt(0).toUpperCase() + type.slice(1)} updated successfully`);
         onItemUpdated(response.data.data);
       } else {
         // Create new item
-        response = await axiosInstance.post(endpoint, formData);
+        response = await axiosInstance.post(endpoint, dataToSend);
         toast.success(`${type.charAt(0).toUpperCase() + type.slice(1)} added successfully`);
         onItemAdded(response.data.data);
       }
@@ -116,48 +133,6 @@ const AddItemModal = ({
     }
   };
 
-  const handleEditItem = (item) => {
-    setEditItem(item);
-    setFormData({ name: item.name });
-    setShowExistingItems(false);
-  };
-
-  const handleDeleteItem = async (item) => {
-    return new Promise((resolve) => {
-      const confirmToast = toast.info(
-        <ConfirmToast
-          message="Are you sure you want to delete this item?"
-          onConfirm={async () => {
-            toast.dismiss(confirmToast); // close confirmation
-            setLoading(true);
-            try {
-              const endpoint = getApiEndpoint();
-              await axiosInstance.delete(`${endpoint}/${item._id}`);
-              toast.success(
-                `${type.charAt(0).toUpperCase() + type.slice(1)} deleted successfully`
-              );
-              fetchExistingItems(); // Refresh the list
-            } catch (error) {
-              console.error("Error deleting item:", error);
-              toast.error(error.response?.data?.message || "Failed to delete item");
-            } finally {
-              setLoading(false);
-              resolve();
-            }
-          }}
-          onCancel={() => toast.dismiss(confirmToast)}
-        />,
-        {
-          position: "top-center",
-          autoClose: false,
-          closeOnClick: false,
-          closeButton: false,
-          draggable: false,
-        }
-      );
-    });
-  };
-
   const handleDelete = async () => {
     if (!editItem) return;
   
@@ -166,7 +141,7 @@ const AddItemModal = ({
         <ConfirmToast
           message="Are you sure you want to delete this item?"
           onConfirm={async () => {
-            toast.dismiss(confirmToast); // Close confirmation toast
+            toast.dismiss(confirmToast);
             setLoading(true);
             try {
               const endpoint = getApiEndpoint();
@@ -174,8 +149,8 @@ const AddItemModal = ({
               toast.success(
                 `${type.charAt(0).toUpperCase() + type.slice(1)} deleted successfully`
               );
-              onItemUpdated(null); // Signal deletion
-              onClose(); // Close modal or UI
+              onItemUpdated(null);
+              onClose();
             } catch (error) {
               console.error("Error deleting item:", error);
               toast.error(error.response?.data?.message || "Failed to delete item");
@@ -234,6 +209,36 @@ const AddItemModal = ({
               />
             </div>
 
+            {/* Dosage Form and Content Fields for Medicine */}
+            {type === 'medicine' && (
+              <>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Dosage Form
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.dosageForm}
+                    onChange={(e) => setFormData({ ...formData, dosageForm: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Enter dosage form (e.g., Tablet, Syrup)"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Content
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.content}
+                    onChange={(e) => setFormData({ ...formData, content: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Enter content (e.g., 500mg)"
+                  />
+                </div>
+              </>
+            )}
+
             {/* Action Buttons */}
             <div className="flex justify-end space-x-3 pt-4">
               <button
@@ -273,11 +278,13 @@ const AddItemModal = ({
             </div>
           </form>
         ) : (
-          // Add mode - show existing items and add form
+          // Add mode - show add form
           <div className="space-y-4">
             {/* Add New Form */}
             <div className="border-t pt-4">
-              <h3 className="text-sm font-medium text-gray-700 mb-2">Add New {type.charAt(0).toUpperCase() + type.slice(1)}</h3>
+              <h3 className="text-sm font-medium text-gray-700 mb-2">
+                Add New {type.charAt(0).toUpperCase() + type.slice(1)}
+              </h3>
               <form onSubmit={handleSubmit} className="space-y-4">
                 {/* Name Field */}
                 <div>
@@ -293,6 +300,36 @@ const AddItemModal = ({
                     required
                   />
                 </div>
+
+                {/* Dosage Form and Content Fields for Medicine */}
+                {type === 'medicine' && (
+                  <>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Dosage Form
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.dosageForm}
+                        onChange={(e) => setFormData({ ...formData, dosageForm: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="Enter dosage form (e.g., Tablet, Syrup)"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Content
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.content}
+                        onChange={(e) => setFormData({ ...formData, content: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="Enter content (e.g., 500mg)"
+                      />
+                    </div>
+                  </>
+                )}
 
                 {/* Action Buttons */}
                 <div className="flex justify-end space-x-3 pt-4">

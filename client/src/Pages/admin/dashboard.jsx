@@ -27,6 +27,7 @@ function DashboardPage() {
   const [error, setError] = useState(null);
   const [selectedAppointment, setSelectedAppointment] = useState(null);
   const [showModal, setShowModal] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -153,11 +154,13 @@ function DashboardPage() {
       <div className="flex flex-col md:flex-row justify-between items-center mb-6">
         <h1 className="text-2xl font-bold mb-4 md:mb-0">Doctor Dashboard</h1>
         <div className="flex gap-3 items-center">
-          {/* <input
+          <input
             type="text"
             placeholder="Search patients..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
             className="px-4 py-2 rounded-full border focus:outline-none focus:ring-2 focus:ring-blue-500"
-          /> */}
+          />
           <div className="relative">
             {/* <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full px-1">
               {dashboardData.todayAppointments}
@@ -225,7 +228,12 @@ function DashboardPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
-                {dashboardData.appointments.map((appt) => (
+                {dashboardData.appointments
+              .filter((appt) => 
+                searchTerm === "" || 
+                appt.patientId?.name?.toLowerCase().includes(searchTerm.toLowerCase())
+              )
+              .map((appt) => (
                   <tr key={appt._id} className="hover:bg-gray-50">
                     <td
                       className="py-3 px-3 cursor-pointer"

@@ -153,6 +153,7 @@ const PrescriptionPDF = memo(
       temp: "-",
       weight: "-",
     },
+    bookingNotes = "",
   }) => {
     const today = new Date();
     const formattedDate = today.toLocaleString("en-GB", {
@@ -196,6 +197,9 @@ const PrescriptionPDF = memo(
                   </Text>
                   <Text>
                     <Text style={styles.label}>Age:</Text> {patient.age}
+                  </Text>
+                  <Text>
+                    <Text style={styles.label}>Booking Notes:</Text> {bookingNotes}
                   </Text>
                   <Text>
                     <Text style={styles.label}>Diagnosis:</Text>{" "}
@@ -532,6 +536,7 @@ const PrescriptionModal = ({ prescriptionId, onClose }) => {
                 labReports={prescription.labReports}
                 labTest={prescription.labTest}
                 vitals={prescription.patient.vitals}
+                bookingNotes={prescription.bookingNotes}
               />
             </PDFViewer>
           </div>
@@ -555,6 +560,7 @@ const PrescriptionModal = ({ prescriptionId, onClose }) => {
                   labReports={prescription.labReports}
                   labTest={prescription.labTest}
                   vitals={prescription.patient.vitals}
+                  bookingNotes={prescription.bookingNotes}
                 />
               }
               fileName={`${prescription.patient.name}-prescription.pdf`}
