@@ -466,9 +466,9 @@ const Prescription = () => {
   const durationDropdownRef = useRef(null);
   const instructionsDropdownRef = useRef(null);
   // Add these refs for tapering dropdowns
-const taperingFrequencyDropdownRefs = useRef({});
-const taperingDaysDropdownRefs = useRef({});
-const diagnosisDropdownRef = useRef(null);
+  const taperingFrequencyDropdownRefs = useRef({});
+  const taperingDaysDropdownRefs = useRef({});
+  const diagnosisDropdownRef = useRef(null);
 
 
 
@@ -480,8 +480,8 @@ const diagnosisDropdownRef = useRef(null);
   const [highlightedDosageIndex, setHighlightedDosageIndex] = useState(-1);
   const [highlightedDiagnosisIndex, setHighlightedDiagnosisIndex] = useState(-1);
   // Add these states for tapering keyboard navigation
-const [highlightedTaperingFrequencyIndices, setHighlightedTaperingFrequencyIndices] = useState({});
-const [highlightedTaperingDaysIndices, setHighlightedTaperingDaysIndices] = useState({});
+  const [highlightedTaperingFrequencyIndices, setHighlightedTaperingFrequencyIndices] = useState({});
+  const [highlightedTaperingDaysIndices, setHighlightedTaperingDaysIndices] = useState({});
 
 
   const handleKeyDown = (e, items, highlightedIndex, setHighlightedIndex, onSelect, closeDropdown) => {
@@ -568,62 +568,136 @@ const [highlightedTaperingDaysIndices, setHighlightedTaperingDaysIndices] = useS
     }
   }, [highlightedInstructionsIndex]);
 
-// Auto-scroll for tapering frequency dropdowns
-useEffect(() => {
-  Object.keys(highlightedTaperingFrequencyIndices).forEach(scheduleIndex => {
-    const highlightedIndex = highlightedTaperingFrequencyIndices[scheduleIndex];
-    if (highlightedIndex >= 0 && taperingFrequencyDropdownRefs.current[scheduleIndex]) {
-      const dropdown = taperingFrequencyDropdownRefs.current[scheduleIndex];
-      const highlightedItem = dropdown.children[highlightedIndex];
-      if (highlightedItem) {
-        highlightedItem.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-      }
-    }
-  });
-}, [highlightedTaperingFrequencyIndices]);
 
-// Auto-scroll for tapering days dropdowns
-useEffect(() => {
-  Object.keys(highlightedTaperingDaysIndices).forEach(scheduleIndex => {
-    const highlightedIndex = highlightedTaperingDaysIndices[scheduleIndex];
-    if (highlightedIndex >= 0 && taperingDaysDropdownRefs.current[scheduleIndex]) {
-      const dropdown = taperingDaysDropdownRefs.current[scheduleIndex];
-      const highlightedItem = dropdown.children[highlightedIndex];
-      if (highlightedItem) {
-        highlightedItem.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-      }
-    }
-  });
-}, [highlightedTaperingDaysIndices]);
+  // SINGLE auto-scroll for tapering frequency dropdowns - USE THIS ONLY
+  useEffect(() => {
+    const handleScroll = () => {
+      Object.keys(highlightedTaperingFrequencyIndices).forEach(scheduleIndex => {
+        const highlightedIndex = highlightedTaperingFrequencyIndices[scheduleIndex];
 
-const handleTaperingKeyDown = (e, items, scheduleIndex, highlightedIndices, setHighlightedIndices, onSelect, closeDropdown) => {
-  const currentHighlighted = highlightedIndices[scheduleIndex] || -1;
-  
-  switch (e.key) {
-    case 'ArrowDown':
+        if (highlightedIndex >= 0 &&
+          taperingFrequencyDropdownRefs.current?.[scheduleIndex]) {
+
+          const dropdown = taperingFrequencyDropdownRefs.current[scheduleIndex];
+
+          if (dropdown?.children?.[highlightedIndex]) {
+            const highlightedItem = dropdown.children[highlightedIndex];
+
+            // Simple, reliable scrolling
+            const itemTop = highlightedItem.offsetTop;
+            const itemHeight = highlightedItem.offsetHeight;
+            const dropdownHeight = dropdown.clientHeight;
+            const currentScroll = dropdown.scrollTop;
+
+            // Check if item is out of view
+            if (itemTop < currentScroll) {
+              dropdown.scrollTop = itemTop;
+            } else if (itemTop + itemHeight > currentScroll + dropdownHeight) {
+              dropdown.scrollTop = itemTop - dropdownHeight + itemHeight;
+            }
+          }
+        }
+      });
+    };
+
+    // Use requestAnimationFrame for smooth performance
+    const rafId = requestAnimationFrame(handleScroll);
+    return () => cancelAnimationFrame(rafId);
+  }, [highlightedTaperingFrequencyIndices]);
+
+  // SINGLE auto-scroll for tapering days dropdowns - USE THIS ONLY
+  useEffect(() => {
+    const handleScroll = () => {
+      Object.keys(highlightedTaperingDaysIndices).forEach(scheduleIndex => {
+        const highlightedIndex = highlightedTaperingDaysIndices[scheduleIndex];
+
+        if (highlightedIndex >= 0 &&
+          taperingDaysDropdownRefs.current?.[scheduleIndex]) {
+
+          const dropdown = taperingDaysDropdownRefs.current[scheduleIndex];
+
+          if (dropdown?.children?.[highlightedIndex]) {
+            const highlightedItem = dropdown.children[highlightedIndex];
+
+            const itemTop = highlightedItem.offsetTop;
+            const itemHeight = highlightedItem.offsetHeight;
+            const dropdownHeight = dropdown.clientHeight;
+            const currentScroll = dropdown.scrollTop;
+
+            if (itemTop < currentScroll) {
+              dropdown.scrollTop = itemTop;
+            } else if (itemTop + itemHeight > currentScroll + dropdownHeight) {
+              dropdown.scrollTop = itemTop - dropdownHeight + itemHeight;
+            }
+          }
+        }
+      });
+    };
+
+    const rafId = requestAnimationFrame(handleScroll);
+    return () => cancelAnimationFrame(rafId);
+  }, [highlightedTaperingDaysIndices]);
+
+
+  // COMPLETELY REWRITTEN handleTaperingKeyDown function
+  const handleTaperingKeyDown = (e, items, scheduleIndex, highlightedIndices, setHighlightedIndices, onSelect, closeDropdown) => {
+    // Prevent default for navigation keys
+    if (['ArrowDown', 'ArrowUp', 'Enter', 'Escape'].includes(e.key)) {
       e.preventDefault();
-      const nextIndex = currentHighlighted < items.length - 1 ? currentHighlighted + 1 : 0;
-      setHighlightedIndices(prev => ({ ...prev, [scheduleIndex]: nextIndex }));
-      break;
-    case 'ArrowUp':
-      e.preventDefault();
-      const prevIndex = currentHighlighted > 0 ? currentHighlighted - 1 : items.length - 1;
-      setHighlightedIndices(prev => ({ ...prev, [scheduleIndex]: prevIndex }));
-      break;
-    case 'Enter':
-      e.preventDefault();
-      if (currentHighlighted >= 0 && items[currentHighlighted]) {
-        onSelect(items[currentHighlighted]);
-      }
-      break;
-    case 'Escape':
-      e.preventDefault();
-      closeDropdown();
-      break;
-    default:
-      break;
-  }
-};
+      e.stopPropagation();
+    }
+
+    // Get current highlighted index with proper fallback
+    const currentHighlighted = highlightedIndices[scheduleIndex] ?? -1;
+
+    // Ensure we have items to navigate
+    if (!items || items.length === 0) return;
+
+    switch (e.key) {
+      case 'ArrowDown':
+        const nextIndex = currentHighlighted >= items.length - 1 ? 0 : currentHighlighted + 1;
+        setHighlightedIndices(prev => ({
+          ...prev,
+          [scheduleIndex]: nextIndex
+        }));
+        break;
+
+      case 'ArrowUp':
+        const prevIndex = currentHighlighted <= 0 ? items.length - 1 : currentHighlighted - 1;
+        setHighlightedIndices(prev => ({
+          ...prev,
+          [scheduleIndex]: prevIndex
+        }));
+        break;
+
+      case 'Enter':
+        if (currentHighlighted >= 0 &&
+          currentHighlighted < items.length &&
+          items[currentHighlighted]) {
+          onSelect(items[currentHighlighted]);
+          setHighlightedIndices(prev => {
+            const newIndices = { ...prev };
+            delete newIndices[scheduleIndex];
+            return newIndices;
+          });
+        }
+        break;
+
+      case 'Escape':
+        closeDropdown();
+        setHighlightedIndices(prev => {
+          const newIndices = { ...prev };
+          delete newIndices[scheduleIndex];
+          return newIndices;
+        });
+        break;
+
+      default:
+        break;
+    }
+  };
+
+
 
   const filteredDiagnoses = diagnoses.filter(diag =>
     diag.name.toLowerCase().includes(diagnosisSearchTerm.toLowerCase())
@@ -1781,78 +1855,78 @@ const handleTaperingKeyDown = (e, items, scheduleIndex, highlightedIndices, setH
                   </button>
                 </div>
                 <div className="relative">
-  <input
-    type="text"
-    id="diagnosis"
-    autoComplete="off" 
-    value={diagnosisSearchTerm}
-    onChange={(e) => {
-      setDiagnosisSearchTerm(e.target.value);
-      setSelectedDiagnosis({ ...selectedDiagnosis, name: e.target.value });
-      setShowDiagnosisDropdown(true);
-      setHighlightedDiagnosisIndex(-1); // Add this
-    }}
-    onFocus={() => {
-      setShowDiagnosisDropdown(true);
-      setHighlightedDiagnosisIndex(-1); // Add this
-    }}
-    onBlur={() => setTimeout(() => setShowDiagnosisDropdown(false), 200)}
-    onKeyDown={(e) => handleKeyDown( // Add this
-      e,
-      filteredDiagnoses,
-      highlightedDiagnosisIndex,
-      setHighlightedDiagnosisIndex,
-      (diagnosis) => {
-        setSelectedDiagnosis({ ...selectedDiagnosis, name: diagnosis.name });
-        setDiagnosisSearchTerm(diagnosis.name);
-        setShowDiagnosisDropdown(false);
-      },
-      () => setShowDiagnosisDropdown(false)
-    )}
-    className="w-full pl-10 pr-10 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-    placeholder="Search diagnosis"
-  />
-  <Search size={16} className="absolute left-3 top-2.5 text-gray-400" />
-  <div className="absolute right-2 top-2 flex space-x-1">
-    <button
-      type="button"
-      className="text-xs px-2 py-1 bg-blue-200 rounded hover:bg-blue-300"
-      onClick={() => {
-        const selectedDiag = diagnoses.find(d => d.name === selectedDiagnosis.name);
-        if (selectedDiag) {
-          handleEditItem(selectedDiag, 'diagnosis');
-        }
-      }}
-    >
-      <Pencil size={12} />
-    </button>
-  </div>
-  {showDiagnosisDropdown && filteredDiagnoses.length > 0 && (
-    <div 
-      ref={diagnosisDropdownRef} // Add this
-      className="absolute z-10 mt-1 w-full bg-white shadow-lg rounded-md max-h-48 overflow-auto"
-    >
-      {filteredDiagnoses.map((diagnosis, index) => ( // Add index parameter
-        <div
-          key={diagnosis._id}
-          onClick={() => {
-            setSelectedDiagnosis({ ...selectedDiagnosis, name: diagnosis.name });
-            setDiagnosisSearchTerm(diagnosis.name);
-            setShowDiagnosisDropdown(false);
-          }}
-          className={`px-4 py-2 cursor-pointer ${ // Update className with highlight logic
-            index === highlightedDiagnosisIndex
-              ? 'bg-blue-100 text-blue-900'
-              : 'hover:bg-gray-100'
-          }`}
-          onMouseEnter={() => setHighlightedDiagnosisIndex(index)} // Add this
-        >
-          <div className="font-medium">{diagnosis.name}</div>
-        </div>
-      ))}
-    </div>
-  )}
-</div>
+                  <input
+                    type="text"
+                    id="diagnosis"
+                    autoComplete="off"
+                    value={diagnosisSearchTerm}
+                    onChange={(e) => {
+                      setDiagnosisSearchTerm(e.target.value);
+                      setSelectedDiagnosis({ ...selectedDiagnosis, name: e.target.value });
+                      setShowDiagnosisDropdown(true);
+                      setHighlightedDiagnosisIndex(-1); // Add this
+                    }}
+                    onFocus={() => {
+                      setShowDiagnosisDropdown(true);
+                      setHighlightedDiagnosisIndex(-1); // Add this
+                    }}
+                    onBlur={() => setTimeout(() => setShowDiagnosisDropdown(false), 200)}
+                    onKeyDown={(e) => handleKeyDown( // Add this
+                      e,
+                      filteredDiagnoses,
+                      highlightedDiagnosisIndex,
+                      setHighlightedDiagnosisIndex,
+                      (diagnosis) => {
+                        setSelectedDiagnosis({ ...selectedDiagnosis, name: diagnosis.name });
+                        setDiagnosisSearchTerm(diagnosis.name);
+                        setShowDiagnosisDropdown(false);
+                      },
+                      () => setShowDiagnosisDropdown(false)
+                    )}
+                    className="w-full pl-10 pr-10 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Search diagnosis"
+                  />
+                  <Search size={16} className="absolute left-3 top-2.5 text-gray-400" />
+                  <div className="absolute right-2 top-2 flex space-x-1">
+                    <button
+                      type="button"
+                      className="text-xs px-2 py-1 bg-blue-200 rounded hover:bg-blue-300"
+                      onClick={() => {
+                        const selectedDiag = diagnoses.find(d => d.name === selectedDiagnosis.name);
+                        if (selectedDiag) {
+                          handleEditItem(selectedDiag, 'diagnosis');
+                        }
+                      }}
+                    >
+                      <Pencil size={12} />
+                    </button>
+                  </div>
+                  {showDiagnosisDropdown && filteredDiagnoses.length > 0 && (
+                    <div
+                      ref={diagnosisDropdownRef} // Add this
+                      className="absolute z-10 mt-1 w-full bg-white shadow-lg rounded-md max-h-48 overflow-auto"
+                    >
+                      {filteredDiagnoses.map((diagnosis, index) => ( // Add index parameter
+                        <div
+                          key={diagnosis._id}
+                          onClick={() => {
+                            setSelectedDiagnosis({ ...selectedDiagnosis, name: diagnosis.name });
+                            setDiagnosisSearchTerm(diagnosis.name);
+                            setShowDiagnosisDropdown(false);
+                          }}
+                          className={`px-4 py-2 cursor-pointer ${ // Update className with highlight logic
+                            index === highlightedDiagnosisIndex
+                              ? 'bg-blue-100 text-blue-900'
+                              : 'hover:bg-gray-100'
+                            }`}
+                          onMouseEnter={() => setHighlightedDiagnosisIndex(index)} // Add this
+                        >
+                          <div className="font-medium">{diagnosis.name}</div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
 
               </div>
               <div>
@@ -1920,7 +1994,7 @@ const handleTaperingKeyDown = (e, items, scheduleIndex, highlightedIndices, setH
                   <input
                     type="text"
                     id="medicine"
-                    autoComplete="off" 
+                    autoComplete="off"
                     value={searchTerm}
                     onChange={(e) => {
                       setSearchTerm(e.target.value);
@@ -1968,8 +2042,8 @@ const handleTaperingKeyDown = (e, items, scheduleIndex, highlightedIndices, setH
                           key={medicine._id}
                           onClick={() => handleMedicineSelect(medicine)}
                           className={`px-4 py-2 cursor-pointer ${index === highlightedMedicineIndex
-                              ? 'bg-blue-100 text-blue-900'
-                              : 'hover:bg-gray-100'
+                            ? 'bg-blue-100 text-blue-900'
+                            : 'hover:bg-gray-100'
                             }`}
                           onMouseEnter={() => setHighlightedMedicineIndex(index)}
                         >
@@ -2008,7 +2082,7 @@ const handleTaperingKeyDown = (e, items, scheduleIndex, highlightedIndices, setH
                   <input
                     type="text"
                     id="dosage"
-                    autoComplete="off" 
+                    autoComplete="off"
                     value={dosageSearchTerm}
                     onChange={(e) => {
                       setDosageSearchTerm(e.target.value);
@@ -2105,7 +2179,7 @@ const handleTaperingKeyDown = (e, items, scheduleIndex, highlightedIndices, setH
                   <input
                     type="text"
                     id="frequency"
-                    autoComplete="off" 
+                    autoComplete="off"
                     value={frequencySearchTerm}
                     onChange={(e) => {
                       setFrequencySearchTerm(e.target.value);
@@ -2203,7 +2277,7 @@ const handleTaperingKeyDown = (e, items, scheduleIndex, highlightedIndices, setH
                   <input
                     type="text"
                     id="duration"
-                    autoComplete="off" 
+                    autoComplete="off"
                     value={durationSearchTerm}
                     onChange={(e) => {
                       setDurationSearchTerm(e.target.value);
@@ -2298,7 +2372,7 @@ const handleTaperingKeyDown = (e, items, scheduleIndex, highlightedIndices, setH
                   <input
                     type="text"
                     id="instructions"
-                    autoComplete="off" 
+                    autoComplete="off"
                     value={instructionsSearchTerm}
                     onChange={(e) => {
                       setInstructionsSearchTerm(e.target.value);
@@ -2380,215 +2454,215 @@ const handleTaperingKeyDown = (e, items, scheduleIndex, highlightedIndices, setH
                   Tapering Schedule
                 </h3>
                 {newMedicine.tapering.map((schedule, index) => (
-  <div
-    key={index}
-    className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4"
-  >
-    {/* Tapering Frequency Search */}
-    <div>
-      <div className="flex items-center justify-between mb-1">
-        <label htmlFor={`tapering-frequency-${index}`} className="block text-sm font-medium text-gray-700">Frequency</label>
-        <button
-          type="button"
-          onClick={() => handleOpenAddModal('frequency')}
-          className="text-blue-600 hover:text-blue-800 text-sm flex items-center"
-        >
-          <Plus size={14} className="mr-1" />
-          Add New
-        </button>
-      </div>
-      <div className="relative">
-        <input
-          type="text"
-          id={`tapering-frequency-${index}`}
-          autoComplete="off" 
-          value={taperingFrequencySearchTerms[index] || ''}
-          onChange={(e) => {
-            const newTerms = [...taperingFrequencySearchTerms];
-            newTerms[index] = e.target.value;
-            setTaperingFrequencySearchTerms(newTerms);
-            setShowTaperingFrequencyDropdowns(prev => ({ ...prev, [index]: true }));
-            setHighlightedTaperingFrequencyIndices(prev => ({ ...prev, [index]: -1 })); // Add this
-          }}
-          onFocus={() => {
-            setShowTaperingFrequencyDropdowns(prev => ({ ...prev, [index]: true }));
-            setHighlightedTaperingFrequencyIndices(prev => ({ ...prev, [index]: -1 })); // Add this
-          }}
-          onBlur={() => setTimeout(() => setShowTaperingFrequencyDropdowns(prev => ({ ...prev, [index]: false })), 200)}
-          onKeyDown={(e) => handleTaperingKeyDown( // Add this
-            e,
-            getTaperingFilteredFrequencies(index),
-            index,
-            highlightedTaperingFrequencyIndices,
-            setHighlightedTaperingFrequencyIndices,
-            (frequency) => {
-              handleUpdateTaperingSchedule(index, 'dosage', frequency.name);
-              const newTerms = [...taperingFrequencySearchTerms];
-              newTerms[index] = frequency.name;
-              setTaperingFrequencySearchTerms(newTerms);
-              setShowTaperingFrequencyDropdowns(prev => ({ ...prev, [index]: false }));
-            },
-            () => setShowTaperingFrequencyDropdowns(prev => ({ ...prev, [index]: false }))
-          )}
-          className="w-full pl-10 pr-10 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-          placeholder="Search frequency"
-        />
-        <Search
-          size={16}
-          className="absolute left-3 top-2.5 text-gray-400"
-        />
-        <div className="absolute right-2 top-2 flex space-x-1">
-          <button
-            type="button"
-            className="text-xs px-2 py-1 bg-blue-200 rounded hover:bg-blue-300"
-            onClick={() => {
-              const selectedFreq = frequencies.find(f => f.name === schedule.dosage);
-              if (selectedFreq) {
-                handleEditItem(selectedFreq, 'frequency');
-              }
-            }}
-          >
-            <Pencil size={12} />
-          </button>
-        </div>
-        {showTaperingFrequencyDropdowns[index] && getTaperingFilteredFrequencies(index).length > 0 && (
-          <div 
-            ref={el => taperingFrequencyDropdownRefs.current[index] = el} // Add this
-            className="absolute z-10 mt-1 w-full bg-white shadow-lg rounded-md max-h-48 overflow-auto"
-          >
-            {getTaperingFilteredFrequencies(index).map((frequency, freqIndex) => ( // Add freqIndex
-              <div
-                key={frequency._id}
-                onClick={() => {
-                  handleUpdateTaperingSchedule(index, 'dosage', frequency.name);
-                  const newTerms = [...taperingFrequencySearchTerms];
-                  newTerms[index] = frequency.name;
-                  setTaperingFrequencySearchTerms(newTerms);
-                  setShowTaperingFrequencyDropdowns(prev => ({ ...prev, [index]: false }));
-                }}
-                className={`px-4 py-2 cursor-pointer ${ // Update className with highlight logic
-                  freqIndex === (highlightedTaperingFrequencyIndices[index] || -1)
-                    ? 'bg-blue-100 text-blue-900'
-                    : 'hover:bg-gray-100'
-                }`}
-                onMouseEnter={() => setHighlightedTaperingFrequencyIndices(prev => ({ ...prev, [index]: freqIndex }))} // Add this
-              >
-                <div className="font-medium">{frequency.name}</div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
+                  <div
+                    key={index}
+                    className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4"
+                  >
+                    {/* Tapering Frequency Search */}
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <label htmlFor={`tapering-frequency-${index}`} className="block text-sm font-medium text-gray-700">Frequency</label>
+                        <button
+                          type="button"
+                          onClick={() => handleOpenAddModal('frequency')}
+                          className="text-blue-600 hover:text-blue-800 text-sm flex items-center"
+                        >
+                          <Plus size={14} className="mr-1" />
+                          Add New
+                        </button>
+                      </div>
+                      <div className="relative">
+                        <input
+                          type="text"
+                          id={`tapering-frequency-${index}`}
+                          autoComplete="off"
+                          value={taperingFrequencySearchTerms[index] || ''}
+                          onChange={(e) => {
+                            const newTerms = [...taperingFrequencySearchTerms];
+                            newTerms[index] = e.target.value;
+                            setTaperingFrequencySearchTerms(newTerms);
+                            setShowTaperingFrequencyDropdowns(prev => ({ ...prev, [index]: true }));
+                            setHighlightedTaperingFrequencyIndices(prev => ({ ...prev, [index]: -1 })); // Add this
+                          }}
+                          onFocus={() => {
+                            setShowTaperingFrequencyDropdowns(prev => ({ ...prev, [index]: true }));
+                            setHighlightedTaperingFrequencyIndices(prev => ({ ...prev, [index]: -1 })); // Add this
+                          }}
+                          onBlur={() => setTimeout(() => setShowTaperingFrequencyDropdowns(prev => ({ ...prev, [index]: false })), 200)}
+                          onKeyDown={(e) => handleTaperingKeyDown( // Add this
+                            e,
+                            getTaperingFilteredFrequencies(index),
+                            index,
+                            highlightedTaperingFrequencyIndices,
+                            setHighlightedTaperingFrequencyIndices,
+                            (frequency) => {
+                              handleUpdateTaperingSchedule(index, 'dosage', frequency.name);
+                              const newTerms = [...taperingFrequencySearchTerms];
+                              newTerms[index] = frequency.name;
+                              setTaperingFrequencySearchTerms(newTerms);
+                              setShowTaperingFrequencyDropdowns(prev => ({ ...prev, [index]: false }));
+                            },
+                            () => setShowTaperingFrequencyDropdowns(prev => ({ ...prev, [index]: false }))
+                          )}
+                          className="w-full pl-10 pr-10 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          placeholder="Search frequency"
+                        />
+                        <Search
+                          size={16}
+                          className="absolute left-3 top-2.5 text-gray-400"
+                        />
+                        <div className="absolute right-2 top-2 flex space-x-1">
+                          <button
+                            type="button"
+                            className="text-xs px-2 py-1 bg-blue-200 rounded hover:bg-blue-300"
+                            onClick={() => {
+                              const selectedFreq = frequencies.find(f => f.name === schedule.dosage);
+                              if (selectedFreq) {
+                                handleEditItem(selectedFreq, 'frequency');
+                              }
+                            }}
+                          >
+                            <Pencil size={12} />
+                          </button>
+                        </div>
+                        {showTaperingFrequencyDropdowns[index] && getTaperingFilteredFrequencies(index).length > 0 && (
+                          <div
+                            ref={el => taperingFrequencyDropdownRefs.current[index] = el} // Add this
+                            className="absolute z-10 mt-1 w-full bg-white shadow-lg rounded-md max-h-48 overflow-auto"
+                          >
+                            {getTaperingFilteredFrequencies(index).map((frequency, freqIndex) => ( // Add freqIndex
+                              <div
+                                key={frequency._id}
+                                onClick={() => {
+                                  handleUpdateTaperingSchedule(index, 'dosage', frequency.name);
+                                  const newTerms = [...taperingFrequencySearchTerms];
+                                  newTerms[index] = frequency.name;
+                                  setTaperingFrequencySearchTerms(newTerms);
+                                  setShowTaperingFrequencyDropdowns(prev => ({ ...prev, [index]: false }));
+                                }}
+                                className={`px-4 py-2 cursor-pointer ${ // Update className with highlight logic
+                                  freqIndex === (highlightedTaperingFrequencyIndices[index] || -1)
+                                    ? 'bg-blue-100 text-blue-900'
+                                    : 'hover:bg-gray-100'
+                                  }`}
+                                onMouseEnter={() => setHighlightedTaperingFrequencyIndices(prev => ({ ...prev, [index]: freqIndex }))} // Add this
+                              >
+                                <div className="font-medium">{frequency.name}</div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
 
-    {/* Tapering Days Search */}
-    <div>
-      <div className="flex items-center justify-between mb-1">
-        <label htmlFor={`tapering-days-${index}`} className="block text-sm font-medium text-gray-700">Days</label>
-        <button
-          type="button"
-          onClick={() => handleOpenAddModal('days')}
-          className="text-blue-600 hover:text-blue-800 text-sm flex items-center"
-        >
-          <Plus size={14} className="mr-1" />
-          Add New
-        </button>
-      </div>
-      <div className="relative">
-        <input
-          type="text"
-          id={`tapering-days-${index}`}
-          autoComplete="off" 
-          value={taperingDaysSearchTerms[index] || ''}
-          onChange={(e) => {
-            const newTerms = [...taperingDaysSearchTerms];
-            newTerms[index] = e.target.value;
-            setTaperingDaysSearchTerms(newTerms);
-            setShowTaperingDaysDropdowns(prev => ({ ...prev, [index]: true }));
-            setHighlightedTaperingDaysIndices(prev => ({ ...prev, [index]: -1 })); // Add this
-          }}
-          onFocus={() => {
-            setShowTaperingDaysDropdowns(prev => ({ ...prev, [index]: true }));
-            setHighlightedTaperingDaysIndices(prev => ({ ...prev, [index]: -1 })); // Add this
-          }}
-          onBlur={() => setTimeout(() => setShowTaperingDaysDropdowns(prev => ({ ...prev, [index]: false })), 200)}
-          onKeyDown={(e) => handleTaperingKeyDown( // Add this
-            e,
-            getTaperingFilteredDays(index),
-            index,
-            highlightedTaperingDaysIndices,
-            setHighlightedTaperingDaysIndices,
-            (day) => {
-              handleUpdateTaperingSchedule(index, 'days', day.name);
-              const newTerms = [...taperingDaysSearchTerms];
-              newTerms[index] = day.name;
-              setTaperingDaysSearchTerms(newTerms);
-              setShowTaperingDaysDropdowns(prev => ({ ...prev, [index]: false }));
-            },
-            () => setShowTaperingDaysDropdowns(prev => ({ ...prev, [index]: false }))
-          )}
-          className="w-full pl-10 pr-10 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-          placeholder="Search days"
-        />
-        <Search
-          size={16}
-          className="absolute left-3 top-2.5 text-gray-400"
-        />
-        <div className="absolute right-2 top-2 flex space-x-1">
-          <button
-            type="button"
-            className="text-xs px-2 py-1 bg-blue-200 rounded hover:bg-blue-300"
-            onClick={() => {
-              const selectedDay = days.find(d => d.name === schedule.days);
-              if (selectedDay) {
-                handleEditItem(selectedDay, 'days');
-              }
-            }}
-          >
-            <Pencil size={12} />
-          </button>
-        </div>
-        {showTaperingDaysDropdowns[index] && getTaperingFilteredDays(index).length > 0 && (
-          <div 
-            ref={el => taperingDaysDropdownRefs.current[index] = el} // Add this
-            className="absolute z-10 mt-1 w-full bg-white shadow-lg rounded-md max-h-48 overflow-auto"
-          >
-            {getTaperingFilteredDays(index).map((day, dayIndex) => ( // Add dayIndex
-              <div
-                key={day._id}
-                onClick={() => {
-                  handleUpdateTaperingSchedule(index, 'days', day.name);
-                  const newTerms = [...taperingDaysSearchTerms];
-                  newTerms[index] = day.name;
-                  setTaperingDaysSearchTerms(newTerms);
-                  setShowTaperingDaysDropdowns(prev => ({ ...prev, [index]: false }));
-                }}
-                className={`px-4 py-2 cursor-pointer ${ // Update className with highlight logic
-                  dayIndex === (highlightedTaperingDaysIndices[index] || -1)
-                    ? 'bg-blue-100 text-blue-900'
-                    : 'hover:bg-gray-100'
-                }`}
-                onMouseEnter={() => setHighlightedTaperingDaysIndices(prev => ({ ...prev, [index]: dayIndex }))} // Add this
-              >
-                <div className="font-medium">{day.name}</div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
+                    {/* Tapering Days Search */}
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <label htmlFor={`tapering-days-${index}`} className="block text-sm font-medium text-gray-700">Days</label>
+                        <button
+                          type="button"
+                          onClick={() => handleOpenAddModal('days')}
+                          className="text-blue-600 hover:text-blue-800 text-sm flex items-center"
+                        >
+                          <Plus size={14} className="mr-1" />
+                          Add New
+                        </button>
+                      </div>
+                      <div className="relative">
+                        <input
+                          type="text"
+                          id={`tapering-days-${index}`}
+                          autoComplete="off"
+                          value={taperingDaysSearchTerms[index] || ''}
+                          onChange={(e) => {
+                            const newTerms = [...taperingDaysSearchTerms];
+                            newTerms[index] = e.target.value;
+                            setTaperingDaysSearchTerms(newTerms);
+                            setShowTaperingDaysDropdowns(prev => ({ ...prev, [index]: true }));
+                            setHighlightedTaperingDaysIndices(prev => ({ ...prev, [index]: -1 })); // Add this
+                          }}
+                          onFocus={() => {
+                            setShowTaperingDaysDropdowns(prev => ({ ...prev, [index]: true }));
+                            setHighlightedTaperingDaysIndices(prev => ({ ...prev, [index]: -1 })); // Add this
+                          }}
+                          onBlur={() => setTimeout(() => setShowTaperingDaysDropdowns(prev => ({ ...prev, [index]: false })), 200)}
+                          onKeyDown={(e) => handleTaperingKeyDown( // Add this
+                            e,
+                            getTaperingFilteredDays(index),
+                            index,
+                            highlightedTaperingDaysIndices,
+                            setHighlightedTaperingDaysIndices,
+                            (day) => {
+                              handleUpdateTaperingSchedule(index, 'days', day.name);
+                              const newTerms = [...taperingDaysSearchTerms];
+                              newTerms[index] = day.name;
+                              setTaperingDaysSearchTerms(newTerms);
+                              setShowTaperingDaysDropdowns(prev => ({ ...prev, [index]: false }));
+                            },
+                            () => setShowTaperingDaysDropdowns(prev => ({ ...prev, [index]: false }))
+                          )}
+                          className="w-full pl-10 pr-10 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          placeholder="Search days"
+                        />
+                        <Search
+                          size={16}
+                          className="absolute left-3 top-2.5 text-gray-400"
+                        />
+                        <div className="absolute right-2 top-2 flex space-x-1">
+                          <button
+                            type="button"
+                            className="text-xs px-2 py-1 bg-blue-200 rounded hover:bg-blue-300"
+                            onClick={() => {
+                              const selectedDay = days.find(d => d.name === schedule.days);
+                              if (selectedDay) {
+                                handleEditItem(selectedDay, 'days');
+                              }
+                            }}
+                          >
+                            <Pencil size={12} />
+                          </button>
+                        </div>
+                        {showTaperingDaysDropdowns[index] && getTaperingFilteredDays(index).length > 0 && (
+                          <div
+                            ref={el => taperingDaysDropdownRefs.current[index] = el} // Add this
+                            className="absolute z-10 mt-1 w-full bg-white shadow-lg rounded-md max-h-48 overflow-auto"
+                          >
+                            {getTaperingFilteredDays(index).map((day, dayIndex) => ( // Add dayIndex
+                              <div
+                                key={day._id}
+                                onClick={() => {
+                                  handleUpdateTaperingSchedule(index, 'days', day.name);
+                                  const newTerms = [...taperingDaysSearchTerms];
+                                  newTerms[index] = day.name;
+                                  setTaperingDaysSearchTerms(newTerms);
+                                  setShowTaperingDaysDropdowns(prev => ({ ...prev, [index]: false }));
+                                }}
+                                className={`px-4 py-2 cursor-pointer ${ // Update className with highlight logic
+                                  dayIndex === (highlightedTaperingDaysIndices[index] || -1)
+                                    ? 'bg-blue-100 text-blue-900'
+                                    : 'hover:bg-gray-100'
+                                  }`}
+                                onMouseEnter={() => setHighlightedTaperingDaysIndices(prev => ({ ...prev, [index]: dayIndex }))} // Add this
+                              >
+                                <div className="font-medium">{day.name}</div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
 
-    {/* Remove button */}
-    <div className="flex items-end">
-      <button
-        onClick={() => handleRemoveTaperingSchedule(index)}
-        className="text-red-600 hover:text-red-800"
-      >
-        <Trash2 size={16} />
-      </button>
-    </div>
-  </div>
-))}
+                    {/* Remove button */}
+                    <div className="flex items-end">
+                      <button
+                        onClick={() => handleRemoveTaperingSchedule(index)}
+                        className="text-red-600 hover:text-red-800"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  </div>
+                ))}
 
                 <button
                   onClick={handleAddTaperingSchedule}

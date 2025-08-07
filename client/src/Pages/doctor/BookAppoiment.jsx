@@ -318,10 +318,10 @@ export default function AppointmentBookingForm() {
 
       <div className="bg-blue-600 text-white p-6">
         <h1 className="text-xl font-bold">
-          Clinic Appointment Booking System
+           Appointment Booking System
         </h1>
 
-        <p className="text-sm opacity-90">Receptionist Portal</p>
+        {/* <p className="text-sm opacity-90">Receptionist Portal</p> */}
       </div>
 
       {/* Progress Steps */}
