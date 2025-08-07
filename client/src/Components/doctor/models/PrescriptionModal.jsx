@@ -35,15 +35,15 @@ class PDFErrorBoundary extends React.Component {
     return this.props.children;
   }
 }
-// PDF Styles
+/// PDF Styles
 const styles = StyleSheet.create({
   page: {
     fontFamily: "Helvetica",
-    fontSize: 10,
+    fontSize: 12, // increased from 10
     backgroundColor: "#FFFFFF",
   },
   container: {
-    padding: 10, // New padding for elements other than header
+    padding: 10,
   },
   header: {
     backgroundColor: "#009688",
@@ -52,11 +52,11 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
   },
   headerText: {
-    fontSize: 14,
+    fontSize: 16, // increased from 14
     fontWeight: "bold",
   },
   subHeaderText: {
-    fontSize: 8,
+    fontSize: 10, // increased from 8
     marginTop: 2,
   },
   section: {
@@ -65,7 +65,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontWeight: "bold",
-    fontSize: 11,
+    fontSize: 13, // increased from 11
     marginBottom: 2,
   },
   row: {
@@ -96,16 +96,16 @@ const styles = StyleSheet.create({
   },
   tableCellHeader: {
     fontWeight: "bold",
-    fontSize: 9,
+    fontSize: 11, // increased from 9
   },
   tableCell: {
-    fontSize: 9,
+    fontSize: 11, // increased from 9
   },
   TapringHed: {
-    fontSize: 8,
+    fontSize: 10, // increased from 8
   },
   TapringP: {
-    fontSize: 8,
+    fontSize: 10, // increased from 8
   },
   label: {
     fontWeight: "bold",
@@ -122,7 +122,7 @@ const styles = StyleSheet.create({
     right: 15,
     backgroundColor: "#FAFAFA",
     padding: 5,
-    fontSize: 8,
+    fontSize: 10, // increased from 8
   },
   signature: {
     position: "absolute",

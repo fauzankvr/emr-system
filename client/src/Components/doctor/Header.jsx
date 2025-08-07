@@ -1,63 +1,11 @@
-import React, { useEffect, useRef, useState } from "react";
-import * as THREE from "three";
+import React from "react";
 
-const Header = ({
-  color = 0x00a896,
-  backgroundColor = 0x0d1b2a,
-  size = 1.2,
-}) => {
-  const vantaRef = useRef(null);
-  const vantaEffect = useRef(null);
-  const [vantaLoaded, setVantaLoaded] = useState(false);
-
-  useEffect(() => {
-    // Dynamically import Vanta.js
-    import("vanta/dist/vanta.globe.min")
-      .then((VANTA) => {
-        if (vantaRef.current) {
-          vantaEffect.current = VANTA.default.GLOBE({
-            el: vantaRef.current,
-            mouseControls: true,
-            touchControls: true,
-            gyroControls: false,
-            minHeight: 200.0,
-            minWidth: 200.0,
-            scale: 1.0,
-            scaleMobile: 1.0,
-            color,
-            backgroundColor,
-            size,
-            THREE,
-          });
-          setVantaLoaded(true);
-        }
-      })
-      .catch((error) => {
-        console.error("Failed to load Vanta.js:", error);
-      });
-
-    return () => {
-      if (vantaEffect.current) {
-        vantaEffect.current.destroy();
-      }
-    };
-  }, [color, backgroundColor, size]);
-
+const Header = () => {
   return (
     <header
       id="home"
-      className="relative min-h-[95vh] flex items-center justify-center text-center text-[#f1faee] px-4"
+      className="relative min-h-[95vh] flex items-center justify-center text-center text-[#f1faee] px-4 bg-[#0d1b2a]"
     >
-      {!vantaLoaded && (
-        <div className="absolute inset-0 z-0 bg-[#0d1b2a] flex items-center justify-center">
-          <p>Loading background...</p>
-        </div>
-      )}
-      <div
-        ref={vantaRef}
-        className="absolute inset-0 z-0"
-        style={{ width: "100%", height: "100%" }}
-      />
       <div className="relative z-10 max-w-3xl bg-black/30 p-8 rounded-2xl backdrop-blur-sm">
         <h1 className="text-4xl md:text-6xl font-bold mb-5 animate-fadeInDown">
           Suhaim Soft

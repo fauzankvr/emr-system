@@ -121,7 +121,11 @@ const AddItemModal = ({
         // Create new item
         response = await axiosInstance.post(endpoint, dataToSend);
         toast.success(`${type.charAt(0).toUpperCase() + type.slice(1)} added successfully`);
-        onItemAdded(response.data.data);
+        if (type === 'medicine') {
+          onItemAdded(response.data)
+        }else{
+          onItemAdded(response.data.data);
+        }
       }
 
       onClose();
