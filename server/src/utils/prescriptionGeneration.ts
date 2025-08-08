@@ -220,7 +220,7 @@ async function generatePrescriptionPDF(
         .font("Helvetica-Bold")
         .text("Value: ", 30, currentY + 12)
         .font("Helvetica")
-        .text(report.value || " ", 100, currentY + 12, { width: 400 });
+        .text(report.values || " ", 100, currentY + 12, { width: 400 });
 
       doc
         .font("Helvetica-Bold")
