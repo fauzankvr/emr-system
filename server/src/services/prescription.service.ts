@@ -163,7 +163,7 @@ export class PrescriptionService {
       if (!patient?.email) {
         throw new Error("Patient not found or email not registered.");
       }
-
+      console.log(prescription)
       const result = prescriptionEmitter.emit(
         "prescription:created",
         patient.email,
