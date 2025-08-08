@@ -61,10 +61,11 @@ const TemplateSchema = new Schema<ITemplate>(
       {
         medicine: MedicineSchema,
         isTapering: { type: Boolean, default: false },
-        dosage: { type: String, required: true },
+        dosage: { type: String},
+        dosageAmount: { type: String},
         duration: { type: String },
         instructions: { type: String },
-        timing: { type: String },
+        // timing: { type: String },
         tapering: [TaperingScheduleSchema],
       },
     ],
