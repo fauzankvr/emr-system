@@ -404,6 +404,7 @@ const Prescription = () => {
     bp: "",
     pulse: "",
     temp: "",
+    unit:"F",
     weight: "",
   });
   const [availableMedicines, setAvailableMedicines] = useState([]);
@@ -857,8 +858,23 @@ const Prescription = () => {
           `/api/patient/${patientId}`
         );
         setPatient(patientResponse.data.data);
+        console.log(patientResponse.data.data)
         if (patientResponse?.data?.data?.vitals) {
-          setVitals(patientResponse.data.data.vitals);
+          const vitalsData = patientResponse.data.data.vitals;
+          let tempUnit="F"
+          if (vitalsData.temp) {
+            // Match number + unit separately (e.g., "10C" -> ["10", "C"])
+            const match = vitalsData.temp.match(/^([\d.]+)\s*([CF])$/i);
+            if (match) {
+              tempUnit = match[2].toUpperCase();
+            } 
+          }
+        
+          setVitals({
+            ...vitalsData,
+            temp: vitalsData.temp, 
+            unit: tempUnit
+          });
         }
       }
     }
@@ -896,7 +912,9 @@ const Prescription = () => {
         if (prescId) {
           const prescriptionResponse = await axiosInstance.get(`/api/prescription/${prescId}`);
           const prescData = prescriptionResponse.data.data;
+          console.log(prescData)
           setPrescriptionId(prescData._id);
+          setBookingNotes(prescData.bookingNotes)
           setDiagnosis(prescData.diagnosis || "");
           if (!diagnosisOptions.includes(prescData.diagnosis)) {
             setCustomDiagnosis(prescData.diagnosis);
@@ -958,7 +976,6 @@ const Prescription = () => {
     if (appointmentId) {
       axiosInstance.get(`/api/booking/${appointmentId}`)
         .then(res => {
-          console.log(res.data.data.notes)
           if (res.data?.data?.notes) {
             setBookingNotes(res.data.data.notes);
           }
@@ -1076,10 +1093,10 @@ const Prescription = () => {
   };
 
   const handleAddLabReport = async () => {
-    if (!newLabReport.name || !newLabReport.values) {
-      toast.error("Please provide both report name and value");
-      return;
-    }
+    // if (!newLabReport.name || !newLabReport.values) {
+    //   toast.error("Please provide both report name and value");
+    //   return;
+    // }
 
     setLabReportLoading(true);
     try {
@@ -1441,6 +1458,7 @@ const Prescription = () => {
         );
 
         const patients = bookings.map((booking) => booking.patientId);
+        console.log(patients)
 
         // // Optional: remove duplicates
         // const uniquePatients = Array.from(
@@ -1448,7 +1466,7 @@ const Prescription = () => {
         // );
 
         // setAllPatients(uniquePatients);
-        setAvailablePatients(patients);
+        setAvailablePatients(bookings);
       } else {
         // Query exists: filter from already-loaded allPatients
         const lowerQuery = query.toLowerCase();
@@ -1685,18 +1703,19 @@ const Prescription = () => {
                   <div className="max-h-40 overflow-y-auto">
                     {availablePatients.map(pat => (
                       <div
-                        key={pat._id}
+                        key={pat.patientId._id}
                         className="p-2 hover:bg-blue-100 cursor-pointer rounded"
                         onClick={() => {
-                          setPatient(pat);
-                          setPatientId(pat._id);
-                          if (pat.vitals) {
-                            setVitals(pat.vitals);
+                          setPatient(pat.patientId);
+                          setPatientId(pat.patientId._id);
+                          setBookingNotes(pat.notes)
+                          if (pat.patientId.vitals) {
+                            setVitals(pat.patientId.vitals);
                           }
                         }}
                       >
-                        <span className="font-medium">{pat.name}</span>
-                        <span className="ml-2 text-xs text-gray-500">{pat.email}</span>
+                        <span className="font-medium">{pat.patientId.name}</span>
+                        <span className="ml-2 text-xs text-gray-500">{pat.patientId.email}</span>
                       </div>
                     ))}
                   </div>
@@ -1728,8 +1747,16 @@ const Prescription = () => {
                   <button
                     onClick={() => {
                       setPatient(null);
+                      setBookingNotes("")
                       setPatientId(null);
-                      setVitals({});
+                      setVitals({
+                        spo2: "",
+                        bp: "",
+                        pulse: "",
+                        temp: "",
+                        unit:"F",
+                        weight: "",
+                      });
                     }}
                     className="mt-3 px-3 py-1 bg-red-500 text-white text-sm rounded hover:bg-red-600"
                   >
@@ -1799,23 +1826,37 @@ const Prescription = () => {
                 />
               </div>
               <div>
-                <label
-                  htmlFor="temp"
-                  className="block text-sm font-medium text-gray-700 mb-1"
-                >
-                  Temp (°C)
-                </label>
-                <input
-                  type="text"
-                  id="temp"
-                  value={vitals.temp}
-                  onChange={(e) =>
-                    setVitals({ ...vitals, temp: e.target.value })
-                  }
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="e.g. 37.5°C"
-                />
-              </div>
+    <label className="block text-sm font-medium text-gray-700 mb-1">Temperature</label>
+    <div className="relative flex items-center">
+      <input
+        
+        id="temp"
+        className="w-full px-3 py-2 pr-16 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+        value={vitals.temp ? vitals.temp.replace(/[°CF]/g, '') : ''}
+        onChange={(e) =>
+          setVitals({
+            ...vitals,
+            temp: e.target.value ? `${e.target.value}${vitals.unit || 'F'}` : '',
+          })
+        }
+        placeholder="e.g. 37.5"
+      />
+      <select
+        value={vitals.unit || 'F'}
+        onChange={(e) =>
+          setVitals({
+            ...vitals,
+            unit: e.target.value,
+            temp: vitals.temp ? `${vitals.temp.replace(/[°CF]/g, '')}${e.target.value}` : '',
+          })
+        }
+        className="absolute right-1 top-1/2 -translate-y-1/2 h-7 px-1 border-l border-gray-300 bg-gray-50 rounded-r-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+      >
+        <option value="C">°C</option>
+        <option value="F">°F</option>
+      </select>
+    </div>
+  </div>
               <div>
                 <label
                   htmlFor="weight"
@@ -1840,108 +1881,128 @@ const Prescription = () => {
           {/* Diagnosis and Notes */}
           <div className="p-4 md:p-6 border-t">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="relative mb-4">
-                <div className="flex items-center justify-between mb-1">
-                  <label htmlFor="diagnosis" className="block text-sm font-medium text-gray-700">
-                    Diagnosis
-                  </label>
-                  <button
-                    type="button"
-                    onClick={() => handleOpenAddModal('diagnosis')}
-                    className="text-blue-600 hover:text-blue-800 text-sm flex items-center"
-                  >
-                    <Plus size={14} className="mr-1" />
-                    Add New
-                  </button>
-                </div>
+              <div className="space-y-4">
+                {/* Diagnosis Input */}
                 <div className="relative">
-                  <input
-                    type="text"
-                    id="diagnosis"
-                    autoComplete="off"
-                    value={diagnosisSearchTerm}
-                    onChange={(e) => {
-                      setDiagnosisSearchTerm(e.target.value);
-                      setSelectedDiagnosis({ ...selectedDiagnosis, name: e.target.value });
-                      setShowDiagnosisDropdown(true);
-                      setHighlightedDiagnosisIndex(-1); // Add this
-                    }}
-                    onFocus={() => {
-                      setShowDiagnosisDropdown(true);
-                      setHighlightedDiagnosisIndex(-1); // Add this
-                    }}
-                    onBlur={() => setTimeout(() => setShowDiagnosisDropdown(false), 200)}
-                    onKeyDown={(e) => handleKeyDown( // Add this
-                      e,
-                      filteredDiagnoses,
-                      highlightedDiagnosisIndex,
-                      setHighlightedDiagnosisIndex,
-                      (diagnosis) => {
-                        setSelectedDiagnosis({ ...selectedDiagnosis, name: diagnosis.name });
-                        setDiagnosisSearchTerm(diagnosis.name);
-                        setShowDiagnosisDropdown(false);
-                      },
-                      () => setShowDiagnosisDropdown(false)
-                    )}
-                    className="w-full pl-10 pr-10 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Search diagnosis"
-                  />
-                  <Search size={16} className="absolute left-3 top-2.5 text-gray-400" />
-                  <div className="absolute right-2 top-2 flex space-x-1">
+                  <div className="flex items-center justify-between mb-1">
+                    <label htmlFor="diagnosis" className="block text-sm font-medium text-gray-700">
+                      Diagnosis
+                    </label>
                     <button
                       type="button"
-                      className="text-xs px-2 py-1 bg-blue-200 rounded hover:bg-blue-300"
-                      onClick={() => {
-                        const selectedDiag = diagnoses.find(d => d.name === selectedDiagnosis.name);
-                        if (selectedDiag) {
-                          handleEditItem(selectedDiag, 'diagnosis');
-                        }
-                      }}
+                      onClick={() => handleOpenAddModal('diagnosis')}
+                      className="text-blue-600 hover:text-blue-800 text-sm flex items-center"
                     >
-                      <Pencil size={12} />
+                      <Plus size={14} className="mr-1" />
+                      Add New
                     </button>
                   </div>
-                  {showDiagnosisDropdown && filteredDiagnoses.length > 0 && (
-                    <div
-                      ref={diagnosisDropdownRef} // Add this
-                      className="absolute z-10 mt-1 w-full bg-white shadow-lg rounded-md max-h-48 overflow-auto"
-                    >
-                      {filteredDiagnoses.map((diagnosis, index) => ( // Add index parameter
-                        <div
-                          key={diagnosis._id}
-                          onClick={() => {
+                  <div className="relative">
+                    <input
+                      type="text"
+                      id="diagnosis"
+                      autoComplete="off"
+                      value={diagnosisSearchTerm}
+                      onChange={(e) => {
+                        setDiagnosisSearchTerm(e.target.value);
+                        setSelectedDiagnosis({ ...selectedDiagnosis, name: e.target.value });
+                        setShowDiagnosisDropdown(true);
+                        setHighlightedDiagnosisIndex(-1);
+                      }}
+                      onFocus={() => {
+                        setShowDiagnosisDropdown(true);
+                        setHighlightedDiagnosisIndex(-1);
+                      }}
+                      onBlur={() => setTimeout(() => setShowDiagnosisDropdown(false), 200)}
+                      onKeyDown={(e) =>
+                        handleKeyDown(
+                          e,
+                          filteredDiagnoses,
+                          highlightedDiagnosisIndex,
+                          setHighlightedDiagnosisIndex,
+                          (diagnosis) => {
                             setSelectedDiagnosis({ ...selectedDiagnosis, name: diagnosis.name });
                             setDiagnosisSearchTerm(diagnosis.name);
                             setShowDiagnosisDropdown(false);
-                          }}
-                          className={`px-4 py-2 cursor-pointer ${ // Update className with highlight logic
-                            index === highlightedDiagnosisIndex
-                              ? 'bg-blue-100 text-blue-900'
-                              : 'hover:bg-gray-100'
-                            }`}
-                          onMouseEnter={() => setHighlightedDiagnosisIndex(index)} // Add this
-                        >
-                          <div className="font-medium">{diagnosis.name}</div>
-                        </div>
-                      ))}
+                          },
+                          () => setShowDiagnosisDropdown(false)
+                        )
+                      }
+                      className="w-full pl-10 pr-10 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="Search diagnosis"
+                    />
+                    <Search size={16} className="absolute left-3 top-2.5 text-gray-400" />
+                    <div className="absolute right-2 top-2 flex space-x-1">
+                      <button
+                        type="button"
+                        className="text-xs px-2 py-1 bg-blue-200 rounded hover:bg-blue-300"
+                        onClick={() => {
+                          const selectedDiag = diagnoses.find((d) => d.name === selectedDiagnosis.name);
+                          if (selectedDiag) {
+                            handleEditItem(selectedDiag, 'diagnosis');
+                          }
+                        }}
+                      >
+                        <Pencil size={12} />
+                      </button>
                     </div>
-                  )}
+                    {showDiagnosisDropdown && filteredDiagnoses.length > 0 && (
+                      <div
+                        ref={diagnosisDropdownRef}
+                        className="absolute z-10 mt-1 w-full bg-white shadow-lg rounded-md max-h-48 overflow-auto"
+                      >
+                        {filteredDiagnoses.map((diagnosis, index) => (
+                          <div
+                            key={diagnosis._id}
+                            onClick={() => {
+                              setSelectedDiagnosis({ ...selectedDiagnosis, name: diagnosis.name });
+                              setDiagnosisSearchTerm(diagnosis.name);
+                              setShowDiagnosisDropdown(false);
+                            }}
+                            className={`px-4 py-2 cursor-pointer ${index === highlightedDiagnosisIndex ? 'bg-blue-100 text-blue-900' : 'hover:bg-gray-100'
+                              }`}
+                            onMouseEnter={() => setHighlightedDiagnosisIndex(index)}
+                          >
+                            <div className="font-medium">{diagnosis.name}</div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
-
+                {/* Booking Note Input - Moved to Left Column */}
+                <div>
+                  <label htmlFor="bookingNote" className="block text-sm font-medium text-gray-700 mb-1">
+                    Booking Note
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      id="bookingNote"
+                      autoComplete="off"
+                      value={bookingNotes || ''}
+                      onChange={(e) => setBookingNotes(e.target.value)} // Note: Consider using setSelectedDiagnosis if bookingNote should be stored there
+                      placeholder="Enter Booking Note"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                    />
+                  </div>
+                </div>
               </div>
               <div>
-                <label htmlFor="symptom" className="block text-sm font-medium text-gray-700 mb-1">
-                  Additional Notes
-                </label>
-                <div className="relative">
-                  <input
-                    type="text"
-                    // autoComplete="off" 
-                    value={selectedDiagnosis.notes || ''}
-                    onChange={(e) => setSelectedDiagnosis({ ...selectedDiagnosis, notes: e.target.value })}
-                    placeholder="Enter Additional Notes"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md mt-2"
-                  />
+                {/* Additional Notes Input */}
+                <div className="mb-4">
+                  <label htmlFor="symptom" className="block text-sm font-medium text-gray-700 mb-1">
+                    Additional Notes
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={selectedDiagnosis.notes || ''}
+                      onChange={(e) => setSelectedDiagnosis({ ...selectedDiagnosis, notes: e.target.value })}
+                      placeholder="Enter Additional Notes"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                    />
+                  </div>
                 </div>
               </div>
             </div>

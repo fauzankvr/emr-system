@@ -517,7 +517,7 @@ const PrescriptionModal = ({ prescriptionId, onClose }) => {
 
         <PDFErrorBoundary>
           <div className="h-[500px] overflow-auto">
-            <PDFViewer width="100%" height="100%" showToolbar={false}>
+            <PDFViewer width="100%" height="100%" >
               <PrescriptionPDF
                 key={prescription._id}
                 doctor={{

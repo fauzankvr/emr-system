@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { axiosInstance } from "../../API/axiosInstance";
 import { FaEye, FaEdit, FaTrash, FaSearch, FaPlus, FaUser, FaSpinner, FaTimes } from "react-icons/fa";
 import { toast, ToastContainer } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css"; 
+import "react-toastify/dist/ReactToastify.css";
 
 const PatientList = () => {
   const [patients, setPatients] = useState([]);
@@ -24,6 +24,7 @@ const PatientList = () => {
       bp: "",
       pulse: "",
       temp: "",
+      unit: "F",
       weight: ""
     }
   });
@@ -50,14 +51,12 @@ const PatientList = () => {
     }
   };
 
-  // Filter patients based on search term
   const filteredPatients = patients.filter(patient =>
     patient.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     patient.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
     patient.phone.includes(searchTerm)
   );
 
-  // Pagination logic
   const indexOfLastPatient = currentPage * patientsPerPage;
   const indexOfFirstPatient = indexOfLastPatient - patientsPerPage;
   const currentPatients = filteredPatients.slice(indexOfFirstPatient, indexOfLastPatient);
@@ -71,12 +70,13 @@ const PatientList = () => {
   const handleEdit = (patient) => {
     setEditForm({ 
       ...patient,
-      vitals: patient.vitals || {
-        spo2: "",
-        bp: "",
-        pulse: "",
-        temp: "",
-        weight: ""
+      vitals: {
+        spo2: patient.vitals?.spo2 || "",
+        bp: patient.vitals?.bp || "",
+        pulse: patient.vitals?.pulse || "",
+        temp: patient.vitals?.temp ? patient.vitals.temp.replace(/[°CF]/g, '') : "",
+        unit: patient.vitals?.unit || "F",
+        weight: patient.vitals?.weight || ""
       }
     });
     setShowEditModal(true);
@@ -91,11 +91,12 @@ const PatientList = () => {
         ...prev,
         vitals: {
           ...prev.vitals,
-          [vitalKey]: value
+          [vitalKey]: vitalKey === 'temp' ? value : value,
+          ...(vitalKey === 'unit' && prev.vitals.temp ? { temp: `${prev.vitals.temp.replace(/[°CF]/g, '')}${value}` } : {})
         }
       }));
     } else {
-      setEditForm({ ...editForm, [name]: value });
+      setEditForm(prev => ({ ...prev, [name]: value }));
     }
   };
 
@@ -107,7 +108,14 @@ const PatientList = () => {
     }
     setEditLoading(true);
     try {
-      await axiosInstance.put(`/api/patient/${editForm._id}`, editForm);
+      const updatedForm = {
+        ...editForm,
+        vitals: {
+          ...editForm.vitals,
+          temp: editForm.vitals.temp ? `${editForm.vitals.temp.replace(/[°CF]/g, '')}${editForm.vitals.unit || 'F'}` : ""
+        }
+      };
+      await axiosInstance.put(`/api/patient/${editForm._id}`, updatedForm);
       toast.success("Patient updated successfully!");
       setShowEditModal(false);
       fetchPatients();
@@ -127,11 +135,12 @@ const PatientList = () => {
         ...prev,
         vitals: {
           ...prev.vitals,
-          [vitalKey]: value
+          [vitalKey]: vitalKey === 'temp' ? value : value,
+          ...(vitalKey === 'unit' && prev.vitals.temp ? { temp: `${prev.vitals.temp.replace(/[°CF]/g, '')}${value}` } : {})
         }
       }));
     } else {
-      setAddForm({ ...addForm, [name]: value });
+      setAddForm(prev => ({ ...prev, [name]: value }));
     }
   };
 
@@ -144,7 +153,14 @@ const PatientList = () => {
     addForm.gender = addForm.gender.toLowerCase();
     setAddLoading(true);
     try {
-      await axiosInstance.post("/api/patient", addForm);
+      const updatedForm = {
+        ...addForm,
+        vitals: {
+          ...addForm.vitals,
+          temp: addForm.vitals.temp ? `${addForm.vitals.temp.replace(/[°CF]/g, '')}${addForm.vitals.unit || 'F'}` : ""
+        }
+      };
+      await axiosInstance.post("/api/patient", updatedForm);
       toast.success("Patient added successfully!");
       setShowAddModal(false);
       setAddForm({
@@ -159,6 +175,7 @@ const PatientList = () => {
           bp: "",
           pulse: "",
           temp: "",
+          unit: "F",
           weight: ""
         }
       });
@@ -233,7 +250,6 @@ const PatientList = () => {
     <div className="min-h-screen bg-gray-50 p-6">
       <ToastContainer />
       <div className="max-w-7xl mx-auto">
-        {/* Header */}
         <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div>
@@ -249,7 +265,6 @@ const PatientList = () => {
           </div>
         </div>
 
-        {/* Search and Stats */}
         <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
           <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
             <div className="relative flex-1 max-w-md">
@@ -271,7 +286,6 @@ const PatientList = () => {
           </div>
         </div>
 
-        {/* Patient Table */}
         <div className="bg-white rounded-lg shadow-sm">
           {loading ? (
             <LoadingSpinner />
@@ -369,7 +383,6 @@ const PatientList = () => {
                 </table>
               </div>
 
-              {/* Pagination */}
               {totalPages > 1 && (
                 <div className="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
                   <div className="flex-1 flex justify-between sm:hidden">
@@ -423,7 +436,6 @@ const PatientList = () => {
         </div>
       </div>
 
-      {/* Add Patient Modal */}
       {showAddModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" style={{ backdropFilter: 'blur(4px)' }}>
           <div className="bg-white rounded-lg shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
@@ -444,7 +456,6 @@ const PatientList = () => {
             
             <form onSubmit={handleAddSubmit} className="p-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Basic Information */}
                 <div className="space-y-4">
                   <h3 className="font-semibold text-lg text-gray-900 border-b pb-2">Basic Information</h3>
                   
@@ -512,7 +523,7 @@ const PatientList = () => {
                     </label>
                     <input
                       name="age"
-                      type="number"
+                     
                       value={addForm.age}
                       onChange={handleAddChange}
                       className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -532,7 +543,6 @@ const PatientList = () => {
                   </div>
                 </div>
 
-                {/* Vitals */}
                 <div className="space-y-4">
                   <h3 className="font-semibold text-lg text-gray-900 border-b pb-2">Vital Signs</h3>
                   
@@ -570,14 +580,26 @@ const PatientList = () => {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Temperature (°F)</label>
-                    <input
-                      name="vitals.temp"
-                      value={addForm.vitals.temp}
-                      onChange={handleAddChange}
-                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      placeholder="e.g., 98.6"
-                    />
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Temperature</label>
+                    <div className="relative flex items-center">
+                      <input
+                        name="vitals.temp"
+                        type="number"
+                        value={addForm.vitals.temp ? addForm.vitals.temp.replace(/[°CF]/g, '') : ''}
+                        onChange={handleAddChange}
+                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        placeholder="e.g., 98.6"
+                      />
+                      <select
+                        name="vitals.unit"
+                        value={addForm.vitals.unit || 'F'}
+                        onChange={handleAddChange}
+                        className="ml-2 p-1 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      >
+                        <option value="C">°C</option>
+                        <option value="F">°F</option>
+                      </select>
+                    </div>
                   </div>
 
                   <div>
@@ -616,7 +638,6 @@ const PatientList = () => {
         </div>
       )}
 
-      {/* Enhanced View Modal */}
       {showViewModal && selectedPatient && (
         <div className="fixed inset-0 bg-opacity-20 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -723,7 +744,6 @@ const PatientList = () => {
         </div>
       )}
 
-      {/* Enhanced Edit Modal with Vitals */}
       {showEditModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" style={{ backdropFilter: 'blur(4px)' }}>
           <div className="bg-white rounded-lg shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
@@ -744,7 +764,6 @@ const PatientList = () => {
             
             <form onSubmit={handleEditSubmit} className="p-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Basic Information */}
                 <div className="space-y-4">
                   <h3 className="font-semibold text-lg text-gray-900 border-b pb-2">Basic Information</h3>
                   
@@ -812,7 +831,7 @@ const PatientList = () => {
                     </label>
                     <input
                       name="age"
-                      type="number"
+                     
                       value={editForm.age || ""}
                       onChange={handleEditChange}
                       className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -832,7 +851,6 @@ const PatientList = () => {
                   </div>
                 </div>
 
-                {/* Vitals */}
                 <div className="space-y-4">
                   <h3 className="font-semibold text-lg text-gray-900 border-b pb-2">Vital Signs</h3>
                   
@@ -870,14 +888,26 @@ const PatientList = () => {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Temperature (°F)</label>
-                    <input
-                      name="vitals.temp"
-                      value={editForm.vitals?.temp || ""}
-                      onChange={handleEditChange}
-                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      placeholder="e.g., 98.6"
-                    />
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Temperature</label>
+                    <div className="relative flex items-center">
+                      <input
+                        name="vitals.temp"
+                        type="number"
+                        value={editForm.vitals?.temp ? editForm.vitals.temp.replace(/[°CF]/g, '') : ''}
+                        onChange={handleEditChange}
+                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        placeholder="e.g., 98.6"
+                      />
+                      <select
+                        name="vitals.unit"
+                        value={editForm.vitals?.unit || 'F'}
+                        onChange={handleEditChange}
+                        className="ml-2 p-1 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      >
+                        <option value="C">°C</option>
+                        <option value="F">°F</option>
+                      </select>
+                    </div>
                   </div>
 
                   <div>

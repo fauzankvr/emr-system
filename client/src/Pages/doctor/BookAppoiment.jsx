@@ -53,30 +53,21 @@ export default function AppointmentBookingForm() {
 
   const [newPatient, setNewPatient] = useState({
     name: "",
-
     email: "",
-
     phone: "",
-
     gender: "male",
-
     age: "",
-
     dob: "",
-
     // address: {
     //   street: "",
-
     //   city: "",
-
     //   state: "",
-
     //   pincode: "",
     // },
   });
 
-  // Add state for vitals
-  const [vitals, setVitals] = useState({ spo2: '', bp: '', pulse: '', temp: '', weight: '' });
+  // Add state for vitals with unit field
+  const [vitals, setVitals] = useState({ spo2: '', bp: '', pulse: '', temp: '', weight: '', unit: 'F' });
 
   // Fetch doctors on component mount
 
@@ -112,7 +103,7 @@ export default function AppointmentBookingForm() {
 
     try {
       const response = await axiosInstance.get("/api/doctor");
-      console.log('docgor',response)
+      console.log('doctor', response);
 
       setDoctors(response.data.data);
     } catch (error) {
@@ -162,7 +153,14 @@ export default function AppointmentBookingForm() {
   // Handle patient selection
 
   const handlePatientSelect = (patient) => {
-    setVitals({...patient.vitals});
+    setVitals({
+      spo2: patient.vitals?.spo2 || '',
+      bp: patient.vitals?.bp || '',
+      pulse: patient.vitals?.pulse || '',
+      temp: patient.vitals?.temp || '',
+      weight: patient.vitals?.weight || '',
+      unit: patient.vitals?.unit || 'F'
+    });
     setSelectedPatient(patient);
     setShowNewPatientForm(false);
   };
@@ -177,17 +175,14 @@ export default function AppointmentBookingForm() {
 
       setNewPatient({
         ...newPatient,
-
         [parent]: {
           ...newPatient[parent],
-
           [child]: value,
         },
       });
     } else {
       setNewPatient({
         ...newPatient,
-
         [name]: value,
       });
     }
@@ -227,7 +222,11 @@ export default function AppointmentBookingForm() {
     try {
       // Update patient vitals before booking
       if (selectedPatient._id) {
-        await axiosInstance.patch(`/api/patient/${selectedPatient._id}/vitals`, { vitals });
+        const updatedVitals = {
+          ...vitals,
+          temp: vitals.temp ? `${vitals.temp.replace(/[°CF]/g, '')}${vitals.unit || 'F'}` : ''
+        };
+        await axiosInstance.patch(`/api/patient/${selectedPatient._id}/vitals`, { vitals: updatedVitals });
       }
       // const [slotTime, slotEndTime] = selectedSlot.startTime.split("-");
 
@@ -350,11 +349,7 @@ export default function AppointmentBookingForm() {
             2
           </div>
 
-          <div
-            className={`h-1 flex-1 mx-2 ${
-              step >= 3 ? "bg-blue-600" : "bg-gray-200"
-            }`}
-          ></div>
+          <div className={`h-1 flex-1 mx-2 ${step >= 3 ? "bg-blue-600" : "bg-gray-200"}`}></div>
 
           <div
             className={`flex items-center justify-center w-8 h-8 rounded-full ${
@@ -588,7 +583,7 @@ export default function AppointmentBookingForm() {
                     </label>
 
                     <input
-                      type="number"
+                      
                       name="age"
                       value={newPatient.age}
                       onChange={handleNewPatientChange}
@@ -719,15 +714,15 @@ export default function AppointmentBookingForm() {
               </div>
             )}
 
-            <div class="w-full max-w-sm mx-auto pt-5">
-              <label class="block text-sm font-medium text-gray-700 mb-2">
+            <div className="w-full max-w-sm mx-auto pt-5">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
                 Enter the Slot Date
               </label>
               <input
                 type="date"
                 placeholder="Select Date"
                 onChange={handleDateChange}
-                class="w-full px-4 py-2 border border-gray-300 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200"
+                className="w-full px-4 py-2 border border-gray-300 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200"
               />
             </div>
 
@@ -805,7 +800,7 @@ export default function AppointmentBookingForm() {
                       <div
                         key={time}
                         className={`flex items-center justify-between p-3 border rounded-lg cursor-pointer transition hover:bg-blue-50 ${
-                          availableSlots === time
+                          selectedSlot === time
                             ? "bg-blue-50 border-blue-500 border-l-4"
                             : "border-gray-200"
                         }`}
@@ -819,7 +814,7 @@ export default function AppointmentBookingForm() {
                           </div>
                         </div>
                         <div className="text-blue-600">
-                          {availableSlots === time ? (
+                          {selectedSlot === time ? (
                             <Check className="w-4 h-4" />
                           ) : (
                             <span onClick={() => handleSlotSelect(time)}>
@@ -914,7 +909,7 @@ export default function AppointmentBookingForm() {
                 <div className="text-sm text-gray-500 mb-1">Time Slot</div>
 
                 <div className="font-medium">
-                   {selectedSlot}
+                  {selectedSlot}
                 </div>
               </div>
             </div>
@@ -924,23 +919,70 @@ export default function AppointmentBookingForm() {
           <div className="mb-6 grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">SpO2</label>
-              <input type="text" className="w-full border rounded-md p-2" value={vitals.spo2} onChange={e => setVitals({ ...vitals, spo2: e.target.value })} placeholder="e.g. 98%" />
+              <input
+                type="text"
+                className="w-full border rounded-md p-2"
+                value={vitals.spo2}
+                onChange={e => setVitals({ ...vitals, spo2: e.target.value })}
+                placeholder="e.g. 98%"
+              />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">BP</label>
-              <input type="text" className="w-full border rounded-md p-2" value={vitals.bp} onChange={e => setVitals({ ...vitals, bp: e.target.value })} placeholder="e.g. 120/80" />
+              <input
+                type="text"
+                className="w-full border rounded-md p-2"
+                value={vitals.bp}
+                onChange={e => setVitals({ ...vitals, bp: e.target.value })}
+                placeholder="e.g. 120/80"
+              />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Pulse</label>
-              <input type="text" className="w-full border rounded-md p-2" value={vitals.pulse} onChange={e => setVitals({ ...vitals, pulse: e.target.value })} placeholder="e.g. 72" />
+              <input
+                type="text"
+                className="w-full border rounded-md p-2"
+                value={vitals.pulse}
+                onChange={e => setVitals({ ...vitals, pulse: e.target.value })}
+                placeholder="e.g. 72"
+              />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Temperature</label>
-              <input type="text" className="w-full border rounded-md p-2" value={vitals.temp} onChange={e => setVitals({ ...vitals, temp: e.target.value })} placeholder="e.g. 37.5°C" />
+              <div className="relative flex items-center">
+                <input
+                  type="number"
+                  className="w-full border rounded-md p-2"
+                  value={vitals.temp ? vitals.temp.replace(/[°CF]/g, '') : ''}
+                  onChange={e => setVitals({
+                    ...vitals,
+                    temp: e.target.value ? `${e.target.value}${vitals.unit || 'F'}` : ''
+                  })}
+                  placeholder="e.g. 98.6"
+                />
+                <select
+                  value={vitals.unit || 'F'}
+                  onChange={e => setVitals({
+                    ...vitals,
+                    unit: e.target.value,
+                    temp: vitals.temp ? `${vitals.temp.replace(/[°CF]/g, '')}${e.target.value}` : ''
+                  })}
+                  className="ml-2 p-1 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option value="C">°C</option>
+                  <option value="F">°F</option>
+                </select>
+              </div>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Weight</label>
-              <input type="text" className="w-full border rounded-md p-2" value={vitals.weight} onChange={e => setVitals({ ...vitals, weight: e.target.value })} placeholder="e.g. 70kg" />
+              <input
+                type="text"
+                className="w-full border rounded-md p-2"
+                value={vitals.weight}
+                onChange={e => setVitals({ ...vitals, weight: e.target.value })}
+                placeholder="e.g. 70kg"
+              />
             </div>
           </div>
 
