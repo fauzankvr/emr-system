@@ -707,7 +707,7 @@ export default function AppointmentBookingForm() {
                     <div className="text-sm text-gray-600">
                       <div>{doctor.specialization}</div>
 
-                      <div>Experience: {doctor.experience} years</div>
+                      {/* <div>Experience: {doctor.experience} years</div> */}
                     </div>
                   </div>
                 ))}
