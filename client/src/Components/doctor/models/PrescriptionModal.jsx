@@ -1,9 +1,9 @@
 import React, { useState, useEffect, memo } from "react";
-import { PDFViewer, PDFDownloadLink } from "@react-pdf/renderer";
+import { PDFViewer, PDFDownloadLink, pdf } from "@react-pdf/renderer";
 import { Document, Page, Text, View, StyleSheet } from "@react-pdf/renderer";
 import { axiosInstance } from "../../../API/axiosInstance";
 import { toast } from "react-toastify";
-import { Download } from "lucide-react";
+import { Download, MessageCircle, X, Phone } from "lucide-react";
 
 // Enhanced Error Boundary Component
 class PDFErrorBoundary extends React.Component {
@@ -35,11 +35,107 @@ class PDFErrorBoundary extends React.Component {
     return this.props.children;
   }
 }
-/// PDF Styles
+
+// Phone Number Modal Component
+const PhoneNumberModal = ({ isOpen, onClose, onSubmit, currentPhone }) => {
+  const [phoneNumber, setPhoneNumber] = useState(currentPhone || "");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!phoneNumber.trim()) {
+      toast.error("Please enter a valid phone number");
+      return;
+    }
+
+    // Basic phone number validation
+    const cleanPhone = phoneNumber.replace(/\D/g, "");
+    if (cleanPhone.length < 10) {
+      toast.error("Please enter a valid 10-digit phone number");
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      await onSubmit(phoneNumber);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60]">
+      <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-lg font-semibold flex items-center">
+            <Phone size={20} className="mr-2 text-green-600" />
+            Enter WhatsApp Number
+          </h3>
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-600"
+            disabled={isSubmitting}
+          >
+            <X size={20} />
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit}>
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Patient's WhatsApp Number
+            </label>
+            <input
+              type="tel"
+              value={phoneNumber}
+              onChange={(e) => setPhoneNumber(e.target.value)}
+              placeholder="Enter 10-digit mobile number"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+              disabled={isSubmitting}
+              autoFocus
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              Example: 9876543210 or +919876543210
+            </p>
+          </div>
+
+          <div className="flex gap-3">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50"
+              disabled={isSubmitting}
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="flex-1 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50 flex items-center justify-center"
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? (
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+              ) : (
+                <>
+                  <MessageCircle size={16} className="mr-1" />
+                  Send to WhatsApp
+                </>
+              )}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
+
+// PDF Styles (keeping your existing styles)
 const styles = StyleSheet.create({
   page: {
     fontFamily: "Helvetica",
-    fontSize: 12, // increased from 10
+    fontSize: 12,
     backgroundColor: "#FFFFFF",
   },
   container: {
@@ -52,11 +148,11 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
   },
   headerText: {
-    fontSize: 16, // increased from 14
+    fontSize: 16,
     fontWeight: "bold",
   },
   subHeaderText: {
-    fontSize: 10, // increased from 8
+    fontSize: 10,
     marginTop: 2,
   },
   section: {
@@ -65,7 +161,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontWeight: "bold",
-    fontSize: 13, // increased from 11
+    fontSize: 13,
     marginBottom: 2,
   },
   row: {
@@ -96,16 +192,16 @@ const styles = StyleSheet.create({
   },
   tableCellHeader: {
     fontWeight: "bold",
-    fontSize: 11, // increased from 9
+    fontSize: 11,
   },
   tableCell: {
-    fontSize: 11, // increased from 9
+    fontSize: 11,
   },
   TapringHed: {
-    fontSize: 10, // increased from 8
+    fontSize: 10,
   },
   TapringP: {
-    fontSize: 10, // increased from 8
+    fontSize: 10,
   },
   label: {
     fontWeight: "bold",
@@ -122,7 +218,7 @@ const styles = StyleSheet.create({
     right: 15,
     backgroundColor: "#FAFAFA",
     padding: 5,
-    fontSize: 10, // increased from 8
+    fontSize: 10,
   },
   signature: {
     position: "absolute",
@@ -132,7 +228,7 @@ const styles = StyleSheet.create({
   },
 });
 
-// PrescriptionPDF Component
+// PrescriptionPDF Component (keeping your existing component)
 const PrescriptionPDF = memo(
   ({
     doctor = {
@@ -423,11 +519,14 @@ const PrescriptionPDF = memo(
     );
   }
 );
-// PrescriptionModal Component
+
+// Enhanced PrescriptionModal Component with improved WhatsApp functionality
 const PrescriptionModal = ({ prescriptionId, onClose }) => {
   const [prescription, setPrescription] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [showPhoneModal, setShowPhoneModal] = useState(false);
+  const [sendingWhatsApp, setSendingWhatsApp] = useState(false);
 
   useEffect(() => {
     const fetchPrescription = async () => {
@@ -449,6 +548,194 @@ const PrescriptionModal = ({ prescriptionId, onClose }) => {
 
     fetchPrescription();
   }, [prescriptionId]);
+
+  const formatPhoneNumber = (phone) => {
+    if (!phone) return "";
+    // Remove all non-digits
+    const cleaned = phone.replace(/\D/g, "");
+    // If it doesn't start with country code, add Indian country code
+    if (cleaned.length === 10) {
+      return `91${cleaned}`;
+    }
+    // If it already has country code but no +, add it
+    if (cleaned.length > 10 && !cleaned.startsWith("+")) {
+      return cleaned;
+    }
+    return cleaned;
+  };
+
+  const generatePDFBlob = async () => {
+    try {
+      const doc = (
+        <PrescriptionPDF
+          doctor={{
+            name: prescription.doctor.name,
+            regNo: "35083",
+            contact: prescription.doctor.phone,
+          }}
+          patient={{
+            name: prescription.patient.name,
+            mobile: prescription.patient.phone,
+            age: prescription.patient.age,
+          }}
+          diagnosis={prescription.diagnosis}
+          notes={prescription.notes}
+          medicines={prescription.medicines}
+          labReports={prescription.labReports}
+          labTest={prescription.labTest}
+          vitals={prescription.patient.vitals}
+          bookingNotes={prescription.bookingNotes}
+        />
+      );
+
+      const blob = await pdf(doc).toBlob();
+      return blob;
+    } catch (error) {
+      console.error("Error generating PDF:", error);
+      throw error;
+    }
+  };
+
+  // Enhanced WhatsApp sharing function - focuses on direct sharing without downloads
+  const sendToWhatsApp = async (phoneNumber) => {
+    try {
+      setSendingWhatsApp(true);
+      
+      const formattedPhone = formatPhoneNumber(phoneNumber);
+      
+      if (!formattedPhone) {
+        toast.error("Invalid phone number");
+        return;
+      }
+
+      // Generate PDF blob
+      const pdfBlob = await generatePDFBlob();
+      
+      // Create message text
+      const message = `Hi ${prescription.patient.name},\n\nYour prescription from Dr. ${prescription.doctor.name} is ready.\n\nDate: ${new Date().toLocaleDateString()}\n\nPlease find your prescription attached.\n\nBest regards,\nClinic Management System`;
+      
+      // Check if Web Share API is supported
+      const canShare = navigator.share && navigator.canShare;
+      
+      if (canShare) {
+        try {
+          // Create a File object from the PDF blob
+          const pdfFile = new File(
+            [pdfBlob], 
+            `${prescription.patient.name}-prescription.pdf`, 
+            { type: 'application/pdf' }
+          );
+          
+          const shareData = {
+            title: 'Medical Prescription',
+            text: message,
+            files: [pdfFile]
+          };
+          
+          // Check if the specific data can be shared
+          if (navigator.canShare(shareData)) {
+            await navigator.share(shareData);
+            toast.success("Prescription shared successfully via WhatsApp!");
+            setShowPhoneModal(false);
+            return;
+          }
+        } catch (shareError) {
+          // If user cancels, don't show error
+          if (shareError.name === 'AbortError') {
+            setShowPhoneModal(false);
+            return;
+          }
+          console.log("Web Share API failed:", shareError);
+          // Continue to fallback method
+        }
+      }
+
+      // Fallback method - use WhatsApp URL with message only
+      // Note: WhatsApp URL doesn't support file attachment directly
+      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      
+      // Create a temporary download for the PDF (user can manually attach)
+      const pdfUrl = URL.createObjectURL(pdfBlob);
+      
+      // Simplified message for URL fallback
+      const urlMessage = `Hi ${prescription.patient.name}, your prescription from Dr. ${prescription.doctor.name} is ready. Date: ${new Date().toLocaleDateString()}`;
+      
+      if (isMobile) {
+        // Try different WhatsApp URL schemes for mobile
+        const whatsappUrls = [
+          `whatsapp://send?phone=${formattedPhone}&text=${encodeURIComponent(urlMessage)}`,
+          `https://api.whatsapp.com/send?phone=${formattedPhone}&text=${encodeURIComponent(urlMessage)}`,
+        ];
+        
+        // Try to open WhatsApp app first, then web version
+        let opened = false;
+        for (const url of whatsappUrls) {
+          try {
+            window.open(url, '_blank');
+            opened = true;
+            break;
+          } catch (error) {
+            console.log(`Failed to open ${url}:`, error);
+          }
+        }
+        
+        if (opened) {
+          // Create a download link for the PDF
+          const link = document.createElement('a');
+          link.href = pdfUrl;
+          link.download = `${prescription.patient.name}-prescription.pdf`;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          
+          toast.info("WhatsApp opened with message. PDF downloaded - please attach it to your message.", {
+            duration: 5000,
+          });
+        }
+      } else {
+        // Desktop: Open WhatsApp Web
+        const whatsappWebUrl = `https://web.whatsapp.com/send?phone=${formattedPhone}&text=${encodeURIComponent(urlMessage)}`;
+        window.open(whatsappWebUrl, '_blank');
+        
+        // Download PDF for manual attachment
+        const link = document.createElement('a');
+        link.href = pdfUrl;
+        link.download = `${prescription.patient.name}-prescription.pdf`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        toast.info("WhatsApp Web opened with message. PDF downloaded - please attach it to your message.", {
+          duration: 5000,
+        });
+      }
+      
+      setShowPhoneModal(false);
+      
+      // Clean up the temporary URL
+      setTimeout(() => {
+        URL.revokeObjectURL(pdfUrl);
+      }, 30000); // Give more time for user to use the file
+      
+    } catch (error) {
+      console.error("Error sending to WhatsApp:", error);
+      toast.error("Failed to send to WhatsApp. Please try again.");
+    } finally {
+      setSendingWhatsApp(false);
+    }
+  };
+
+  const handleWhatsAppClick = () => {
+    const patientPhone = prescription?.patient?.phone || prescription?.patient?.mobile;
+    
+    if (patientPhone && patientPhone !== "-") {
+      // Phone number exists, send directly
+      sendToWhatsApp(patientPhone);
+    } else {
+      // No phone number, show modal
+      setShowPhoneModal(true);
+    }
+  };
 
   if (loading) {
     return (
@@ -503,47 +790,24 @@ const PrescriptionModal = ({ prescriptionId, onClose }) => {
   }
 
   return (
-    <div className="fixed inset-0 flex items-center justify-center z-50 backdrop-blur-sm">
-      <div className="bg-white rounded-lg p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-lg font-semibold">Prescription Details</h2>
-          <button
-            onClick={onClose}
-            className="px-4 py-2 bg-red-700 hover:bg-red-800 text-white rounded"
-          >
-            Close
-          </button>
-        </div>
-
-        <PDFErrorBoundary>
-          <div className="h-[500px] overflow-auto">
-            <PDFViewer width="100%" height="100%" >
-              <PrescriptionPDF
-                key={prescription._id}
-                doctor={{
-                  name: prescription.doctor.name,
-                  regNo: "35083",
-                  contact: prescription.doctor.phone,
-                }}
-                patient={{
-                  name: prescription.patient.name,
-                  mobile: prescription.patient.phone,
-                  age: prescription.patient.age,
-                }}
-                diagnosis={prescription.diagnosis}
-                notes={prescription.notes}
-                medicines={prescription.medicines}
-                labReports={prescription.labReports}
-                labTest={prescription.labTest}
-                vitals={prescription.patient.vitals}
-                bookingNotes={prescription.bookingNotes}
-              />
-            </PDFViewer>
+    <>
+      <div className="fixed inset-0 flex items-center justify-center z-50 backdrop-blur-sm">
+        <div className="bg-white rounded-lg p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-lg font-semibold">Prescription Details</h2>
+            <button
+              onClick={onClose}
+              className="px-4 py-2 bg-red-700 hover:bg-red-800 text-white rounded"
+            >
+              Close
+            </button>
           </div>
-          <div className="flex justify-end mt-4">
-            <PDFDownloadLink
-              document={
+
+          <PDFErrorBoundary>
+            <div className="h-[500px] overflow-auto">
+              <PDFViewer width="100%" height="100%">
                 <PrescriptionPDF
+                  key={prescription._id}
                   doctor={{
                     name: prescription.doctor.name,
                     regNo: "35083",
@@ -562,24 +826,77 @@ const PrescriptionModal = ({ prescriptionId, onClose }) => {
                   vitals={prescription.patient.vitals}
                   bookingNotes={prescription.bookingNotes}
                 />
-              }
-              fileName={`${prescription.patient.name}-prescription.pdf`}
-            >
-              {({ loading }) =>
-                loading ? (
-                  "Loading document..."
+              </PDFViewer>
+            </div>
+            
+            {/* Action Buttons */}
+            <div className="flex justify-end mt-4 gap-3">
+              {/* WhatsApp Send Button */}
+              <button
+                onClick={handleWhatsAppClick}
+                disabled={sendingWhatsApp}
+                className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md flex items-center disabled:opacity-50 transition-colors"
+              >
+                {sendingWhatsApp ? (
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
                 ) : (
-                  <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md flex items-center">
-                    <Download size={16} className="mr-2" />
-                    Download PDF
-                  </button>
-                )
-              }
-            </PDFDownloadLink>
-          </div>
-        </PDFErrorBoundary>
+                  <MessageCircle size={16} className="mr-2" />
+                )}
+                {sendingWhatsApp ? "Sharing..." : "Share via WhatsApp"}
+              </button>
+
+              {/* PDF Download Button */}
+              <PDFDownloadLink
+                document={
+                  <PrescriptionPDF
+                    doctor={{
+                      name: prescription.doctor.name,
+                      regNo: "35083",
+                      contact: prescription.doctor.phone,
+                    }}
+                    patient={{
+                      name: prescription.patient.name,
+                      mobile: prescription.patient.phone,
+                      age: prescription.patient.age,
+                    }}
+                    diagnosis={prescription.diagnosis}
+                    notes={prescription.notes}
+                    medicines={prescription.medicines}
+                    labReports={prescription.labReports}
+                    labTest={prescription.labTest}
+                    vitals={prescription.patient.vitals}
+                    bookingNotes={prescription.bookingNotes}
+                  />
+                }
+                fileName={`${prescription.patient.name}-prescription.pdf`}
+              >
+                {({ loading }) =>
+                  loading ? (
+                    <button className="bg-blue-400 text-white px-4 py-2 rounded-md flex items-center">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      Generating...
+                    </button>
+                  ) : (
+                    <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md flex items-center transition-colors">
+                      <Download size={16} className="mr-2" />
+                      Download PDF
+                    </button>
+                  )
+                }
+              </PDFDownloadLink>
+            </div>
+          </PDFErrorBoundary>
+        </div>
       </div>
-    </div>
+
+      {/* Phone Number Modal */}
+      <PhoneNumberModal
+        isOpen={showPhoneModal}
+        onClose={() => setShowPhoneModal(false)}
+        onSubmit={sendToWhatsApp}
+        currentPhone={prescription?.patient?.phone || prescription?.patient?.mobile}
+      />
+    </>
   );
 };
 
