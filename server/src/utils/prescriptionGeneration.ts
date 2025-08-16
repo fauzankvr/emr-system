@@ -73,6 +73,9 @@ async function generatePrescriptionPDF(
   const formattedDateTime = convertDate(prescriptionDate);
 
   function convertDate(date: Date) {
+    if(!date){
+      return ""
+    }
     return date.toLocaleString("en-GB", {
       day: "2-digit",
       month: "2-digit",
