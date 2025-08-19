@@ -42,31 +42,33 @@ axiosInstance.interceptors.request.use(
 
 // Response interceptor to handle token refresh
 axiosInstance.interceptors.response.use(
-  (response) => {
-    return response;
-  },
+  (response) => response,
   async (error) => {
     const originalRequest = error.config;
+
+    // ⛔ Don't run refresh logic for login/signup endpoints
+    if (originalRequest.url.includes("/login") || originalRequest.url.includes("/signup")) {
+      return Promise.reject(error);
+    }
 
     if (error.response?.status === 401 && !originalRequest._retry) {
       if (isRefreshing) {
         return new Promise((resolve, reject) => {
           failedQueue.push({ resolve, reject });
-        }).then(token => {
-          originalRequest.headers["Authorization"] = token;
-          return axiosInstance(originalRequest);
-        }).catch(err => {
-          return Promise.reject(err);
-        });
+        })
+          .then(token => {
+            originalRequest.headers["Authorization"] = token;
+            return axiosInstance(originalRequest);
+          })
+          .catch(err => Promise.reject(err));
       }
 
       originalRequest._retry = true;
       isRefreshing = true;
 
       const refreshToken = localStorage.getItem("refreshToken");
-      
+
       if (!refreshToken) {
-        // No refresh token, redirect to login
         localStorage.removeItem("accessToken");
         localStorage.removeItem("refreshToken");
         window.location.href = "/login";
@@ -75,22 +77,20 @@ axiosInstance.interceptors.response.use(
 
       try {
         const response = await axios.post(`${backendUrl}/api/auth/refresh`, {
-          refreshToken: refreshToken
+          refreshToken,
         });
 
         const { accessToken, refreshToken: newRefreshToken } = response.data;
-        
+
         localStorage.setItem("accessToken", accessToken);
         localStorage.setItem("refreshToken", newRefreshToken);
-        
+
         processQueue(null, accessToken);
-        
+
         originalRequest.headers["Authorization"] = accessToken;
         return axiosInstance(originalRequest);
       } catch (refreshError) {
         processQueue(refreshError, null);
-        
-        // Refresh token is invalid, redirect to login
         localStorage.removeItem("accessToken");
         localStorage.removeItem("refreshToken");
         window.location.href = "/login";
@@ -103,3 +103,4 @@ axiosInstance.interceptors.response.use(
     return Promise.reject(error);
   }
 );
+

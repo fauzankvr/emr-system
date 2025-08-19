@@ -19,8 +19,7 @@ const LoginPage = () => {
         email,
         password,
       });
-
-      console.log(response.data.doctor);
+      console.log("response...")
       localStorage.setItem("accessToken", response.data.accessToken);
       localStorage.setItem("refreshToken", response.data.refreshToken);
       localStorage.setItem("doctorData", JSON.stringify(response.data.doctor)); // Stringify doctorData
