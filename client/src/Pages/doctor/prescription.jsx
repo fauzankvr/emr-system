@@ -858,7 +858,7 @@ const Prescription = () => {
           `/api/patient/${patientId}`
         );
         setPatient(patientResponse.data.data);
-        console.log(patientResponse.data.data)
+        
         if (patientResponse?.data?.data?.vitals) {
           const vitalsData = patientResponse.data.data.vitals;
           let tempUnit="F"
@@ -912,7 +912,7 @@ const Prescription = () => {
         if (prescId) {
           const prescriptionResponse = await axiosInstance.get(`/api/prescription/${prescId}`);
           const prescData = prescriptionResponse.data.data;
-          console.log(prescData)
+          
           setPrescriptionId(prescData._id);
           setBookingNotes(prescData.bookingNotes)
           setDiagnosis(prescData.diagnosis || "");
@@ -1445,40 +1445,43 @@ const Prescription = () => {
     }
   };
 
-  const fetchPatients = async (query = '') => {
-    try {
-      if (!query.trim()) {
-        // No query: fetch from API
-        const response = await axiosInstance.get("/api/booking");
-        // const response = await axiosInstance.get(/api/patient/search?q=${query});
-        // setAvailablePatients(response.data.data || []);
+  // Add this new state at the top with your other states
+const [allBookings, setAllBookings] = useState([]);
 
-        const bookings = response.data.data.filter(
-          (val) => val.patientId !== null && val.status === "booked"
-        );
+// Updated fetchPatients function
+const fetchPatients = async (query = '') => {
+  try {
 
-        const patients = bookings.map((booking) => booking.patientId);
-        console.log(patients)
-
-        // // Optional: remove duplicates
-        // const uniquePatients = Array.from(
-        //   new Map(patients.map((p) => [p._id, p])).values()
-        // );
-
-        // setAllPatients(uniquePatients);
-        setAvailablePatients(bookings);
-      } else {
-        // Query exists: filter from already-loaded allPatients
-        const lowerQuery = query.toLowerCase();
-        const filtered = availablePatients.filter((patient) =>
-          patient.name?.toLowerCase().includes(lowerQuery)
-        );
-        setAvailablePatients(filtered);
-      }
-    } catch (error) {
-      toast.error('Failed to fetch patients');
+    // Only fetch from API if we don't have data yet
+    let bookingsToFilter = allBookings;
+    
+    if (allBookings.length === 0) {
+      const response = await axiosInstance.get("/api/booking");
+      const freshBookings = response.data.data.filter(
+        (val) => val.patientId !== null && val.status === "booked"
+      );
+      setAllBookings(freshBookings);
+      bookingsToFilter = freshBookings;
     }
-  };
+
+    if (!query.trim()) {
+      // No query: show all bookings
+      setAvailablePatients(bookingsToFilter);
+    } else {
+      // Query exists: filter bookings by patient name or email
+      const lowerQuery = query.toLowerCase();
+      const filtered = bookingsToFilter.filter((booking) =>
+        booking.patientId?.name?.toLowerCase().includes(lowerQuery) ||
+        booking.patientId?.email?.toLowerCase().includes(lowerQuery)
+      );
+      setAvailablePatients(filtered);
+    }
+  } catch (error) {
+    console.error('Error fetching patients:', error);
+    toast.error('Failed to fetch patients');
+  }
+};
+
 
   const handleOpenAddModal = (type) => {
     setModalType(type);
