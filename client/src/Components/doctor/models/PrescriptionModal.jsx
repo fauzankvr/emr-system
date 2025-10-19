@@ -252,17 +252,16 @@ const PrescriptionPDF = memo(
     bookingNotes = "",
     date = new Date()
   }) => {
-  console.log("Raw date prop:", date); // Debug the raw date value
-  console.log("Parsed date:", new Date(date)); // Debug the parsed Date object
 
   const formattedDate = new Intl.DateTimeFormat("en-GB", {
     timeZone: "UTC",
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
   }).format(new Date(date));
-
-  console.log("Formatted date:", formattedDate);
 
     return (
       <Document>

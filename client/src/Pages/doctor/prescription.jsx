@@ -126,17 +126,15 @@ const PrescriptionPDF = ({
   bookingNotes = "",
   date = new Date()
 }) => {
-  const today = new Date(date);
-  const formattedDate = today.toLocaleString("en-US", {
-    weekday: "long",
+  const formattedDate = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "UTC",
     year: "numeric",
-    month: "short",
-    day: "numeric",
+    month: "2-digit",
+    day: "2-digit",
     hour: "2-digit",
     minute: "2-digit",
-    timeZone: "UTC",
     hour12: true,
-  });
+  }).format(new Date(date));
 
   return (
     <Document>
@@ -918,6 +916,9 @@ const Prescription = () => {
   }
 
   function handleAddOldData(data) {
+    toast.success("Added successfully");
+    setLabTest(data?.labTest);
+    setLabReports(data?.labReports);
     setMedicines(data?.medicines)
   }
   useEffect(() => {
@@ -3522,13 +3523,19 @@ const Prescription = () => {
                 </PDFDownloadLink>
                 <button
                   onClick={() => {
-                    if (urlParams.get("isOld")) {
+                    if (urlParams.get("isOld")=='true') {
                       setDiagnosis("");
                       setBookingNotes("");
                       setLabTest([""]);
                       setLabReports([]);
                       setMedicines([]);
                     }
+                    urlParams.set("isOld", "false");
+window.history.replaceState(
+  {},
+  "",
+  `${window.location.pathname}?${urlParams.toString()}`
+);
                     setShowPDFModal(false);
                   }}
                   className="px-3 py-1 bg-red-600 hover:bg-red-700 text-white rounded-md transition text-sm"
