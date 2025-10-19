@@ -7,7 +7,7 @@ import { Document, Page, Text, View, StyleSheet } from "@react-pdf/renderer";
 import { PDFDownloadLink, PDFViewer } from "@react-pdf/renderer";
 import TemplateModal from "../../Components/doctor/models/TemplateModal";
 import AddItemModal from "../../Components/doctor/models/AddItemModal";
-const backendUrl = import.meta.env.VITE_BACKEND_URL;
+// const backendUrl = import.meta.env.VITE_BACKEND_URL;
 
 import { useRef } from 'react';
 
@@ -124,14 +124,17 @@ const PrescriptionPDF = ({
     weight: "-",
   },
   bookingNotes = "",
+  date = new Date()
 }) => {
-  const today = new Date();
-  const formattedDate = today.toLocaleString("en-GB", {
-    day: "2-digit",
-    month: "2-digit",
+  const today = new Date(date);
+  const formattedDate = today.toLocaleString("en-US", {
+    weekday: "long",
     year: "numeric",
+    month: "short",
+    day: "numeric",
     hour: "2-digit",
     minute: "2-digit",
+    timeZone: "UTC",
     hour12: true,
   });
 
@@ -396,6 +399,7 @@ const Prescription = () => {
   const [customDiagnosis, setCustomDiagnosis] = useState("");
   const [notes, setNotes] = useState("");
   const [selectedSymptom, setSelectedSymptom] = useState("");
+  const [selectedDate,setSelectedDate] = useState(new Date())
 
   const [medicines, setMedicines] = useState([]);
   const [labReports, setLabReports] = useState([]);
@@ -404,7 +408,7 @@ const Prescription = () => {
     bp: "",
     pulse: "",
     temp: "",
-    unit:"F",
+    unit: "F",
     weight: "",
   });
   const [availableMedicines, setAvailableMedicines] = useState([]);
@@ -416,8 +420,8 @@ const Prescription = () => {
   const [labTest, setLabTest] = useState([""])
   const [editMedicineIndex, setEditMedicineIndex] = useState(null);
   const [showTemplateModal, setShowTemplateModal] = useState(false);
-  const [showPatientModal, setShowPatientModal] = useState(false);
-  const [showDoctorModal, setShowDoctorModal] = useState(false);
+  // const [showPatientModal, setShowPatientModal] = useState(false);
+  // const [showDoctorModal, setShowDoctorModal] = useState(false);
   const [patientId, setPatientId] = useState(null);
   const [doctorId, setDoctorId] = useState(null);
 
@@ -435,7 +439,7 @@ const Prescription = () => {
   const [availablePatients, setAvailablePatients] = useState([]);
   const [availableDoctors, setAvailableDoctors] = useState([]);
   const [patientSearchQuery, setPatientSearchQuery] = useState('');
-  const [doctorSearchQuery, setDoctorSearchQuery] = useState('');
+  // const [doctorSearchQuery, setDoctorSearchQuery] = useState('');
 
   // Additional state for search functionality
   const [frequencySearchTerm, setFrequencySearchTerm] = useState('');
@@ -753,6 +757,7 @@ const Prescription = () => {
   });
 
   const [newLabReportFile, setNewLabReportFile] = useState(null);
+   const [oldDescriptions, setOldDescriptions] = useState([]);
 
   const diagnosisOptions = [
     "Abdominal Pain",
@@ -858,29 +863,63 @@ const Prescription = () => {
           `/api/patient/${patientId}`
         );
         setPatient(patientResponse.data.data);
-        
+
+        // Fetch patient’s old descriptions (based on doctorId)
+        const descResponse = await axiosInstance.get(
+          `/api/prescription/patient/${patientId}`
+        );
+        setOldDescriptions(descResponse.data.data || []);
+
         if (patientResponse?.data?.data?.vitals) {
           const vitalsData = patientResponse.data.data.vitals;
-          let tempUnit="F"
+          let tempUnit = "F";
           if (vitalsData.temp) {
             // Match number + unit separately (e.g., "10C" -> ["10", "C"])
             const match = vitalsData.temp.match(/^([\d.]+)\s*([CF])$/i);
             if (match) {
               tempUnit = match[2].toUpperCase();
-            } 
+            }
           }
-        
+
           setVitals({
             ...vitalsData,
-            temp: vitalsData.temp, 
-            unit: tempUnit
+            temp: vitalsData.temp,
+            unit: tempUnit,
           });
         }
       }
     }
     fetchData()
   }, [doctorId, patientId])
+  
+  let urlParams = new URLSearchParams(window.location.search);
+   useEffect(() => {
+    if (availableDoctors.length > 0 && !doctorId) {
+      const firstDoctor = availableDoctors[0];
+      setDoctor(firstDoctor);
+      setDoctorId(firstDoctor._id);
+    }
+  }, [availableDoctors]);
 
+  function handleShowOldData(data) {
+    urlParams.set("isOld", "true");
+    window.history.replaceState(
+      {},
+      "",
+      `${window.location.pathname}?${urlParams.toString()}`
+    );
+    setDiagnosis(data?.diagnoses)
+    setBookingNotes(data?.bookingNotes);
+    setLabTest(data?.labTest)
+    setLabReports(data?.labReports)
+    setMedicines(data?.medicines);
+    setSelectedDate(data?.createdAt)
+    setShowPDFModal(true)
+  }
+
+  function handleAddOldData(data) {
+    setMedicines(data?.medicines)
+  }
   useEffect(() => {
     const fetchInitialData = async () => {
       if (saveAsTemplate === 'true') {
@@ -906,7 +945,6 @@ const Prescription = () => {
         setDays(daysResponse.data.data || []);
         setDosages(dosagesResponse.data.data || []);
 
-        const urlParams = new URLSearchParams(window.location.search);
         const prescId = urlParams.get("id") || localStorage.getItem("prescription");
 
         if (prescId) {
@@ -1446,41 +1484,41 @@ const Prescription = () => {
   };
 
   // Add this new state at the top with your other states
-const [allBookings, setAllBookings] = useState([]);
+  const [allBookings, setAllBookings] = useState([]);
 
-// Updated fetchPatients function
-const fetchPatients = async (query = '') => {
-  try {
+  // Updated fetchPatients function
+  const fetchPatients = async (query = '') => {
+    try {
 
-    // Only fetch from API if we don't have data yet
-    let bookingsToFilter = allBookings;
+      // Only fetch from API if we don't have data yet
+      let bookingsToFilter = allBookings;
     
-    if (allBookings.length === 0) {
-      const response = await axiosInstance.get("/api/booking");
-      const freshBookings = response.data.data.filter(
-        (val) => val.patientId !== null && val.status === "booked"
-      );
-      setAllBookings(freshBookings);
-      bookingsToFilter = freshBookings;
-    }
+      if (allBookings.length === 0) {
+        const response = await axiosInstance.get("/api/booking");
+        const freshBookings = response.data.data.filter(
+          (val) => val.patientId !== null && val.status === "booked"
+        );
+        setAllBookings(freshBookings);
+        bookingsToFilter = freshBookings;
+      }
 
-    if (!query.trim()) {
-      // No query: show all bookings
-      setAvailablePatients(bookingsToFilter);
-    } else {
-      // Query exists: filter bookings by patient name or email
-      const lowerQuery = query.toLowerCase();
-      const filtered = bookingsToFilter.filter((booking) =>
-        booking.patientId?.name?.toLowerCase().includes(lowerQuery) ||
-        booking.patientId?.email?.toLowerCase().includes(lowerQuery)
-      );
-      setAvailablePatients(filtered);
+      if (!query.trim()) {
+        // No query: show all bookings
+        setAvailablePatients(bookingsToFilter);
+      } else {
+        // Query exists: filter bookings by patient name or email
+        const lowerQuery = query.toLowerCase();
+        const filtered = bookingsToFilter.filter((booking) =>
+          booking.patientId?.name?.toLowerCase().includes(lowerQuery) ||
+          booking.patientId?.email?.toLowerCase().includes(lowerQuery)
+        );
+        setAvailablePatients(filtered);
+      }
+    } catch (error) {
+      console.error('Error fetching patients:', error);
+      toast.error('Failed to fetch patients');
     }
-  } catch (error) {
-    console.error('Error fetching patients:', error);
-    toast.error('Failed to fetch patients');
-  }
-};
+  };
 
 
   const handleOpenAddModal = (type) => {
@@ -1594,192 +1632,218 @@ const fetchPatients = async (query = '') => {
   return (
     <>
       <ToastContainer />
-      <div className="bg-gray-50 min-h-screen p-4 md:p-6">
+      <div className="bg-gray-50 min-h-screen p-2 md:p-4">
         <div className="max-w-6xl mx-auto bg-white shadow-lg rounded-lg overflow-hidden">
           {/* Header */}
-          <div className="bg-blue-600 text-white p-4 md:p-6">
+          <div className="bg-blue-600 text-white p-2 md:p-4">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center">
               <div>
-                <h1 className="text-2xl font-bold">Medical Prescription</h1>
-                <p className="text-blue-100 mt-1">
+                <h1 className="text-lg font-bold">Medical Prescription</h1>
+                <p className="text-blue-100 mt-1 text-sm">
                   {prescriptionId
                     ? "Edit Prescription"
                     : "Create New Prescription"}
                 </p>
               </div>
-              {/* <div className="flex space-x-2 mt-4 md:mt-0">
-                <button
-                  className="bg-blue-700 hover:bg-blue-800 text-white px-4 py-2 rounded-md flex items-center"
-                  onClick={prescriptionId ? handleUpdate : handleSave}
-                  disabled={templateId && (!doctor || !patient)}
-                >
-                  <FileText size={16} className="mr-2" />
-                  {prescriptionId ? "Update" : "Save"}
-                </button>
-                <button
-                  className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md flex items-center"
-                  onClick={handleSend}
-                  disabled={!prescriptionId && !localStorage.getItem("currentPrescriptionId")}
-                >
-                  <Send size={16} className="mr-2" />
-                  Send
-                </button>
-                <button
-                  className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md flex items-center"
-                  onClick={handleSaveAsTemplate}
-                >
-                  <Plus size={16} className="mr-2" />
-                  Save as Template
-                </button>
-                <button
-                  className="bg-blue-700 hover:bg-blue-800 text-white px-4 py-2 rounded-md flex items-center"
-                  onClick={() => setShowPDFModal(true)}
-                >
-                  <Download size={16} className="mr-2" />
-                  PDF
-                </button>
-              </div> */}
+              {/* <div className="flex space-x-1 mt-2 md:mt-0">
+              <button
+                className="bg-blue-700 hover:bg-blue-800 text-white px-3 py-1 rounded-md flex items-center text-sm"
+                onClick={prescriptionId ? handleUpdate : handleSave}
+                disabled={templateId && (!doctor || !patient)}
+              >
+                <FileText size={14} className="mr-1" />
+                {prescriptionId ? "Update" : "Save"}
+              </button>
+              <button
+                className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded-md flex items-center text-sm"
+                onClick={handleSend}
+                disabled={!prescriptionId && !localStorage.getItem("currentPrescriptionId")}
+              >
+                <Send size={14} className="mr-1" />
+                Send
+              </button>
+              <button
+                className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded-md flex items-center text-sm"
+                onClick={handleSaveAsTemplate}
+              >
+                <Plus size={14} className="mr-1" />
+                Save as Template
+              </button>
+              <button
+                className="bg-blue-700 hover:bg-blue-800 text-white px-3 py-1 rounded-md flex items-center text-sm"
+                onClick={() => setShowPDFModal(true)}
+              >
+                <Download size={14} className="mr-1" />
+                PDF
+              </button>
+            </div> */}
             </div>
           </div>
 
           {/* Doctor and Patient Information */}
-          <div className="p-4 md:p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="p-2 md:p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Doctor Selection */}
-            <div className="border rounded-lg p-4 bg-gray-50">
-              <h2 className="text-lg font-semibold text-gray-700 mb-3">Doctor</h2>
-              {(!doctor && templateId) ? (
+            <div className="border rounded-lg p-2 bg-gray-50">
+              {oldDescriptions ? (
                 <>
-                  <input
-                    type="text"
-                    placeholder="Search doctor..."
-                    value={doctorSearchQuery}
-                    onChange={e => {
-                      setDoctorSearchQuery(e.target.value);
-                      fetchDoctors(e.target.value);
-                    }}
-                    className="w-full p-2 border border-gray-300 rounded-lg mb-2"
-                  />
-                  <div className="max-h-40 overflow-y-auto">
-                    {availableDoctors.map(doc => (
-                      <div
-                        key={doc._id}
-                        className="p-2 hover:bg-blue-100 cursor-pointer rounded"
-                        onClick={() => { setDoctor(doc); setDoctorId(doc._id) }}
-                      >
-                        <span className="font-medium">{doc.name}</span>
-                        <span className="ml-2 text-xs text-gray-500">{doc.email}</span>
-                      </div>
-                    ))}
-                  </div>
+                  {/* 🔹 Old Patient Descriptions Section */}
+                  <h3 className="text-sm font-semibold text-gray-700 mb-1">
+                    Old Prescription
+                  </h3>
+
+                  {oldDescriptions.length > 0 ? (
+                    <div className="space-y-2 max-h-40 overflow-y-auto">
+                      {oldDescriptions.map((desc) => (
+                        <div
+                          key={desc._id}
+                          className="border rounded p-2 bg-white shadow-sm flex justify-between items-center"
+                        >
+                          {/* Left side - Date */}
+                          <p className="text-xs text-gray-600 m-0">
+                            <span className="font-medium">Date:</span>{" "}
+                            {new Date(desc.createdAt).toLocaleString("en-US", {
+                              weekday: "long",
+                              year: "numeric",
+                              month: "short",
+                              day: "numeric",
+                              hour: "2-digit",
+                              minute: "2-digit",
+                              timeZone: "UTC",
+                              hour12: true,
+                            })}
+                          </p>
+
+                          {/* Right side - Buttons */}
+                          <div className="flex gap-2">
+                            <button
+                              className="text-xs px-2 py-1 bg-blue-500 text-white rounded cursor-pointer"
+                              onClick={() => handleShowOldData(desc)}
+                            >
+                              Show
+                            </button>
+                            <button
+                              className="text-xs px-2 py-1 bg-green-500 text-white rounded cursor-pointer"
+                              onClick={() => handleAddOldData(desc)}
+                            >
+                              Add
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-gray-500 text-sm">
+                      No old prescription found.
+                    </p>
+                  )}
                 </>
-              ) : doctor ? (
-                <div className="space-y-2">
-                  <p className="text-gray-800"><span className="font-medium">Name:</span> {doctor.name}</p>
-                  <p className="text-gray-800"><span className="font-medium">ID:</span> {doctor._id}</p>
-                  {doctor.specialization && (
-                    <p className="text-gray-800"><span className="font-medium">Specialization:</span> {doctor.specialization}</p>
-                  )}
-                  {doctor.contact && (
-                    <p className="text-gray-800"><span className="font-medium">Contact:</span> {doctor.contact}</p>
-                  )}
-                </div>
               ) : (
-                <p className="text-gray-500">Loading doctor details...</p>
+                <p className="text-gray-500 text-sm">Loading...</p>
               )}
             </div>
 
             {/* Patient Selection */}
-            <div className="border rounded-lg p-4 bg-gray-50">
-              <h2 className="text-lg font-semibold text-gray-700 mb-3">Patient</h2>
-              {(!patient && templateId) ? (
+            <div className="border rounded-lg p-2 bg-gray-50">
+              <h2 className="text-sm font-semibold text-gray-700 mb-2">
+                Patient
+              </h2>
+              {!patient && templateId ? (
                 <>
                   <input
                     type="text"
                     placeholder="Search patient..."
                     value={patientSearchQuery}
-                    onChange={e => {
+                    onChange={(e) => {
                       setPatientSearchQuery(e.target.value);
                       fetchPatients(e.target.value);
                     }}
-                    className="w-full p-2 border border-gray-300 rounded-lg mb-2"
+                    className="w-full p-1 border border-gray-300 rounded-lg mb-1 text-sm"
                   />
-                  <div className="max-h-40 overflow-y-auto">
-                    {availablePatients.map(pat => (
+                  <div className="max-h-32 overflow-y-auto">
+                    {availablePatients.map((pat) => (
                       <div
                         key={pat.patientId._id}
-                        className="p-2 hover:bg-blue-100 cursor-pointer rounded"
+                        className="p-1 hover:bg-blue-100 cursor-pointer rounded text-sm"
                         onClick={() => {
                           setPatient(pat.patientId);
                           setPatientId(pat.patientId._id);
-                          setBookingNotes(pat.notes)
+                          setBookingNotes(pat.notes);
                           if (pat.patientId.vitals) {
                             setVitals(pat.patientId.vitals);
                           }
                         }}
                       >
-                        <span className="font-medium">{pat.patientId.name}</span>
-                        <span className="ml-2 text-xs text-gray-500">{pat.patientId.email}</span>
+                        <span className="font-medium">
+                          {pat.patientId.name}
+                        </span>
+                        <span className="ml-1 text-xs text-gray-500">
+                          {pat.patientId.email}
+                        </span>
                       </div>
                     ))}
                   </div>
                 </>
               ) : patient ? (
-                <div className="space-y-2">
-                  <p className="text-gray-800">
+                <div className="space-y-1">
+                  <p className="text-gray-800 text-sm">
                     <span className="font-medium">Name:</span> {patient.name}
                   </p>
-                  <p className="text-gray-800">
+                  <p className="text-gray-800 text-sm">
                     <span className="font-medium">ID:</span> {patient._id}
                   </p>
                   {patient.age && (
-                    <p className="text-gray-800">
+                    <p className="text-gray-800 text-sm">
                       <span className="font-medium">Age:</span> {patient.age}
                     </p>
                   )}
                   {patient.gender && (
-                    <p className="text-gray-800">
-                      <span className="font-medium">Gender:</span> {patient.gender}
+                    <p className="text-gray-800 text-sm">
+                      <span className="font-medium">Gender:</span>{" "}
+                      {patient.gender}
                     </p>
                   )}
                   {patient.contact && (
-                    <p className="text-gray-800">
-                      <span className="font-medium">Contact:</span> {patient.contact}
+                    <p className="text-gray-800 text-sm">
+                      <span className="font-medium">Contact:</span>{" "}
+                      {patient.contact}
                     </p>
                   )}
 
                   <button
                     onClick={() => {
                       setPatient(null);
-                      setBookingNotes("")
+                      setBookingNotes("");
                       setPatientId(null);
                       setVitals({
                         spo2: "",
                         bp: "",
                         pulse: "",
                         temp: "",
-                        unit:"F",
+                        unit: "F",
                         weight: "",
                       });
                     }}
-                    className="mt-3 px-3 py-1 bg-red-500 text-white text-sm rounded hover:bg-red-600"
+                    className="mt-2 px-2 py-1 bg-red-500 text-white text-xs rounded hover:bg-red-600"
                   >
                     Remove Patient
                   </button>
                 </div>
               ) : (
-                <p className="text-gray-500">Loading patient details...</p>
+                <p className="text-gray-500 text-sm">
+                  Loading patient details...
+                </p>
               )}
             </div>
           </div>
 
           {/* Vitals */}
-          <div className="p-4 md:p-6 border-t">
-            <h2 className="text-lg font-semibold text-gray-700 mb-4">Vitals</h2>
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-4">
+          <div className="p-2 md:p-4 border-t">
+            <h2 className="text-sm font-semibold text-gray-700 mb-2">Vitals</h2>
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-2 mb-2">
               <div>
                 <label
                   htmlFor="spo2"
-                  className="block text-sm font-medium text-gray-700 mb-1"
+                  className="block text-xs font-medium text-gray-700 mb-1"
                 >
                   SpO2 (%)
                 </label>
@@ -1790,14 +1854,14 @@ const fetchPatients = async (query = '') => {
                   onChange={(e) =>
                     setVitals({ ...vitals, spo2: e.target.value })
                   }
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-2 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                   placeholder="e.g. 98%"
                 />
               </div>
               <div>
                 <label
                   htmlFor="bp"
-                  className="block text-sm font-medium text-gray-700 mb-1"
+                  className="block text-xs font-medium text-gray-700 mb-1"
                 >
                   BP (mmHg)
                 </label>
@@ -1806,14 +1870,14 @@ const fetchPatients = async (query = '') => {
                   id="bp"
                   value={vitals.bp}
                   onChange={(e) => setVitals({ ...vitals, bp: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-2 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                   placeholder="e.g. 120/80"
                 />
               </div>
               <div>
                 <label
                   htmlFor="pulse"
-                  className="block text-sm font-medium text-gray-700 mb-1"
+                  className="block text-xs font-medium text-gray-700 mb-1"
                 >
                   Pulse (bpm)
                 </label>
@@ -1824,46 +1888,53 @@ const fetchPatients = async (query = '') => {
                   onChange={(e) =>
                     setVitals({ ...vitals, pulse: e.target.value })
                   }
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-2 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                   placeholder="e.g. 72"
                 />
               </div>
               <div>
-    <label className="block text-sm font-medium text-gray-700 mb-1">Temperature</label>
-    <div className="relative flex items-center">
-      <input
-        
-        id="temp"
-        className="w-full px-3 py-2 pr-16 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-        value={vitals.temp ? vitals.temp.replace(/[°CF]/g, '') : ''}
-        onChange={(e) =>
-          setVitals({
-            ...vitals,
-            temp: e.target.value ? `${e.target.value}${vitals.unit || 'F'}` : '',
-          })
-        }
-        placeholder="e.g. 37.5"
-      />
-      <select
-        value={vitals.unit || 'F'}
-        onChange={(e) =>
-          setVitals({
-            ...vitals,
-            unit: e.target.value,
-            temp: vitals.temp ? `${vitals.temp.replace(/[°CF]/g, '')}${e.target.value}` : '',
-          })
-        }
-        className="absolute right-1 top-1/2 -translate-y-1/2 h-7 px-1 border-l border-gray-300 bg-gray-50 rounded-r-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-      >
-        <option value="C">°C</option>
-        <option value="F">°F</option>
-      </select>
-    </div>
-  </div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">
+                  Temperature
+                </label>
+                <div className="relative flex items-center">
+                  <input
+                    id="temp"
+                    className="w-full px-2 py-1 pr-12 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                    value={vitals.temp ? vitals.temp.replace(/[°CF]/g, "") : ""}
+                    onChange={(e) =>
+                      setVitals({
+                        ...vitals,
+                        temp: e.target.value
+                          ? `${e.target.value}${vitals.unit || "F"}`
+                          : "",
+                      })
+                    }
+                    placeholder="e.g. 37.5"
+                  />
+                  <select
+                    value={vitals.unit || "F"}
+                    onChange={(e) =>
+                      setVitals({
+                        ...vitals,
+                        unit: e.target.value,
+                        temp: vitals.temp
+                          ? `${vitals.temp.replace(/[°CF]/g, "")}${
+                              e.target.value
+                            }`
+                          : "",
+                      })
+                    }
+                    className="absolute right-1 top-1/2 -translate-y-1/2 h-6 px-1 border-l border-gray-300 bg-gray-50 rounded-r-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs"
+                  >
+                    <option value="C">°C</option>
+                    <option value="F">°F</option>
+                  </select>
+                </div>
+              </div>
               <div>
                 <label
                   htmlFor="weight"
-                  className="block text-sm font-medium text-gray-700 mb-1"
+                  className="block text-xs font-medium text-gray-700 mb-1"
                 >
                   Weight (kg)
                 </label>
@@ -1874,7 +1945,7 @@ const fetchPatients = async (query = '') => {
                   onChange={(e) =>
                     setVitals({ ...vitals, weight: e.target.value })
                   }
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-2 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                   placeholder="e.g. 70kg"
                 />
               </div>
@@ -1882,21 +1953,24 @@ const fetchPatients = async (query = '') => {
           </div>
 
           {/* Diagnosis and Notes */}
-          <div className="p-4 md:p-6 border-t">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-4">
+          <div className="p-2 md:p-4 border-t">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
                 {/* Diagnosis Input */}
                 <div className="relative">
                   <div className="flex items-center justify-between mb-1">
-                    <label htmlFor="diagnosis" className="block text-sm font-medium text-gray-700">
+                    <label
+                      htmlFor="diagnosis"
+                      className="block text-xs font-medium text-gray-700"
+                    >
                       Diagnosis
                     </label>
                     <button
                       type="button"
-                      onClick={() => handleOpenAddModal('diagnosis')}
-                      className="text-blue-600 hover:text-blue-800 text-sm flex items-center"
+                      onClick={() => handleOpenAddModal("diagnosis")}
+                      className="text-blue-600 hover:text-blue-800 text-xs flex items-center"
                     >
-                      <Plus size={14} className="mr-1" />
+                      <Plus size={12} className="mr-1" />
                       Add New
                     </button>
                   </div>
@@ -1908,7 +1982,10 @@ const fetchPatients = async (query = '') => {
                       value={diagnosisSearchTerm}
                       onChange={(e) => {
                         setDiagnosisSearchTerm(e.target.value);
-                        setSelectedDiagnosis({ ...selectedDiagnosis, name: e.target.value });
+                        setSelectedDiagnosis({
+                          ...selectedDiagnosis,
+                          name: e.target.value,
+                        });
                         setShowDiagnosisDropdown(true);
                         setHighlightedDiagnosisIndex(-1);
                       }}
@@ -1916,7 +1993,9 @@ const fetchPatients = async (query = '') => {
                         setShowDiagnosisDropdown(true);
                         setHighlightedDiagnosisIndex(-1);
                       }}
-                      onBlur={() => setTimeout(() => setShowDiagnosisDropdown(false), 200)}
+                      onBlur={() =>
+                        setTimeout(() => setShowDiagnosisDropdown(false), 200)
+                      }
                       onKeyDown={(e) =>
                         handleKeyDown(
                           e,
@@ -1924,47 +2003,63 @@ const fetchPatients = async (query = '') => {
                           highlightedDiagnosisIndex,
                           setHighlightedDiagnosisIndex,
                           (diagnosis) => {
-                            setSelectedDiagnosis({ ...selectedDiagnosis, name: diagnosis.name });
+                            setSelectedDiagnosis({
+                              ...selectedDiagnosis,
+                              name: diagnosis.name,
+                            });
                             setDiagnosisSearchTerm(diagnosis.name);
                             setShowDiagnosisDropdown(false);
                           },
                           () => setShowDiagnosisDropdown(false)
                         )
                       }
-                      className="w-full pl-10 pr-10 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full pl-8 pr-8 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                       placeholder="Search diagnosis"
                     />
-                    <Search size={16} className="absolute left-3 top-2.5 text-gray-400" />
-                    <div className="absolute right-2 top-2 flex space-x-1">
+                    <Search
+                      size={14}
+                      className="absolute left-2 top-2 text-gray-400"
+                    />
+                    <div className="absolute right-1 top-1.5 flex space-x-1">
                       <button
                         type="button"
-                        className="text-xs px-2 py-1 bg-blue-200 rounded hover:bg-blue-300"
+                        className="text-xs px-1 py-1 bg-blue-200 rounded hover:bg-blue-300"
                         onClick={() => {
-                          const selectedDiag = diagnoses.find((d) => d.name === selectedDiagnosis.name);
+                          const selectedDiag = diagnoses.find(
+                            (d) => d.name === selectedDiagnosis.name
+                          );
                           if (selectedDiag) {
-                            handleEditItem(selectedDiag, 'diagnosis');
+                            handleEditItem(selectedDiag, "diagnosis");
                           }
                         }}
                       >
-                        <Pencil size={12} />
+                        <Pencil size={10} />
                       </button>
                     </div>
                     {showDiagnosisDropdown && filteredDiagnoses.length > 0 && (
                       <div
                         ref={diagnosisDropdownRef}
-                        className="absolute z-10 mt-1 w-full bg-white shadow-lg rounded-md max-h-48 overflow-auto"
+                        className="absolute z-10 mt-1 w-full bg-white shadow-lg rounded-md max-h-40 overflow-auto"
                       >
                         {filteredDiagnoses.map((diagnosis, index) => (
                           <div
                             key={diagnosis._id}
                             onClick={() => {
-                              setSelectedDiagnosis({ ...selectedDiagnosis, name: diagnosis.name });
+                              setSelectedDiagnosis({
+                                ...selectedDiagnosis,
+                                name: diagnosis.name,
+                              });
                               setDiagnosisSearchTerm(diagnosis.name);
                               setShowDiagnosisDropdown(false);
                             }}
-                            className={`px-4 py-2 cursor-pointer ${index === highlightedDiagnosisIndex ? 'bg-blue-100 text-blue-900' : 'hover:bg-gray-100'
-                              }`}
-                            onMouseEnter={() => setHighlightedDiagnosisIndex(index)}
+                            className={`px-3 py-1 cursor-pointer text-sm ${
+                              index === highlightedDiagnosisIndex
+                                ? "bg-blue-100 text-blue-900"
+                                : "hover:bg-gray-100"
+                            }`}
+                            onMouseEnter={() =>
+                              setHighlightedDiagnosisIndex(index)
+                            }
                           >
                             <div className="font-medium">{diagnosis.name}</div>
                           </div>
@@ -1975,7 +2070,10 @@ const fetchPatients = async (query = '') => {
                 </div>
                 {/* Booking Note Input - Moved to Left Column */}
                 <div>
-                  <label htmlFor="bookingNote" className="block text-sm font-medium text-gray-700 mb-1">
+                  <label
+                    htmlFor="bookingNote"
+                    className="block text-xs font-medium text-gray-700 mb-1"
+                  >
                     Booking Note
                   </label>
                   <div className="relative">
@@ -1983,27 +2081,35 @@ const fetchPatients = async (query = '') => {
                       type="text"
                       id="bookingNote"
                       autoComplete="off"
-                      value={bookingNotes || ''}
+                      value={bookingNotes || ""}
                       onChange={(e) => setBookingNotes(e.target.value)} // Note: Consider using setSelectedDiagnosis if bookingNote should be stored there
                       placeholder="Enter Booking Note"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                      className="w-full px-2 py-1 border border-gray-300 rounded-md text-sm"
                     />
                   </div>
                 </div>
               </div>
               <div>
                 {/* Additional Notes Input */}
-                <div className="mb-4">
-                  <label htmlFor="symptom" className="block text-sm font-medium text-gray-700 mb-1">
+                <div className="mb-2">
+                  <label
+                    htmlFor="symptom"
+                    className="block text-xs font-medium text-gray-700 mb-1"
+                  >
                     Additional Notes
                   </label>
                   <div className="relative">
                     <input
                       type="text"
-                      value={selectedDiagnosis.notes || ''}
-                      onChange={(e) => setSelectedDiagnosis({ ...selectedDiagnosis, notes: e.target.value })}
+                      value={selectedDiagnosis.notes || ""}
+                      onChange={(e) =>
+                        setSelectedDiagnosis({
+                          ...selectedDiagnosis,
+                          notes: e.target.value,
+                        })
+                      }
                       placeholder="Enter Additional Notes"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                      className="w-full px-2 py-1 border border-gray-300 rounded-md text-sm"
                     />
                   </div>
                 </div>
@@ -2012,11 +2118,11 @@ const fetchPatients = async (query = '') => {
           </div>
 
           {/* Medicines */}
-          <div className="p-4 md:p-6 border-t">
-            <h2 className="text-lg font-semibold text-gray-700 mb-4">
+          <div className="p-2 md:p-4 border-t">
+            <h2 className="text-sm font-semibold text-gray-700 mb-2">
               Medicines
             </h2>
-            <div className="mb-4">
+            <div className="mb-2">
               <label className="flex items-center">
                 <input
                   type="checkbox"
@@ -2027,30 +2133,30 @@ const fetchPatients = async (query = '') => {
                       isTapering: e.target.checked,
                     })
                   }
-                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                  className="h-3 w-3 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                 />
-                <span className="ml-2 text-sm text-gray-700">Is Tapering</span>
+                <span className="ml-1 text-xs text-gray-700">Is Tapering</span>
               </label>
             </div>
 
             {/* First Div: Medicine, Dosage, Frequency */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-2 mb-2">
               {/* Medicine Search */}
               {/* Medicine Search - Updated with keyboard navigation */}
               <div className="relative">
                 <div className="flex items-center justify-between mb-1">
                   <label
                     htmlFor="medicine"
-                    className="block text-sm font-medium text-gray-700"
+                    className="block text-xs font-medium text-gray-700"
                   >
                     Medicine
                   </label>
                   <button
                     type="button"
-                    onClick={() => handleOpenAddModal('medicine')}
-                    className="text-blue-600 hover:text-blue-800 text-sm flex items-center"
+                    onClick={() => handleOpenAddModal("medicine")}
+                    className="text-blue-600 hover:text-blue-800 text-xs flex items-center"
                   >
-                    <Plus size={14} className="mr-1" />
+                    <Plus size={12} className="mr-1" />
                     Add New
                   </button>
                 </div>
@@ -2069,47 +2175,59 @@ const fetchPatients = async (query = '') => {
                       setShowMedicineDropdown(true);
                       setHighlightedMedicineIndex(-1);
                     }}
-                    onBlur={() => setTimeout(() => setShowMedicineDropdown(false), 200)}
-                    onKeyDown={(e) => handleKeyDown(
-                      e,
-                      searchResults,
-                      highlightedMedicineIndex,
-                      setHighlightedMedicineIndex,
-                      handleMedicineSelect,
-                      () => setShowMedicineDropdown(false)
-                    )}
-                    className="w-full pl-10 pr-10 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    onBlur={() =>
+                      setTimeout(() => setShowMedicineDropdown(false), 200)
+                    }
+                    onKeyDown={(e) =>
+                      handleKeyDown(
+                        e,
+                        searchResults,
+                        highlightedMedicineIndex,
+                        setHighlightedMedicineIndex,
+                        handleMedicineSelect,
+                        () => setShowMedicineDropdown(false)
+                      )
+                    }
+                    className="w-full pl-8 pr-8 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                     placeholder="Search medicine"
                   />
-                  <Search size={16} className="absolute left-3 top-2.5 text-gray-400" />
-                  <div className="absolute right-2 top-2 flex space-x-1">
+                  <Search
+                    size={14}
+                    className="absolute left-2 top-2 text-gray-400"
+                  />
+                  <div className="absolute right-1 top-1.5 flex space-x-1">
                     <button
                       type="button"
-                      className="text-xs px-2 py-1 bg-blue-200 rounded hover:bg-blue-300"
+                      className="text-xs px-1 py-1 bg-blue-200 rounded hover:bg-blue-300"
                       onClick={() => {
-                        const selectedMedicine = searchResults.find(m => m.name === searchTerm);
+                        const selectedMedicine = searchResults.find(
+                          (m) => m.name === searchTerm
+                        );
                         if (selectedMedicine) {
-                          handleEditItem(selectedMedicine, 'medicine');
+                          handleEditItem(selectedMedicine, "medicine");
                         }
                       }}
                     >
-                      <Pencil size={12} />
+                      <Pencil size={10} />
                     </button>
                   </div>
                   {showMedicineDropdown && searchResults.length > 0 && (
                     <div
                       ref={medicineDropdownRef}
-                      className="absolute z-10 mt-1 w-full bg-white shadow-lg rounded-md max-h-48 overflow-auto"
+                      className="absolute z-10 mt-1 w-full bg-white shadow-lg rounded-md max-h-40 overflow-auto"
                     >
                       {searchResults.map((medicine, index) => (
                         <div
                           key={medicine._id}
                           onClick={() => handleMedicineSelect(medicine)}
-                          className={`px-4 py-2 cursor-pointer ${index === highlightedMedicineIndex
-                            ? 'bg-blue-100 text-blue-900'
-                            : 'hover:bg-gray-100'
-                            }`}
-                          onMouseEnter={() => setHighlightedMedicineIndex(index)}
+                          className={`px-3 py-1 cursor-pointer text-sm ${
+                            index === highlightedMedicineIndex
+                              ? "bg-blue-100 text-blue-900"
+                              : "hover:bg-gray-100"
+                          }`}
+                          onMouseEnter={() =>
+                            setHighlightedMedicineIndex(index)
+                          }
                         >
                           <div className="font-medium">{medicine.name}</div>
                           <div className="text-xs text-gray-500">
@@ -2119,26 +2237,24 @@ const fetchPatients = async (query = '') => {
                       ))}
                     </div>
                   )}
-
                 </div>
               </div>
-
 
               {/* Dosage Search */}
               <div>
                 <div className="flex items-center justify-between mb-1">
                   <label
                     htmlFor="dosage"
-                    className="block text-sm font-medium text-gray-700"
+                    className="block text-xs font-medium text-gray-700"
                   >
                     Dosage
                   </label>
                   <button
                     type="button"
-                    onClick={() => handleOpenAddModal('dosage')}
-                    className="text-blue-600 hover:text-blue-800 text-sm flex items-center"
+                    onClick={() => handleOpenAddModal("dosage")}
+                    className="text-blue-600 hover:text-blue-800 text-xs flex items-center"
                   >
-                    <Plus size={14} className="mr-1" />
+                    <Plus size={12} className="mr-1" />
                     Add New
                   </button>
                 </div>
@@ -2150,7 +2266,10 @@ const fetchPatients = async (query = '') => {
                     value={dosageSearchTerm}
                     onChange={(e) => {
                       setDosageSearchTerm(e.target.value);
-                      setNewMedicine({ ...newMedicine, dosageAmount: e.target.value });
+                      setNewMedicine({
+                        ...newMedicine,
+                        dosageAmount: e.target.value,
+                      });
                       setShowDosageDropdown(true);
                       setHighlightedDosageIndex(-1); // Add this
                     }}
@@ -2158,64 +2277,85 @@ const fetchPatients = async (query = '') => {
                       setShowDosageDropdown(true);
                       setHighlightedDosageIndex(-1); // Add this
                     }}
-                    onBlur={() => setTimeout(() => setShowDosageDropdown(false), 200)}
-                    onKeyDown={(e) => handleKeyDown( // Add this
-                      e,
-                      filteredDosages,
-                      highlightedDosageIndex,
-                      setHighlightedDosageIndex,
-                      (dosage) => {
-                        setNewMedicine({ ...newMedicine, dosageAmount: dosage.name });
-                        setDosageSearchTerm(dosage.name);
-                        setShowDosageDropdown(false);
-                      },
-                      () => setShowDosageDropdown(false)
-                    )}
-                    className="w-full pl-10 pr-10 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    onBlur={() =>
+                      setTimeout(() => setShowDosageDropdown(false), 200)
+                    }
+                    onKeyDown={(e) =>
+                      handleKeyDown(
+                        // Add this
+                        e,
+                        filteredDosages,
+                        highlightedDosageIndex,
+                        setHighlightedDosageIndex,
+                        (dosage) => {
+                          setNewMedicine({
+                            ...newMedicine,
+                            dosageAmount: dosage.name,
+                          });
+                          setDosageSearchTerm(dosage.name);
+                          setShowDosageDropdown(false);
+                        },
+                        () => setShowDosageDropdown(false)
+                      )
+                    }
+                    className="w-full pl-8 pr-8 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                     placeholder="Search dosage"
                   />
 
                   <Search
-                    size={16}
-                    className="absolute left-3 top-2.5 text-gray-400"
+                    size={14}
+                    className="absolute left-2 top-2 text-gray-400"
                   />
-                  <div className="absolute right-2 top-2 flex space-x-1">
+                  <div className="absolute right-1 top-1.5 flex space-x-1">
                     <button
                       type="button"
-                      className="text-xs px-2 py-1 bg-blue-200 rounded hover:bg-blue-300"
+                      className="text-xs px-1 py-1 bg-blue-200 rounded hover:bg-blue-300"
                       onClick={() => {
-                        const selectedDosage = dosages.find(d => d.name === newMedicine.dosageAmount);
+                        const selectedDosage = dosages.find(
+                          (d) => d.name === newMedicine.dosageAmount
+                        );
                         if (selectedDosage) {
-                          handleEditItem(selectedDosage, 'dosage');
+                          handleEditItem(selectedDosage, "dosage");
                         }
                       }}
                     >
-                      <Pencil size={12} />
+                      <Pencil size={10} />
                     </button>
                   </div>
                   {showDosageDropdown && filteredDosages.length > 0 && (
                     <div
                       ref={dosageDropdownRef} // Add this
-                      className="absolute z-10 mt-1 w-full bg-white shadow-lg rounded-md max-h-48 overflow-auto"
+                      className="absolute z-10 mt-1 w-full bg-white shadow-lg rounded-md max-h-40 overflow-auto"
                     >
-                      {filteredDosages.map((dosage, index) => ( // Add index
-                        <div
-                          key={dosage._id}
-                          onClick={() => {
-                            setNewMedicine({ ...newMedicine, dosageAmount: dosage.name });
-                            setDosageSearchTerm(dosage.name);
-                            setShowDosageDropdown(false);
-                          }}
-                          className={`px-4 py-2 cursor-pointer ${ // Update this
-                            index === highlightedDosageIndex
-                              ? 'bg-blue-100 text-blue-900'
-                              : 'hover:bg-gray-100'
+                      {filteredDosages.map(
+                        (
+                          dosage,
+                          index // Add index
+                        ) => (
+                          <div
+                            key={dosage._id}
+                            onClick={() => {
+                              setNewMedicine({
+                                ...newMedicine,
+                                dosageAmount: dosage.name,
+                              });
+                              setDosageSearchTerm(dosage.name);
+                              setShowDosageDropdown(false);
+                            }}
+                            className={`px-3 py-1 cursor-pointer text-sm ${
+                              // Update this
+                              index === highlightedDosageIndex
+                                ? "bg-blue-100 text-blue-900"
+                                : "hover:bg-gray-100"
                             }`}
-                          onMouseEnter={() => setHighlightedDosageIndex(index)} // Add this
-                        >
-                          <div className="font-medium">{dosage.name}</div>
-                        </div>
-                      ))}
+                            onMouseEnter={() =>
+                              setHighlightedDosageIndex(index)
+                            } // Add this
+                          >
+                            <div className="font-medium">{dosage.name}</div>
+                          </div>
+                        )
+                      )}
                     </div>
                   )}
                 </div>
@@ -2226,16 +2366,16 @@ const fetchPatients = async (query = '') => {
                 <div className="flex items-center justify-between mb-1">
                   <label
                     htmlFor="frequency"
-                    className="block text-sm font-medium text-gray-700"
+                    className="block text-xs font-medium text-gray-700"
                   >
                     Frequency
                   </label>
                   <button
                     type="button"
-                    onClick={() => handleOpenAddModal('frequency')}
-                    className="text-blue-600 hover:text-blue-800 text-sm flex items-center"
+                    onClick={() => handleOpenAddModal("frequency")}
+                    className="text-blue-600 hover:text-blue-800 text-xs flex items-center"
                   >
-                    <Plus size={14} className="mr-1" />
+                    <Plus size={12} className="mr-1" />
                     Add New
                   </button>
                 </div>
@@ -2254,63 +2394,84 @@ const fetchPatients = async (query = '') => {
                       setShowFrequencyDropdown(true);
                       setHighlightedFrequencyIndex(-1); // Add this
                     }}
-                    onBlur={() => setTimeout(() => setShowFrequencyDropdown(false), 200)}
-                    onKeyDown={(e) => handleKeyDown( // Add this
-                      e,
-                      filteredFrequencies,
-                      highlightedFrequencyIndex,
-                      setHighlightedFrequencyIndex,
-                      (frequency) => {
-                        setNewMedicine({ ...newMedicine, dosage: frequency.name });
-                        setFrequencySearchTerm(frequency.name);
-                        setShowFrequencyDropdown(false);
-                      },
-                      () => setShowFrequencyDropdown(false)
-                    )}
-                    className="w-full pl-10 pr-10 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    onBlur={() =>
+                      setTimeout(() => setShowFrequencyDropdown(false), 200)
+                    }
+                    onKeyDown={(e) =>
+                      handleKeyDown(
+                        // Add this
+                        e,
+                        filteredFrequencies,
+                        highlightedFrequencyIndex,
+                        setHighlightedFrequencyIndex,
+                        (frequency) => {
+                          setNewMedicine({
+                            ...newMedicine,
+                            dosage: frequency.name,
+                          });
+                          setFrequencySearchTerm(frequency.name);
+                          setShowFrequencyDropdown(false);
+                        },
+                        () => setShowFrequencyDropdown(false)
+                      )
+                    }
+                    className="w-full pl-8 pr-8 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                     placeholder="Search frequency"
                   />
                   <Search
-                    size={16}
-                    className="absolute left-3 top-2.5 text-gray-400"
+                    size={14}
+                    className="absolute left-2 top-2 text-gray-400"
                   />
-                  <div className="absolute right-2 top-2 flex space-x-1">
+                  <div className="absolute right-1 top-1.5 flex space-x-1">
                     <button
                       type="button"
-                      className="text-xs px-2 py-1 bg-blue-200 rounded hover:bg-blue-300"
+                      className="text-xs px-1 py-1 bg-blue-200 rounded hover:bg-blue-300"
                       onClick={() => {
-                        const selectedFreq = frequencies.find(f => f.name === newMedicine.dosage);
+                        const selectedFreq = frequencies.find(
+                          (f) => f.name === newMedicine.dosage
+                        );
                         if (selectedFreq) {
-                          handleEditItem(selectedFreq, 'frequency');
+                          handleEditItem(selectedFreq, "frequency");
                         }
                       }}
                     >
-                      <Pencil size={12} />
+                      <Pencil size={10} />
                     </button>
                   </div>
                   {showFrequencyDropdown && filteredFrequencies.length > 0 && (
                     <div
                       ref={frequencyDropdownRef} // Add this
-                      className="absolute z-10 mt-1 w-full bg-white shadow-lg rounded-md max-h-48 overflow-auto"
+                      className="absolute z-10 mt-1 w-full bg-white shadow-lg rounded-md max-h-40 overflow-auto"
                     >
-                      {filteredFrequencies.map((frequency, index) => ( // Add index
-                        <div
-                          key={frequency._id}
-                          onClick={() => {
-                            setNewMedicine({ ...newMedicine, dosage: frequency.name });
-                            setFrequencySearchTerm(frequency.name);
-                            setShowFrequencyDropdown(false);
-                          }}
-                          className={`px-4 py-2 cursor-pointer ${ // Update this
-                            index === highlightedFrequencyIndex
-                              ? 'bg-blue-100 text-blue-900'
-                              : 'hover:bg-gray-100'
+                      {filteredFrequencies.map(
+                        (
+                          frequency,
+                          index // Add index
+                        ) => (
+                          <div
+                            key={frequency._id}
+                            onClick={() => {
+                              setNewMedicine({
+                                ...newMedicine,
+                                dosage: frequency.name,
+                              });
+                              setFrequencySearchTerm(frequency.name);
+                              setShowFrequencyDropdown(false);
+                            }}
+                            className={`px-3 py-1 cursor-pointer text-sm ${
+                              // Update this
+                              index === highlightedFrequencyIndex
+                                ? "bg-blue-100 text-blue-900"
+                                : "hover:bg-gray-100"
                             }`}
-                          onMouseEnter={() => setHighlightedFrequencyIndex(index)} // Add this
-                        >
-                          <div className="font-medium">{frequency.name}</div>
-                        </div>
-                      ))}
+                            onMouseEnter={() =>
+                              setHighlightedFrequencyIndex(index)
+                            } // Add this
+                          >
+                            <div className="font-medium">{frequency.name}</div>
+                          </div>
+                        )
+                      )}
                     </div>
                   )}
                 </div>
@@ -2318,22 +2479,22 @@ const fetchPatients = async (query = '') => {
             </div>
 
             {/* Second Div: Duration, Instructions */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mb-2">
               {/* Duration Search */}
               <div>
                 <div className="flex items-center justify-between mb-1">
                   <label
                     htmlFor="duration"
-                    className="block text-sm font-medium text-gray-700"
+                    className="block text-xs font-medium text-gray-700"
                   >
                     Duration
                   </label>
                   <button
                     type="button"
-                    onClick={() => handleOpenAddModal('days')}
-                    className="text-blue-600 hover:text-blue-800 text-sm flex items-center"
+                    onClick={() => handleOpenAddModal("days")}
+                    className="text-blue-600 hover:text-blue-800 text-xs flex items-center"
                   >
-                    <Plus size={14} className="mr-1" />
+                    <Plus size={12} className="mr-1" />
                     Add New
                   </button>
                 </div>
@@ -2352,63 +2513,84 @@ const fetchPatients = async (query = '') => {
                       setShowDurationDropdown(true);
                       setHighlightedDurationIndex(-1); // Add this
                     }}
-                    onBlur={() => setTimeout(() => setShowDurationDropdown(false), 200)}
-                    onKeyDown={(e) => handleKeyDown( // Add this
-                      e,
-                      filteredDays,
-                      highlightedDurationIndex,
-                      setHighlightedDurationIndex,
-                      (day) => {
-                        setNewMedicine({ ...newMedicine, duration: day.name });
-                        setDurationSearchTerm(day.name);
-                        setShowDurationDropdown(false);
-                      },
-                      () => setShowDurationDropdown(false)
-                    )}
-                    className="w-full pl-10 pr-10 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    onBlur={() =>
+                      setTimeout(() => setShowDurationDropdown(false), 200)
+                    }
+                    onKeyDown={(e) =>
+                      handleKeyDown(
+                        // Add this
+                        e,
+                        filteredDays,
+                        highlightedDurationIndex,
+                        setHighlightedDurationIndex,
+                        (day) => {
+                          setNewMedicine({
+                            ...newMedicine,
+                            duration: day.name,
+                          });
+                          setDurationSearchTerm(day.name);
+                          setShowDurationDropdown(false);
+                        },
+                        () => setShowDurationDropdown(false)
+                      )
+                    }
+                    className="w-full pl-8 pr-8 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                     placeholder="Search duration"
                   />
                   <Search
-                    size={16}
-                    className="absolute left-3 top-2.5 text-gray-400"
+                    size={14}
+                    className="absolute left-2 top-2 text-gray-400"
                   />
-                  <div className="absolute right-2 top-2 flex space-x-1">
+                  <div className="absolute right-1 top-1.5 flex space-x-1">
                     <button
                       type="button"
-                      className="text-xs px-2 py-1 bg-blue-200 rounded hover:bg-blue-300"
+                      className="text-xs px-1 py-1 bg-blue-200 rounded hover:bg-blue-300"
                       onClick={() => {
-                        const selectedDay = days.find(d => d.name === newMedicine.duration);
+                        const selectedDay = days.find(
+                          (d) => d.name === newMedicine.duration
+                        );
                         if (selectedDay) {
-                          handleEditItem(selectedDay, 'days');
+                          handleEditItem(selectedDay, "days");
                         }
                       }}
                     >
-                      <Pencil size={12} />
+                      <Pencil size={10} />
                     </button>
                   </div>
                   {showDurationDropdown && filteredDays.length > 0 && (
                     <div
                       ref={durationDropdownRef} // Add this
-                      className="absolute z-10 mt-1 w-full bg-white shadow-lg rounded-md max-h-48 overflow-auto"
+                      className="absolute z-10 mt-1 w-full bg-white shadow-lg rounded-md max-h-40 overflow-auto"
                     >
-                      {filteredDays.map((day, index) => ( // Add index parameter
-                        <div
-                          key={day._id}
-                          onClick={() => {
-                            setNewMedicine({ ...newMedicine, duration: day.name });
-                            setDurationSearchTerm(day.name);
-                            setShowDurationDropdown(false);
-                          }}
-                          className={`px-4 py-2 cursor-pointer ${ // Update className with highlight logic
-                            index === highlightedDurationIndex
-                              ? 'bg-blue-100 text-blue-900'
-                              : 'hover:bg-gray-100'
+                      {filteredDays.map(
+                        (
+                          day,
+                          index // Add index parameter
+                        ) => (
+                          <div
+                            key={day._id}
+                            onClick={() => {
+                              setNewMedicine({
+                                ...newMedicine,
+                                duration: day.name,
+                              });
+                              setDurationSearchTerm(day.name);
+                              setShowDurationDropdown(false);
+                            }}
+                            className={`px-3 py-1 cursor-pointer text-sm ${
+                              // Update className with highlight logic
+                              index === highlightedDurationIndex
+                                ? "bg-blue-100 text-blue-900"
+                                : "hover:bg-gray-100"
                             }`}
-                          onMouseEnter={() => setHighlightedDurationIndex(index)} // Add this
-                        >
-                          <div className="font-medium">{day.name}</div>
-                        </div>
-                      ))}
+                            onMouseEnter={() =>
+                              setHighlightedDurationIndex(index)
+                            } // Add this
+                          >
+                            <div className="font-medium">{day.name}</div>
+                          </div>
+                        )
+                      )}
                     </div>
                   )}
                 </div>
@@ -2419,16 +2601,16 @@ const fetchPatients = async (query = '') => {
                 <div className="flex items-center justify-between mb-1">
                   <label
                     htmlFor="instructions"
-                    className="block text-sm font-medium text-gray-700"
+                    className="block text-xs font-medium text-gray-700"
                   >
                     Instructions
                   </label>
                   <button
                     type="button"
-                    onClick={() => handleOpenAddModal('instruction')}
-                    className="text-blue-600 hover:text-blue-800 text-sm flex items-center"
+                    onClick={() => handleOpenAddModal("instruction")}
+                    className="text-blue-600 hover:text-blue-800 text-xs flex items-center"
                   >
-                    <Plus size={14} className="mr-1" />
+                    <Plus size={12} className="mr-1" />
                     Add New
                   </button>
                 </div>
@@ -2447,91 +2629,119 @@ const fetchPatients = async (query = '') => {
                       setShowInstructionsDropdown(true);
                       setHighlightedInstructionsIndex(-1); // Add this
                     }}
-                    onBlur={() => setTimeout(() => setShowInstructionsDropdown(false), 200)}
-                    onKeyDown={(e) => handleKeyDown( // Add this
-                      e,
-                      filteredInstructions,
-                      highlightedInstructionsIndex,
-                      setHighlightedInstructionsIndex,
-                      (instruction) => {
-                        setNewMedicine({ ...newMedicine, instructions: instruction.name });
-                        setInstructionsSearchTerm(instruction.name);
-                        setShowInstructionsDropdown(false);
-                      },
-                      () => setShowInstructionsDropdown(false)
-                    )}
-                    className="w-full pl-10 pr-10 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    onBlur={() =>
+                      setTimeout(() => setShowInstructionsDropdown(false), 200)
+                    }
+                    onKeyDown={(e) =>
+                      handleKeyDown(
+                        // Add this
+                        e,
+                        filteredInstructions,
+                        highlightedInstructionsIndex,
+                        setHighlightedInstructionsIndex,
+                        (instruction) => {
+                          setNewMedicine({
+                            ...newMedicine,
+                            instructions: instruction.name,
+                          });
+                          setInstructionsSearchTerm(instruction.name);
+                          setShowInstructionsDropdown(false);
+                        },
+                        () => setShowInstructionsDropdown(false)
+                      )
+                    }
+                    className="w-full pl-8 pr-8 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                     placeholder="Search instructions"
                   />
                   <Search
-                    size={16}
-                    className="absolute left-3 top-2.5 text-gray-400"
+                    size={14}
+                    className="absolute left-2 top-2 text-gray-400"
                   />
-                  <div className="absolute right-2 top-2 flex space-x-1">
+                  <div className="absolute right-1 top-1.5 flex space-x-1">
                     <button
                       type="button"
-                      className="text-xs px-2 py-1 bg-blue-200 rounded hover:bg-blue-300"
+                      className="text-xs px-1 py-1 bg-blue-200 rounded hover:bg-blue-300"
                       onClick={() => {
-                        const selectedInst = instructions.find(i => i.name === newMedicine.instructions);
+                        const selectedInst = instructions.find(
+                          (i) => i.name === newMedicine.instructions
+                        );
                         if (selectedInst) {
-                          handleEditItem(selectedInst, 'instruction');
+                          handleEditItem(selectedInst, "instruction");
                         }
                       }}
                     >
-                      <Pencil size={12} />
+                      <Pencil size={10} />
                     </button>
                   </div>
-                  {showInstructionsDropdown && filteredInstructions.length > 0 && (
-                    <div
-                      ref={instructionsDropdownRef} // Add this
-                      className="absolute z-10 mt-1 w-full bg-white shadow-lg rounded-md max-h-48 overflow-auto"
-                    >
-                      {filteredInstructions.map((instruction, index) => ( // Add index parameter
-                        <div
-                          key={instruction._id}
-                          onClick={() => {
-                            setNewMedicine({ ...newMedicine, instructions: instruction.name });
-                            setInstructionsSearchTerm(instruction.name);
-                            setShowInstructionsDropdown(false);
-                          }}
-                          className={`px-4 py-2 cursor-pointer ${ // Update className with highlight logic
-                            index === highlightedInstructionsIndex
-                              ? 'bg-blue-100 text-blue-900'
-                              : 'hover:bg-gray-100'
-                            }`}
-                          onMouseEnter={() => setHighlightedInstructionsIndex(index)} // Add this
-                        >
-                          <div className="font-medium">{instruction.name}</div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
+                  {showInstructionsDropdown &&
+                    filteredInstructions.length > 0 && (
+                      <div
+                        ref={instructionsDropdownRef} // Add this
+                        className="absolute z-10 mt-1 w-full bg-white shadow-lg rounded-md max-h-40 overflow-auto"
+                      >
+                        {filteredInstructions.map(
+                          (
+                            instruction,
+                            index // Add index parameter
+                          ) => (
+                            <div
+                              key={instruction._id}
+                              onClick={() => {
+                                setNewMedicine({
+                                  ...newMedicine,
+                                  instructions: instruction.name,
+                                });
+                                setInstructionsSearchTerm(instruction.name);
+                                setShowInstructionsDropdown(false);
+                              }}
+                              className={`px-3 py-1 cursor-pointer text-sm ${
+                                // Update className with highlight logic
+                                index === highlightedInstructionsIndex
+                                  ? "bg-blue-100 text-blue-900"
+                                  : "hover:bg-gray-100"
+                              }`}
+                              onMouseEnter={() =>
+                                setHighlightedInstructionsIndex(index)
+                              } // Add this
+                            >
+                              <div className="font-medium">
+                                {instruction.name}
+                              </div>
+                            </div>
+                          )
+                        )}
+                      </div>
+                    )}
                 </div>
               </div>
             </div>
 
-
             {/* Tapering Schedule Section */}
             {newMedicine.isTapering && (
-              <div className="mt-4">
-                <h3 className="text-sm font-medium text-gray-700 mb-2">
+              <div className="mt-2">
+                <h3 className="text-xs font-medium text-gray-700 mb-1">
                   Tapering Schedule
                 </h3>
                 {newMedicine.tapering.map((schedule, index) => (
                   <div
                     key={index}
-                    className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4"
+                    className="grid grid-cols-1 md:grid-cols-3 gap-2 mb-2"
                   >
                     {/* Tapering Frequency Search */}
                     <div>
                       <div className="flex items-center justify-between mb-1">
-                        <label htmlFor={`tapering-frequency-${index}`} className="block text-sm font-medium text-gray-700">Frequency</label>
+                        <label
+                          htmlFor={`tapering-frequency-${index}`}
+                          className="block text-xs font-medium text-gray-700"
+                        >
+                          Frequency
+                        </label>
                         <button
                           type="button"
-                          onClick={() => handleOpenAddModal('frequency')}
-                          className="text-blue-600 hover:text-blue-800 text-sm flex items-center"
+                          onClick={() => handleOpenAddModal("frequency")}
+                          className="text-blue-600 hover:text-blue-800 text-xs flex items-center"
                         >
-                          <Plus size={14} className="mr-1" />
+                          <Plus size={12} className="mr-1" />
                           Add New
                         </button>
                       </div>
@@ -2540,95 +2750,169 @@ const fetchPatients = async (query = '') => {
                           type="text"
                           id={`tapering-frequency-${index}`}
                           autoComplete="off"
-                          value={taperingFrequencySearchTerms[index] || ''}
+                          value={taperingFrequencySearchTerms[index] || ""}
                           onChange={(e) => {
                             const newTerms = [...taperingFrequencySearchTerms];
                             newTerms[index] = e.target.value;
                             setTaperingFrequencySearchTerms(newTerms);
-                            setShowTaperingFrequencyDropdowns(prev => ({ ...prev, [index]: true }));
-                            setHighlightedTaperingFrequencyIndices(prev => ({ ...prev, [index]: -1 })); // Add this
+                            setShowTaperingFrequencyDropdowns((prev) => ({
+                              ...prev,
+                              [index]: true,
+                            }));
+                            setHighlightedTaperingFrequencyIndices((prev) => ({
+                              ...prev,
+                              [index]: -1,
+                            })); // Add this
                           }}
                           onFocus={() => {
-                            setShowTaperingFrequencyDropdowns(prev => ({ ...prev, [index]: true }));
-                            setHighlightedTaperingFrequencyIndices(prev => ({ ...prev, [index]: -1 })); // Add this
+                            setShowTaperingFrequencyDropdowns((prev) => ({
+                              ...prev,
+                              [index]: true,
+                            }));
+                            setHighlightedTaperingFrequencyIndices((prev) => ({
+                              ...prev,
+                              [index]: -1,
+                            })); // Add this
                           }}
-                          onBlur={() => setTimeout(() => setShowTaperingFrequencyDropdowns(prev => ({ ...prev, [index]: false })), 200)}
-                          onKeyDown={(e) => handleTaperingKeyDown( // Add this
-                            e,
-                            getTaperingFilteredFrequencies(index),
-                            index,
-                            highlightedTaperingFrequencyIndices,
-                            setHighlightedTaperingFrequencyIndices,
-                            (frequency) => {
-                              handleUpdateTaperingSchedule(index, 'dosage', frequency.name);
-                              const newTerms = [...taperingFrequencySearchTerms];
-                              newTerms[index] = frequency.name;
-                              setTaperingFrequencySearchTerms(newTerms);
-                              setShowTaperingFrequencyDropdowns(prev => ({ ...prev, [index]: false }));
-                            },
-                            () => setShowTaperingFrequencyDropdowns(prev => ({ ...prev, [index]: false }))
-                          )}
-                          className="w-full pl-10 pr-10 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          onBlur={() =>
+                            setTimeout(
+                              () =>
+                                setShowTaperingFrequencyDropdowns((prev) => ({
+                                  ...prev,
+                                  [index]: false,
+                                })),
+                              200
+                            )
+                          }
+                          onKeyDown={(e) =>
+                            handleTaperingKeyDown(
+                              // Add this
+                              e,
+                              getTaperingFilteredFrequencies(index),
+                              index,
+                              highlightedTaperingFrequencyIndices,
+                              setHighlightedTaperingFrequencyIndices,
+                              (frequency) => {
+                                handleUpdateTaperingSchedule(
+                                  index,
+                                  "dosage",
+                                  frequency.name
+                                );
+                                const newTerms = [
+                                  ...taperingFrequencySearchTerms,
+                                ];
+                                newTerms[index] = frequency.name;
+                                setTaperingFrequencySearchTerms(newTerms);
+                                setShowTaperingFrequencyDropdowns((prev) => ({
+                                  ...prev,
+                                  [index]: false,
+                                }));
+                              },
+                              () =>
+                                setShowTaperingFrequencyDropdowns((prev) => ({
+                                  ...prev,
+                                  [index]: false,
+                                }))
+                            )
+                          }
+                          className="w-full pl-8 pr-8 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                           placeholder="Search frequency"
                         />
                         <Search
-                          size={16}
-                          className="absolute left-3 top-2.5 text-gray-400"
+                          size={14}
+                          className="absolute left-2 top-2 text-gray-400"
                         />
-                        <div className="absolute right-2 top-2 flex space-x-1">
+                        <div className="absolute right-1 top-1.5 flex space-x-1">
                           <button
                             type="button"
-                            className="text-xs px-2 py-1 bg-blue-200 rounded hover:bg-blue-300"
+                            className="text-xs px-1 py-1 bg-blue-200 rounded hover:bg-blue-300"
                             onClick={() => {
-                              const selectedFreq = frequencies.find(f => f.name === schedule.dosage);
+                              const selectedFreq = frequencies.find(
+                                (f) => f.name === schedule.dosage
+                              );
                               if (selectedFreq) {
-                                handleEditItem(selectedFreq, 'frequency');
+                                handleEditItem(selectedFreq, "frequency");
                               }
                             }}
                           >
-                            <Pencil size={12} />
+                            <Pencil size={10} />
                           </button>
                         </div>
-                        {showTaperingFrequencyDropdowns[index] && getTaperingFilteredFrequencies(index).length > 0 && (
-                          <div
-                            ref={el => taperingFrequencyDropdownRefs.current[index] = el} // Add this
-                            className="absolute z-10 mt-1 w-full bg-white shadow-lg rounded-md max-h-48 overflow-auto"
-                          >
-                            {getTaperingFilteredFrequencies(index).map((frequency, freqIndex) => ( // Add freqIndex
-                              <div
-                                key={frequency._id}
-                                onClick={() => {
-                                  handleUpdateTaperingSchedule(index, 'dosage', frequency.name);
-                                  const newTerms = [...taperingFrequencySearchTerms];
-                                  newTerms[index] = frequency.name;
-                                  setTaperingFrequencySearchTerms(newTerms);
-                                  setShowTaperingFrequencyDropdowns(prev => ({ ...prev, [index]: false }));
-                                }}
-                                className={`px-4 py-2 cursor-pointer ${ // Update className with highlight logic
-                                  freqIndex === (highlightedTaperingFrequencyIndices[index] || -1)
-                                    ? 'bg-blue-100 text-blue-900'
-                                    : 'hover:bg-gray-100'
-                                  }`}
-                                onMouseEnter={() => setHighlightedTaperingFrequencyIndices(prev => ({ ...prev, [index]: freqIndex }))} // Add this
-                              >
-                                <div className="font-medium">{frequency.name}</div>
-                              </div>
-                            ))}
-                          </div>
-                        )}
+                        {showTaperingFrequencyDropdowns[index] &&
+                          getTaperingFilteredFrequencies(index).length > 0 && (
+                            <div
+                              ref={(el) =>
+                                (taperingFrequencyDropdownRefs.current[index] =
+                                  el)
+                              } // Add this
+                              className="absolute z-10 mt-1 w-full bg-white shadow-lg rounded-md max-h-40 overflow-auto"
+                            >
+                              {getTaperingFilteredFrequencies(index).map(
+                                (
+                                  frequency,
+                                  freqIndex // Add freqIndex
+                                ) => (
+                                  <div
+                                    key={frequency._id}
+                                    onClick={() => {
+                                      handleUpdateTaperingSchedule(
+                                        index,
+                                        "dosage",
+                                        frequency.name
+                                      );
+                                      const newTerms = [
+                                        ...taperingFrequencySearchTerms,
+                                      ];
+                                      newTerms[index] = frequency.name;
+                                      setTaperingFrequencySearchTerms(newTerms);
+                                      setShowTaperingFrequencyDropdowns(
+                                        (prev) => ({ ...prev, [index]: false })
+                                      );
+                                    }}
+                                    className={`px-3 py-1 cursor-pointer text-sm ${
+                                      // Update className with highlight logic
+                                      freqIndex ===
+                                      (highlightedTaperingFrequencyIndices[
+                                        index
+                                      ] || -1)
+                                        ? "bg-blue-100 text-blue-900"
+                                        : "hover:bg-gray-100"
+                                    }`}
+                                    onMouseEnter={() =>
+                                      setHighlightedTaperingFrequencyIndices(
+                                        (prev) => ({
+                                          ...prev,
+                                          [index]: freqIndex,
+                                        })
+                                      )
+                                    } // Add this
+                                  >
+                                    <div className="font-medium">
+                                      {frequency.name}
+                                    </div>
+                                  </div>
+                                )
+                              )}
+                            </div>
+                          )}
                       </div>
                     </div>
 
                     {/* Tapering Days Search */}
                     <div>
                       <div className="flex items-center justify-between mb-1">
-                        <label htmlFor={`tapering-days-${index}`} className="block text-sm font-medium text-gray-700">Days</label>
+                        <label
+                          htmlFor={`tapering-days-${index}`}
+                          className="block text-xs font-medium text-gray-700"
+                        >
+                          Days
+                        </label>
                         <button
                           type="button"
-                          onClick={() => handleOpenAddModal('days')}
-                          className="text-blue-600 hover:text-blue-800 text-sm flex items-center"
+                          onClick={() => handleOpenAddModal("days")}
+                          className="text-blue-600 hover:text-blue-800 text-xs flex items-center"
                         >
-                          <Plus size={14} className="mr-1" />
+                          <Plus size={12} className="mr-1" />
                           Add New
                         </button>
                       </div>
@@ -2637,82 +2921,148 @@ const fetchPatients = async (query = '') => {
                           type="text"
                           id={`tapering-days-${index}`}
                           autoComplete="off"
-                          value={taperingDaysSearchTerms[index] || ''}
+                          value={taperingDaysSearchTerms[index] || ""}
                           onChange={(e) => {
                             const newTerms = [...taperingDaysSearchTerms];
                             newTerms[index] = e.target.value;
                             setTaperingDaysSearchTerms(newTerms);
-                            setShowTaperingDaysDropdowns(prev => ({ ...prev, [index]: true }));
-                            setHighlightedTaperingDaysIndices(prev => ({ ...prev, [index]: -1 })); // Add this
+                            setShowTaperingDaysDropdowns((prev) => ({
+                              ...prev,
+                              [index]: true,
+                            }));
+                            setHighlightedTaperingDaysIndices((prev) => ({
+                              ...prev,
+                              [index]: -1,
+                            })); // Add this
                           }}
                           onFocus={() => {
-                            setShowTaperingDaysDropdowns(prev => ({ ...prev, [index]: true }));
-                            setHighlightedTaperingDaysIndices(prev => ({ ...prev, [index]: -1 })); // Add this
+                            setShowTaperingDaysDropdowns((prev) => ({
+                              ...prev,
+                              [index]: true,
+                            }));
+                            setHighlightedTaperingDaysIndices((prev) => ({
+                              ...prev,
+                              [index]: -1,
+                            })); // Add this
                           }}
-                          onBlur={() => setTimeout(() => setShowTaperingDaysDropdowns(prev => ({ ...prev, [index]: false })), 200)}
-                          onKeyDown={(e) => handleTaperingKeyDown( // Add this
-                            e,
-                            getTaperingFilteredDays(index),
-                            index,
-                            highlightedTaperingDaysIndices,
-                            setHighlightedTaperingDaysIndices,
-                            (day) => {
-                              handleUpdateTaperingSchedule(index, 'days', day.name);
-                              const newTerms = [...taperingDaysSearchTerms];
-                              newTerms[index] = day.name;
-                              setTaperingDaysSearchTerms(newTerms);
-                              setShowTaperingDaysDropdowns(prev => ({ ...prev, [index]: false }));
-                            },
-                            () => setShowTaperingDaysDropdowns(prev => ({ ...prev, [index]: false }))
-                          )}
-                          className="w-full pl-10 pr-10 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          onBlur={() =>
+                            setTimeout(
+                              () =>
+                                setShowTaperingDaysDropdowns((prev) => ({
+                                  ...prev,
+                                  [index]: false,
+                                })),
+                              200
+                            )
+                          }
+                          onKeyDown={(e) =>
+                            handleTaperingKeyDown(
+                              // Add this
+                              e,
+                              getTaperingFilteredDays(index),
+                              index,
+                              highlightedTaperingDaysIndices,
+                              setHighlightedTaperingDaysIndices,
+                              (day) => {
+                                handleUpdateTaperingSchedule(
+                                  index,
+                                  "days",
+                                  day.name
+                                );
+                                const newTerms = [...taperingDaysSearchTerms];
+                                newTerms[index] = day.name;
+                                setTaperingDaysSearchTerms(newTerms);
+                                setShowTaperingDaysDropdowns((prev) => ({
+                                  ...prev,
+                                  [index]: false,
+                                }));
+                              },
+                              () =>
+                                setShowTaperingDaysDropdowns((prev) => ({
+                                  ...prev,
+                                  [index]: false,
+                                }))
+                            )
+                          }
+                          className="w-full pl-8 pr-8 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                           placeholder="Search days"
                         />
                         <Search
-                          size={16}
-                          className="absolute left-3 top-2.5 text-gray-400"
+                          size={14}
+                          className="absolute left-2 top-2 text-gray-400"
                         />
-                        <div className="absolute right-2 top-2 flex space-x-1">
+                        <div className="absolute right-1 top-1.5 flex space-x-1">
                           <button
                             type="button"
-                            className="text-xs px-2 py-1 bg-blue-200 rounded hover:bg-blue-300"
+                            className="text-xs px-1 py-1 bg-blue-200 rounded hover:bg-blue-300"
                             onClick={() => {
-                              const selectedDay = days.find(d => d.name === schedule.days);
+                              const selectedDay = days.find(
+                                (d) => d.name === schedule.days
+                              );
                               if (selectedDay) {
-                                handleEditItem(selectedDay, 'days');
+                                handleEditItem(selectedDay, "days");
                               }
                             }}
                           >
-                            <Pencil size={12} />
+                            <Pencil size={10} />
                           </button>
                         </div>
-                        {showTaperingDaysDropdowns[index] && getTaperingFilteredDays(index).length > 0 && (
-                          <div
-                            ref={el => taperingDaysDropdownRefs.current[index] = el} // Add this
-                            className="absolute z-10 mt-1 w-full bg-white shadow-lg rounded-md max-h-48 overflow-auto"
-                          >
-                            {getTaperingFilteredDays(index).map((day, dayIndex) => ( // Add dayIndex
-                              <div
-                                key={day._id}
-                                onClick={() => {
-                                  handleUpdateTaperingSchedule(index, 'days', day.name);
-                                  const newTerms = [...taperingDaysSearchTerms];
-                                  newTerms[index] = day.name;
-                                  setTaperingDaysSearchTerms(newTerms);
-                                  setShowTaperingDaysDropdowns(prev => ({ ...prev, [index]: false }));
-                                }}
-                                className={`px-4 py-2 cursor-pointer ${ // Update className with highlight logic
-                                  dayIndex === (highlightedTaperingDaysIndices[index] || -1)
-                                    ? 'bg-blue-100 text-blue-900'
-                                    : 'hover:bg-gray-100'
-                                  }`}
-                                onMouseEnter={() => setHighlightedTaperingDaysIndices(prev => ({ ...prev, [index]: dayIndex }))} // Add this
-                              >
-                                <div className="font-medium">{day.name}</div>
-                              </div>
-                            ))}
-                          </div>
-                        )}
+                        {showTaperingDaysDropdowns[index] &&
+                          getTaperingFilteredDays(index).length > 0 && (
+                            <div
+                              ref={(el) =>
+                                (taperingDaysDropdownRefs.current[index] = el)
+                              } // Add this
+                              className="absolute z-10 mt-1 w-full bg-white shadow-lg rounded-md max-h-40 overflow-auto"
+                            >
+                              {getTaperingFilteredDays(index).map(
+                                (
+                                  day,
+                                  dayIndex // Add dayIndex
+                                ) => (
+                                  <div
+                                    key={day._id}
+                                    onClick={() => {
+                                      handleUpdateTaperingSchedule(
+                                        index,
+                                        "days",
+                                        day.name
+                                      );
+                                      const newTerms = [
+                                        ...taperingDaysSearchTerms,
+                                      ];
+                                      newTerms[index] = day.name;
+                                      setTaperingDaysSearchTerms(newTerms);
+                                      setShowTaperingDaysDropdowns((prev) => ({
+                                        ...prev,
+                                        [index]: false,
+                                      }));
+                                    }}
+                                    className={`px-3 py-1 cursor-pointer text-sm ${
+                                      // Update className with highlight logic
+                                      dayIndex ===
+                                      (highlightedTaperingDaysIndices[index] ||
+                                        -1)
+                                        ? "bg-blue-100 text-blue-900"
+                                        : "hover:bg-gray-100"
+                                    }`}
+                                    onMouseEnter={() =>
+                                      setHighlightedTaperingDaysIndices(
+                                        (prev) => ({
+                                          ...prev,
+                                          [index]: dayIndex,
+                                        })
+                                      )
+                                    } // Add this
+                                  >
+                                    <div className="font-medium">
+                                      {day.name}
+                                    </div>
+                                  </div>
+                                )
+                              )}
+                            </div>
+                          )}
                       </div>
                     </div>
 
@@ -2722,7 +3072,7 @@ const fetchPatients = async (query = '') => {
                         onClick={() => handleRemoveTaperingSchedule(index)}
                         className="text-red-600 hover:text-red-800"
                       >
-                        <Trash2 size={16} />
+                        <Trash2 size={14} />
                       </button>
                     </div>
                   </div>
@@ -2730,9 +3080,9 @@ const fetchPatients = async (query = '') => {
 
                 <button
                   onClick={handleAddTaperingSchedule}
-                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md flex items-center mb-4"
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded-md flex items-center mb-2 text-sm"
                 >
-                  <Plus size={16} className="mr-2" />
+                  <Plus size={14} className="mr-1" />
                   Add Tapering Schedule
                 </button>
               </div>
@@ -2742,16 +3092,16 @@ const fetchPatients = async (query = '') => {
             <div className="flex items-end">
               <button
                 onClick={handleSaveMedicine}
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md flex items-center justify-center"
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded-md flex items-center justify-center text-sm"
               >
                 {editMedicineIndex !== null ? (
                   <>
-                    <Pencil size={16} className="mr-2" />
+                    <Pencil size={14} className="mr-1" />
                     Save Medicine
                   </>
                 ) : (
                   <>
-                    <Plus size={16} className="mr-2" />
+                    <Plus size={14} className="mr-1" />
                     Add Medicine
                   </>
                 )}
@@ -2759,29 +3109,29 @@ const fetchPatients = async (query = '') => {
             </div>
 
             {/* Medicines Table */}
-            <div className="overflow-x-auto mt-6">
+            <div className="overflow-x-auto mt-4">
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Medicine
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Dosage
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Frequency
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Duration
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Instructions
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Tapering
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Action
                     </th>
                   </tr>
@@ -2791,7 +3141,7 @@ const fetchPatients = async (query = '') => {
                     <tr>
                       <td
                         colSpan={7}
-                        className="px-6 py-4 text-center text-gray-500"
+                        className="px-3 py-2 text-center text-gray-500 text-sm"
                       >
                         No medicines added yet
                       </td>
@@ -2799,49 +3149,49 @@ const fetchPatients = async (query = '') => {
                   ) : (
                     medicines.map((medicine, index) => (
                       <tr key={index}>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm font-medium text-gray-900">
+                        <td className="px-3 py-2 whitespace-nowrap">
+                          <div className="text-xs font-medium text-gray-900">
                             {medicine.medicine.name}
                           </div>
                           <div className="text-xs text-gray-500">
                             {medicine.medicine.dosageForm}
                           </div>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        <td className="px-3 py-2 whitespace-nowrap text-xs text-gray-500">
                           {medicine.dosageAmount || "-"}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        <td className="px-3 py-2 whitespace-nowrap text-xs text-gray-500">
                           {medicine.dosage || "-"}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        <td className="px-3 py-2 whitespace-nowrap text-xs text-gray-500">
                           {medicine.duration || "-"}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        <td className="px-3 py-2 whitespace-nowrap text-xs text-gray-500">
                           {medicine.instructions || "-"}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        <td className="px-3 py-2 whitespace-nowrap text-xs text-gray-500">
                           {medicine.isTapering && medicine.tapering?.length > 0
                             ? medicine.tapering
-                              .map(
-                                (schedule) =>
-                                  `${schedule.dosage} for ${schedule.days}`
-                              )
-                              .join(", ")
+                                .map(
+                                  (schedule) =>
+                                    `${schedule.dosage} for ${schedule.days}`
+                                )
+                                .join(", ")
                             : "No"}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
+                        <td className="px-3 py-2 whitespace-nowrap text-right text-xs font-medium space-x-1">
                           <button
                             onClick={() => handleEditMedicine(index)}
-                            className="text-yellow-600 hover:text-yellow-800 mr-2"
+                            className="text-yellow-600 hover:text-yellow-800 mr-1"
                             title="Edit Medicine"
                           >
-                            <Pencil size={16} />
+                            <Pencil size={14} />
                           </button>
                           <button
                             onClick={() => handleRemoveMedicine(index)}
                             className="text-red-600 hover:text-red-800"
                           >
-                            <Trash2 size={16} />
+                            <Trash2 size={14} />
                           </button>
                         </td>
                       </tr>
@@ -2853,16 +3203,16 @@ const fetchPatients = async (query = '') => {
           </div>
 
           {/* Lab Reports */}
-          <div className="p-4 md:p-6 border-t">
-            <h2 className="text-lg font-semibold text-gray-700 mb-4">
+          <div className="p-2 md:p-4 border-t">
+            <h2 className="text-sm font-semibold text-gray-700 mb-2">
               Lab Reports
             </h2>
-            <div className="mb-6">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+            <div className="mb-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-2 mb-2">
                 <div>
                   <label
                     htmlFor="reportName"
-                    className="block text-sm font-medium text-gray-700 mb-1"
+                    className="block text-xs font-medium text-gray-700 mb-1"
                   >
                     Report Name
                   </label>
@@ -2873,14 +3223,14 @@ const fetchPatients = async (query = '') => {
                     onChange={(e) =>
                       setNewLabReport({ ...newLabReport, name: e.target.value })
                     }
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-2 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                     placeholder="e.g. Blood Test"
                   />
                 </div>
                 <div>
                   <label
                     htmlFor="reportValue"
-                    className="block text-sm font-medium text-gray-700 mb-1"
+                    className="block text-xs font-medium text-gray-700 mb-1"
                   >
                     Value
                   </label>
@@ -2888,15 +3238,20 @@ const fetchPatients = async (query = '') => {
                     type="text"
                     id="reportValue"
                     value={newLabReport.values}
-                    onChange={e => setNewLabReport({ ...newLabReport, values: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    onChange={(e) =>
+                      setNewLabReport({
+                        ...newLabReport,
+                        values: e.target.value,
+                      })
+                    }
+                    className="w-full px-2 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                     placeholder="e.g. 220 mg/dL"
                   />
                 </div>
                 <div>
                   <label
                     htmlFor="reportDate"
-                    className="block text-sm font-medium text-gray-700 mb-1"
+                    className="block text-xs font-medium text-gray-700 mb-1"
                   >
                     Report Date
                   </label>
@@ -2910,19 +3265,23 @@ const fetchPatients = async (query = '') => {
                         reportDate: e.target.value,
                       })
                     }
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-2 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                   />
                 </div>
                 <div className="md:col-span-3">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Report File (Image or PDF)</label>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
+                    Report File (Image or PDF)
+                  </label>
                   <input
                     type="file"
                     accept="image/*,application/pdf"
-                    onChange={e => setNewLabReportFile(e.target.files[0])}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    onChange={(e) => setNewLabReportFile(e.target.files[0])}
+                    className="w-full px-2 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                   />
                   {newLabReportFile && (
-                    <div className="mt-1 text-xs text-gray-500">Selected: {newLabReportFile.name}</div>
+                    <div className="mt-1 text-xs text-gray-500">
+                      Selected: {newLabReportFile.name}
+                    </div>
                   )}
                 </div>
               </div>
@@ -2930,19 +3289,20 @@ const fetchPatients = async (query = '') => {
                 <button
                   onClick={handleAddLabReport}
                   disabled={labReportLoading}
-                  className={`w-full px-4 py-2 rounded-md flex items-center justify-center ${labReportLoading
-                    ? "bg-gray-400 cursor-not-allowed"
-                    : "bg-blue-600 hover:bg-blue-700"
-                    } text-white`}
+                  className={`w-full px-3 py-1 rounded-md flex items-center justify-center text-sm ${
+                    labReportLoading
+                      ? "bg-gray-400 cursor-not-allowed"
+                      : "bg-blue-600 hover:bg-blue-700"
+                  } text-white`}
                 >
                   {labReportLoading ? (
                     <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white mr-1"></div>
                       Loading...
                     </>
                   ) : (
                     <>
-                      <Plus size={16} className="mr-2" />
+                      <Plus size={14} className="mr-1" />
                       Add Lab Report
                     </>
                   )}
@@ -2954,19 +3314,19 @@ const fetchPatients = async (query = '') => {
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Report Name
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Value
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Report Date
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Report File
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Action
                     </th>
                   </tr>
@@ -2976,7 +3336,7 @@ const fetchPatients = async (query = '') => {
                     <tr>
                       <td
                         colSpan={5}
-                        className="px-6 py-4 text-center text-gray-500"
+                        className="px-3 py-2 text-center text-gray-500 text-sm"
                       >
                         No lab reports added yet
                       </td>
@@ -2984,13 +3344,13 @@ const fetchPatients = async (query = '') => {
                   ) : (
                     labReports.map((report, index) => (
                       <tr key={index}>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        <td className="px-3 py-2 whitespace-nowrap text-xs text-gray-500">
                           {report.name || "-"}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        <td className="px-3 py-2 whitespace-nowrap text-xs text-gray-500">
                           {report.values || "-"}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        <td className="px-3 py-2 whitespace-nowrap text-xs text-gray-500">
                           {report.reportDate
                             ? new Date(report.reportDate).toLocaleDateString()
                             : "-"}
@@ -3001,25 +3361,29 @@ const fetchPatients = async (query = '') => {
                               href={report.reportImageUrl}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="text-blue-600 underline ml-2"
+                              className="text-blue-600 underline ml-1 text-xs"
                             >
-                              {report.reportImageUrl.toLowerCase().includes('.pdf') ? 'View PDF' : 'View File'}
+                              {report.reportImageUrl
+                                .toLowerCase()
+                                .includes(".pdf")
+                                ? "View PDF"
+                                : "View File"}
                             </a>
                           )}
                         </td>
 
-                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
+                        <td className="px-3 py-2 whitespace-nowrap text-right text-xs font-medium space-x-1">
                           <button
                             onClick={() => handleEditLabReport(index)}
-                            className="text-blue-600 hover:text-blue-800"
+                            className="text-blue-600 hover:text-blue-800 mr-1"
                           >
-                            <Pencil size={16} />
+                            <Pencil size={14} />
                           </button>
                           <button
                             onClick={() => handleRemoveLabReport(index)}
                             className="text-red-600 hover:text-red-800"
                           >
-                            <Trash2 size={16} />
+                            <Trash2 size={14} />
                           </button>
                         </td>
                       </tr>
@@ -3031,13 +3395,13 @@ const fetchPatients = async (query = '') => {
           </div>
 
           {/* Lab Test Advised */}
-          <div className="p-4 md:p-6 border-t">
-            <h2 className="text-lg font-semibold text-gray-700 mb-4">
+          <div className="p-2 md:p-4 border-t">
+            <h2 className="text-sm font-semibold text-gray-700 mb-2">
               Lab Tests On Next Visit
             </h2>
 
             {labTest.map((test, index) => (
-              <div key={index} className="flex items-center gap-4 mb-4">
+              <div key={index} className="flex items-center gap-2 mb-2">
                 <input
                   type="text"
                   value={test}
@@ -3047,7 +3411,7 @@ const fetchPatients = async (query = '') => {
                     setLabTest(updated);
                   }}
                   placeholder={`Test ${index + 1}`}
-                  className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="flex-1 px-2 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                 />
                 <button
                   onClick={() => {
@@ -3058,59 +3422,62 @@ const fetchPatients = async (query = '') => {
                   className="text-red-600 hover:text-red-800"
                   title="Remove"
                 >
-                  <Trash2 size={16} />
+                  <Trash2 size={14} />
                 </button>
               </div>
             ))}
 
             <button
               onClick={() => setLabTest([...labTest, ""])}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md flex items-center"
+              className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded-md flex items-center text-sm"
             >
-              <Plus size={16} className="mr-2" />
+              <Plus size={14} className="mr-1" />
               Add Test
             </button>
           </div>
 
           {/* Footer */}
-          <div className="bg-gray-50 px-4 py-4 sm:px-6 border-t flex justify-end">
-            <div className="flex space-x-2 mt-4 mr-2 md:mt-0" >
+          <div className="bg-gray-50 px-2 py-2 sm:px-4 border-t flex justify-end">
+            <div className="flex space-x-1 mt-2 mr-1 md:mt-0">
               <button
-                className="bg-blue-700 hover:bg-blue-800 text-white px-4 py-2 rounded-md flex items-center"
+                className="bg-blue-700 hover:bg-blue-800 text-white px-3 py-1 rounded-md flex items-center text-sm"
                 onClick={prescriptionId ? handleUpdate : handleSave}
                 disabled={templateId && (!doctor || !patient)}
               >
-                <FileText size={16} className="mr-2" />
+                <FileText size={14} className="mr-1" />
                 {prescriptionId ? "Update" : "Save"}
               </button>
               <button
-                className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md flex items-center"
+                className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded-md flex items-center text-sm"
                 onClick={handleSend}
-                disabled={!prescriptionId && !localStorage.getItem("currentPrescriptionId")}
+                disabled={
+                  !prescriptionId &&
+                  !localStorage.getItem("currentPrescriptionId")
+                }
               >
-                <Send size={16} className="mr-2" />
+                <Send size={14} className="mr-1" />
                 Send
               </button>
               <button
-                className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md flex items-center"
+                className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded-md flex items-center text-sm"
                 onClick={handleSaveAsTemplate}
               >
-                <Plus size={16} className="mr-2" />
+                <Plus size={14} className="mr-1" />
                 Save as Template
               </button>
               {/* <button
-                  className="bg-blue-700 hover:bg-blue-800 text-white px-4 py-2 rounded-md flex items-center"
-                  onClick={() => setShowPDFModal(true)}
-                >
-                  <Download size={16} className="mr-2" />
-                  PDF
-                </button> */}
+                className="bg-blue-700 hover:bg-blue-800 text-white px-3 py-1 rounded-md flex items-center text-sm"
+                onClick={() => setShowPDFModal(true)}
+              >
+                <Download size={14} className="mr-1" />
+                PDF
+              </button> */}
             </div>
             <button
               onClick={() => setShowPDFModal(true)}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-md font-medium flex items-center"
+              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-1 rounded-md font-medium flex items-center text-sm"
             >
-              <FileText size={16} className="mr-2" />
+              <FileText size={14} className="mr-1" />
               See Preview
             </button>
           </div>
@@ -3120,12 +3487,12 @@ const fetchPatients = async (query = '') => {
       {/* PDF Modal */}
       {showPDFModal && (
         <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-4xl">
-            <div className="flex flex-wrap justify-between items-center gap-2 mb-4">
-              <h2 className="text-lg font-semibold text-gray-800">
+          <div className="bg-white rounded-lg p-4 w-full max-w-4xl">
+            <div className="flex flex-wrap justify-between items-center gap-1 mb-2">
+              <h2 className="text-sm font-semibold text-gray-800">
                 Prescription PDF Preview
               </h2>
-              <div className="flex gap-2">
+              <div className="flex gap-1">
                 <PDFDownloadLink
                   document={
                     <PrescriptionPDF
@@ -3140,22 +3507,31 @@ const fetchPatients = async (query = '') => {
                       bookingNotes={bookingNotes}
                     />
                   }
-                  fileName={`${patient?.name || 'patient'}-prescription.pdf`}
+                  fileName={`${patient?.name || "patient"}-prescription.pdf`}
                 >
                   {({ loading }) =>
                     loading ? (
                       "Loading document..."
                     ) : (
-                      <button className="flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition">
-                        <Download size={16} className="mr-2" />
+                      <button className="flex items-center px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition text-sm">
+                        <Download size={14} className="mr-1" />
                         Download PDF
                       </button>
                     )
                   }
                 </PDFDownloadLink>
                 <button
-                  onClick={() => setShowPDFModal(false)}
-                  className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-md transition"
+                  onClick={() => {
+                    if (urlParams.get("isOld")) {
+                      setDiagnosis("");
+                      setBookingNotes("");
+                      setLabTest([""]);
+                      setLabReports([]);
+                      setMedicines([]);
+                    }
+                    setShowPDFModal(false);
+                  }}
+                  className="px-3 py-1 bg-red-600 hover:bg-red-700 text-white rounded-md transition text-sm"
                 >
                   Close
                 </button>
@@ -3173,6 +3549,7 @@ const fetchPatients = async (query = '') => {
                   labTest={labTest}
                   vitals={vitals}
                   bookingNotes={bookingNotes}
+                  date = {selectedDate}
                 />
               </PDFViewer>
             </div>
@@ -3190,10 +3567,10 @@ const fetchPatients = async (query = '') => {
             diagnosis: selectedDiagnosis.name || diagnosis,
             notes: selectedDiagnosis.notes || notes,
             labReports,
-            labTest
+            labTest,
           }}
           onSave={(template) => {
-            toast.success('Template saved successfully!');
+            toast.success("Template saved successfully!");
             setShowTemplateModal(false);
           }}
         />
@@ -3212,6 +3589,6 @@ const fetchPatients = async (query = '') => {
       )}
     </>
   );
-};
+}
 
 export default Prescription;

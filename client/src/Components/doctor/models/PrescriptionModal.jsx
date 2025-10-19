@@ -250,16 +250,19 @@ const PrescriptionPDF = memo(
       weight: "-",
     },
     bookingNotes = "",
+    date = new Date()
   }) => {
-    const today = new Date();
-    const formattedDate = today.toLocaleString("en-GB", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: true,
-    });
+  console.log("Raw date prop:", date); // Debug the raw date value
+  console.log("Parsed date:", new Date(date)); // Debug the parsed Date object
+
+  const formattedDate = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "UTC",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date(date));
+
+  console.log("Formatted date:", formattedDate);
 
     return (
       <Document>
@@ -536,6 +539,10 @@ const PrescriptionModal = ({ prescriptionId, onClose }) => {
           `/api/prescription/${prescriptionId}`
         );
         const prescriptionData = response.data.data;
+        console.log(
+          "Fetched prescription.createdAt:",
+          prescriptionData.createdAt
+        );
         setPrescription(prescriptionData);
         setLoading(false);
       } catch (err) {
@@ -551,13 +558,10 @@ const PrescriptionModal = ({ prescriptionId, onClose }) => {
 
   const formatPhoneNumber = (phone) => {
     if (!phone) return "";
-    // Remove all non-digits
     const cleaned = phone.replace(/\D/g, "");
-    // If it doesn't start with country code, add Indian country code
     if (cleaned.length === 10) {
       return `91${cleaned}`;
     }
-    // If it already has country code but no +, add it
     if (cleaned.length > 10 && !cleaned.startsWith("+")) {
       return cleaned;
     }
@@ -565,6 +569,9 @@ const PrescriptionModal = ({ prescriptionId, onClose }) => {
   };
 
   const generatePDFBlob = async () => {
+    if (!prescription) {
+      throw new Error("Prescription data is not available.");
+    }
     try {
       const doc = (
         <PrescriptionPDF
@@ -585,9 +592,9 @@ const PrescriptionModal = ({ prescriptionId, onClose }) => {
           labTest={prescription.labTest}
           vitals={prescription.patient.vitals}
           bookingNotes={prescription.bookingNotes}
+          date={prescription.createdAt} // Pass the raw string
         />
       );
-
       const blob = await pdf(doc).toBlob();
       return blob;
     } catch (error) {
@@ -596,43 +603,37 @@ const PrescriptionModal = ({ prescriptionId, onClose }) => {
     }
   };
 
-  // Enhanced WhatsApp sharing function - focuses on direct sharing without downloads
   const sendToWhatsApp = async (phoneNumber) => {
     try {
       setSendingWhatsApp(true);
-      
       const formattedPhone = formatPhoneNumber(phoneNumber);
-      
       if (!formattedPhone) {
         toast.error("Invalid phone number");
         return;
       }
-
-      // Generate PDF blob
       const pdfBlob = await generatePDFBlob();
-      
-      // Create message text
-      const message = `Hi ${prescription.patient.name},\n\nYour prescription from Dr. ${prescription.doctor.name} is ready.\n\nDate: ${new Date().toLocaleDateString()}\n\nPlease find your prescription attached.\n\nBest regards,\nClinic Management System`;
-      
-      // Check if Web Share API is supported
+      const message = `Hi ${
+        prescription.patient.name
+      },\n\nYour prescription from Dr. ${
+        prescription.doctor.name
+      } is ready.\n\nDate: ${new Intl.DateTimeFormat("en-GB", {
+        timeZone: "UTC",
+      }).format(
+        new Date(prescription.createdAt)
+      )}\n\nPlease find your prescription attached.\n\nBest regards,\nClinic Management System`;
       const canShare = navigator.share && navigator.canShare;
-      
       if (canShare) {
         try {
-          // Create a File object from the PDF blob
           const pdfFile = new File(
-            [pdfBlob], 
-            `${prescription.patient.name}-prescription.pdf`, 
-            { type: 'application/pdf' }
+            [pdfBlob],
+            `${prescription.patient.name}-prescription.pdf`,
+            { type: "application/pdf" }
           );
-          
           const shareData = {
-            title: 'Medical Prescription',
+            title: "Medical Prescription",
             text: message,
-            files: [pdfFile]
+            files: [pdfFile],
           };
-          
-          // Check if the specific data can be shared
           if (navigator.canShare(shareData)) {
             await navigator.share(shareData);
             toast.success("Prescription shared successfully via WhatsApp!");
@@ -640,83 +641,80 @@ const PrescriptionModal = ({ prescriptionId, onClose }) => {
             return;
           }
         } catch (shareError) {
-          // If user cancels, don't show error
-          if (shareError.name === 'AbortError') {
+          if (shareError.name === "AbortError") {
             setShowPhoneModal(false);
             return;
           }
           console.log("Web Share API failed:", shareError);
-          // Continue to fallback method
         }
       }
-
-      // Fallback method - use WhatsApp URL with message only
-      // Note: WhatsApp URL doesn't support file attachment directly
-      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-      
-      // Create a temporary download for the PDF (user can manually attach)
+      const isMobile =
+        /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+          navigator.userAgent
+        );
       const pdfUrl = URL.createObjectURL(pdfBlob);
-      
-      // Simplified message for URL fallback
-      const urlMessage = `Hi ${prescription.patient.name}, your prescription from Dr. ${prescription.doctor.name} is ready. Date: ${new Date().toLocaleDateString()}`;
-      
+      const urlMessage = `Hi ${
+        prescription.patient.name
+      }, your prescription from Dr. ${
+        prescription.doctor.name
+      } is ready. Date: ${new Intl.DateTimeFormat("en-GB", {
+        timeZone: "UTC",
+      }).format(new Date(prescription.createdAt))}`;
       if (isMobile) {
-        // Try different WhatsApp URL schemes for mobile
         const whatsappUrls = [
-          `whatsapp://send?phone=${formattedPhone}&text=${encodeURIComponent(urlMessage)}`,
-          `https://api.whatsapp.com/send?phone=${formattedPhone}&text=${encodeURIComponent(urlMessage)}`,
+          `whatsapp://send?phone=${formattedPhone}&text=${encodeURIComponent(
+            urlMessage
+          )}`,
+          `https://api.whatsapp.com/send?phone=${formattedPhone}&text=${encodeURIComponent(
+            urlMessage
+          )}`,
         ];
-        
-        // Try to open WhatsApp app first, then web version
         let opened = false;
         for (const url of whatsappUrls) {
           try {
-            window.open(url, '_blank');
+            window.open(url, "_blank");
             opened = true;
             break;
           } catch (error) {
             console.log(`Failed to open ${url}:`, error);
           }
         }
-        
         if (opened) {
-          // Create a download link for the PDF
-          const link = document.createElement('a');
+          const link = document.createElement("a");
           link.href = pdfUrl;
           link.download = `${prescription.patient.name}-prescription.pdf`;
           document.body.appendChild(link);
           link.click();
           document.body.removeChild(link);
-          
-          toast.info("WhatsApp opened with message. PDF downloaded - please attach it to your message.", {
-            duration: 5000,
-          });
+          toast.info(
+            "WhatsApp opened with message. PDF downloaded - please attach it to your message.",
+            {
+              duration: 5000,
+            }
+          );
         }
       } else {
-        // Desktop: Open WhatsApp Web
-        const whatsappWebUrl = `https://web.whatsapp.com/send?phone=${formattedPhone}&text=${encodeURIComponent(urlMessage)}`;
-        window.open(whatsappWebUrl, '_blank');
-        
-        // Download PDF for manual attachment
-        const link = document.createElement('a');
+        const whatsappWebUrl = `https://web.whatsapp.com/send?phone=${formattedPhone}&text=${encodeURIComponent(
+          urlMessage
+        )}`;
+        window.open(whatsappWebUrl, "_blank");
+        const link = document.createElement("a");
         link.href = pdfUrl;
         link.download = `${prescription.patient.name}-prescription.pdf`;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
-        
-        toast.info("WhatsApp Web opened with message. PDF downloaded - please attach it to your message.", {
-          duration: 5000,
-        });
+        toast.info(
+          "WhatsApp Web opened with message. PDF downloaded - please attach it to your message.",
+          {
+            duration: 5000,
+          }
+        );
       }
-      
       setShowPhoneModal(false);
-      
-      // Clean up the temporary URL
       setTimeout(() => {
         URL.revokeObjectURL(pdfUrl);
-      }, 30000); // Give more time for user to use the file
-      
+      }, 30000);
     } catch (error) {
       console.error("Error sending to WhatsApp:", error);
       toast.error("Failed to send to WhatsApp. Please try again.");
@@ -726,13 +724,15 @@ const PrescriptionModal = ({ prescriptionId, onClose }) => {
   };
 
   const handleWhatsAppClick = () => {
-    const patientPhone = prescription?.patient?.phone || prescription?.patient?.mobile;
-    
+    if (!prescription) {
+      toast.error("Prescription data is not available yet.");
+      return;
+    }
+    const patientPhone =
+      prescription.patient?.phone || prescription.patient?.mobile;
     if (patientPhone && patientPhone !== "-") {
-      // Phone number exists, send directly
       sendToWhatsApp(patientPhone);
     } else {
-      // No phone number, show modal
       setShowPhoneModal(true);
     }
   };
@@ -825,13 +825,12 @@ const PrescriptionModal = ({ prescriptionId, onClose }) => {
                   labTest={prescription.labTest}
                   vitals={prescription.patient.vitals}
                   bookingNotes={prescription.bookingNotes}
+                  date={prescription.createdAt} // Pass the raw string
                 />
               </PDFViewer>
             </div>
-            
-            {/* Action Buttons */}
+
             <div className="flex justify-end mt-4 gap-3">
-              {/* WhatsApp Send Button */}
               <button
                 onClick={handleWhatsAppClick}
                 disabled={sendingWhatsApp}
@@ -845,7 +844,6 @@ const PrescriptionModal = ({ prescriptionId, onClose }) => {
                 {sendingWhatsApp ? "Sharing..." : "Share via WhatsApp"}
               </button>
 
-              {/* PDF Download Button */}
               <PDFDownloadLink
                 document={
                   <PrescriptionPDF
@@ -866,6 +864,7 @@ const PrescriptionModal = ({ prescriptionId, onClose }) => {
                     labTest={prescription.labTest}
                     vitals={prescription.patient.vitals}
                     bookingNotes={prescription.bookingNotes}
+                    date={prescription.createdAt} // Pass the raw string
                   />
                 }
                 fileName={`${prescription.patient.name}-prescription.pdf`}
@@ -889,12 +888,13 @@ const PrescriptionModal = ({ prescriptionId, onClose }) => {
         </div>
       </div>
 
-      {/* Phone Number Modal */}
       <PhoneNumberModal
         isOpen={showPhoneModal}
         onClose={() => setShowPhoneModal(false)}
         onSubmit={sendToWhatsApp}
-        currentPhone={prescription?.patient?.phone || prescription?.patient?.mobile}
+        currentPhone={
+          prescription?.patient?.phone || prescription?.patient?.mobile
+        }
       />
     </>
   );
