@@ -114,6 +114,18 @@ const Navbar = ({ theme, setTheme }) => {
           ))}
           <li role="none">
             <Link
+              to="/lab/login"
+              className="text-[#f1faee] text-lg hover:text-[#00a896]"
+              // onClick={handleNavClick}
+              role="menuitem"
+              aria-label="Lab login"
+            >
+              Lab Login
+            </Link>
+          </li>
+          
+          <li role="none">
+            <Link
               to="/doctor/login"
               className="text-[#f1faee] text-lg hover:text-[#00a896]"
               onClick={handleNavClick}

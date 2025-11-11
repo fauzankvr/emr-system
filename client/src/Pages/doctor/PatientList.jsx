@@ -68,7 +68,7 @@ const PatientList = () => {
   };
 
   const handleEdit = (patient) => {
-    setEditForm({ 
+    setEditForm({
       ...patient,
       vitals: {
         spo2: patient.vitals?.spo2 || "",
@@ -84,7 +84,7 @@ const PatientList = () => {
 
   const handleEditChange = (e) => {
     const { name, value } = e.target;
-    
+
     if (name.startsWith('vitals.')) {
       const vitalKey = name.split('.')[1];
       setEditForm(prev => ({
@@ -128,7 +128,7 @@ const PatientList = () => {
 
   const handleAddChange = (e) => {
     const { name, value } = e.target;
-    
+
     if (name.startsWith('vitals.')) {
       const vitalKey = name.split('.')[1];
       setAddForm(prev => ({
@@ -256,7 +256,7 @@ const PatientList = () => {
               <h1 className="text-3xl font-bold text-gray-900">Patient Management</h1>
               <p className="text-gray-600 mt-1">Manage and view all patient records</p>
             </div>
-            <button 
+            <button
               className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
               onClick={() => setShowAddModal(true)}
             >
@@ -382,55 +382,68 @@ const PatientList = () => {
                   </tbody>
                 </table>
               </div>
-
               {totalPages > 1 && (
-                <div className="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
-                  <div className="flex-1 flex justify-between sm:hidden">
+                <div className="flex flex-col sm:flex-row items-center justify-between bg-white px-4 py-3 border-t border-gray-200">
+                  {/* Showing text */}
+                  <div className="mb-2 sm:mb-0 text-sm text-gray-700">
+                    Showing{" "}
+                    <span className="font-medium">{indexOfFirstPatient + 1}</span> to{" "}
+                    <span className="font-medium">
+                      {Math.min(indexOfLastPatient, filteredPatients.length)}
+                    </span>{" "}
+                    of <span className="font-medium">{filteredPatients.length}</span> results
+                  </div>
+
+                  {/* Pagination */}
+                  <div className="flex items-center gap-1 flex-wrap justify-center sm:justify-end w-full sm:w-auto">
+                    {/* Previous */}
                     <button
                       onClick={() => paginate(currentPage - 1)}
                       disabled={currentPage === 1}
-                      className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
+                      className="px-3 py-2 text-sm font-medium border rounded-md bg-gray-50 text-gray-600 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      Previous
+                      ← Prev
                     </button>
+
+                    {/* Page numbers with ellipsis */}
+                    {Array.from({ length: totalPages }, (_, i) => i + 1)
+                      .filter(
+                        (page) =>
+                          page === 1 ||
+                          page === totalPages ||
+                          (page >= currentPage - 2 && page <= currentPage + 2)
+                      )
+                      .map((page, index, arr) => {
+                        const prev = arr[index - 1];
+                        const showDots = prev && page - prev > 1;
+                        return (
+                          <React.Fragment key={page}>
+                            {showDots && <span className="px-2 text-gray-500">...</span>}
+                            <button
+                              onClick={() => paginate(page)}
+                              className={`px-3 py-2 text-sm font-medium rounded-md border ${currentPage === page
+                                  ? "bg-blue-600 text-white border-blue-600"
+                                  : "bg-white text-gray-600 border-gray-300 hover:bg-gray-100"
+                                }`}
+                            >
+                              {page}
+                            </button>
+                          </React.Fragment>
+                        );
+                      })}
+
+                    {/* Next */}
                     <button
                       onClick={() => paginate(currentPage + 1)}
                       disabled={currentPage === totalPages}
-                      className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
+                      className="px-3 py-2 text-sm font-medium border rounded-md bg-gray-50 text-gray-600 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      Next
+                      Next →
                     </button>
-                  </div>
-                  <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
-                    <div>
-                      <p className="text-sm text-gray-700">
-                        Showing <span className="font-medium">{indexOfFirstPatient + 1}</span> to{' '}
-                        <span className="font-medium">
-                          {Math.min(indexOfLastPatient, filteredPatients.length)}
-                        </span>{' '}
-                        of <span className="font-medium">{filteredPatients.length}</span> results
-                      </p>
-                    </div>
-                    <div>
-                      <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px">
-                        {Array.from({ length: totalPages }, (_, i) => (
-                          <button
-                            key={i + 1}
-                            onClick={() => paginate(i + 1)}
-                            className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
-                              currentPage === i + 1
-                                ? 'z-10 bg-blue-50 border-blue-500 text-blue-600'
-                                : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
-                            }`}
-                          >
-                            {i + 1}
-                          </button>
-                        ))}
-                      </nav>
-                    </div>
                   </div>
                 </div>
               )}
+
             </>
           )}
         </div>
@@ -453,12 +466,12 @@ const PatientList = () => {
                 </button>
               </div>
             </div>
-            
+
             <form onSubmit={handleAddSubmit} className="p-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-4">
                   <h3 className="font-semibold text-lg text-gray-900 border-b pb-2">Basic Information</h3>
-                  
+
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Full Name <span className="text-red-500">*</span>
@@ -523,7 +536,7 @@ const PatientList = () => {
                     </label>
                     <input
                       name="age"
-                     
+
                       value={addForm.age}
                       onChange={handleAddChange}
                       className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -545,7 +558,7 @@ const PatientList = () => {
 
                 <div className="space-y-4">
                   <h3 className="font-semibold text-lg text-gray-900 border-b pb-2">Vital Signs</h3>
-                  
+
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">SpO2 (%)</label>
                     <input
@@ -615,7 +628,7 @@ const PatientList = () => {
                 </div>
               </div>
             </form>
-            
+
             <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-end gap-3 rounded-b-lg">
               <button
                 type="button"
@@ -645,7 +658,7 @@ const PatientList = () => {
               <h2 className="text-2xl font-bold text-gray-900">Patient Details</h2>
               <p className="text-gray-600 mt-1">Complete patient information</p>
             </div>
-            
+
             <div className="p-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-4">
@@ -731,7 +744,7 @@ const PatientList = () => {
                 </div>
               </div>
             </div>
-            
+
             <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-end rounded-b-xl">
               <button
                 className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
@@ -761,12 +774,12 @@ const PatientList = () => {
                 </button>
               </div>
             </div>
-            
+
             <form onSubmit={handleEditSubmit} className="p-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-4">
                   <h3 className="font-semibold text-lg text-gray-900 border-b pb-2">Basic Information</h3>
-                  
+
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Full Name <span className="text-red-500">*</span>
@@ -831,7 +844,7 @@ const PatientList = () => {
                     </label>
                     <input
                       name="age"
-                     
+
                       value={editForm.age || ""}
                       onChange={handleEditChange}
                       className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -853,7 +866,7 @@ const PatientList = () => {
 
                 <div className="space-y-4">
                   <h3 className="font-semibold text-lg text-gray-900 border-b pb-2">Vital Signs</h3>
-                  
+
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">SpO2 (%)</label>
                     <input
@@ -923,7 +936,7 @@ const PatientList = () => {
                 </div>
               </div>
             </form>
-            
+
             <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-end gap-3 rounded-b-lg">
               <button
                 type="button"

@@ -9,6 +9,7 @@ import PatientHistoryPage from "../Pages/doctor/PatientHIstory";
 import Prescription from "../Pages/doctor/prescription";
 import TemplatesPage from "../Pages/doctor/Templates";
 import PatientListPage from "../Pages/doctor/PatientList";
+import InvestigationHistoryPage from "../Pages/doctor/InvestigationHistoryPage";
 
 function ProtectedRoutes() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -17,8 +18,6 @@ function ProtectedRoutes() {
   useEffect(() => {
     const accessToken = localStorage.getItem("accessToken");
     const refreshToken = localStorage.getItem("refreshToken");
-    console.log('accessToken', accessToken);
-    console.log('refreshToken', refreshToken);
     
     if (accessToken && refreshToken) {
       setIsAuthenticated(true);
@@ -48,6 +47,7 @@ function ProtectedRoutes() {
         <Route path="templates" element={<TemplatesPage />} />
         <Route path="prescription" element={<Prescription />} />
         <Route path="patients" element={<PatientListPage />} />
+        <Route path="investigations" element={<InvestigationHistoryPage />} />
         {/* <Route path="support" element={<SupportPage />} /> */}
         <Route path="*" element={<Navigate to="dashboard" replace />} />
       </Routes>

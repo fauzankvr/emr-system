@@ -221,7 +221,15 @@ const PrescriptionPDF = ({
                   </Text>
                   <Text>
                     <Text style={styles.label}>Report Date:</Text>{" "}
-                    {report.reportDate || "-"}
+                    {new Intl.DateTimeFormat("en-GB", {
+                      timeZone: "UTC",
+                      year: "numeric",
+                      month: "2-digit",
+                      day: "2-digit",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                      hour12: true,
+                    }).format(new Date(report.reportDate)) || "-"}
                   </Text>
                 </View>
               ))
@@ -360,11 +368,11 @@ const PrescriptionPDF = ({
             </View>
           </View>
 
-          {/* Lab Tests for Next Visit */}
+          {/* Investigations for Next Visit */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Lab Tests On Next Visit</Text>
+            <Text style={styles.sectionTitle}>Investigation On Next Visit</Text>
             {labTest.map((val) => (
-              <Text key={val}>{val}</Text>
+              <Text key={val}>{val.name}</Text>
             ))}
           </View>
         </View>
@@ -397,7 +405,7 @@ const Prescription = () => {
   const [customDiagnosis, setCustomDiagnosis] = useState("");
   const [notes, setNotes] = useState("");
   const [selectedSymptom, setSelectedSymptom] = useState("");
-  const [selectedDate,setSelectedDate] = useState(new Date())
+  const [selectedDate, setSelectedDate] = useState(new Date())
 
   const [medicines, setMedicines] = useState([]);
   const [labReports, setLabReports] = useState([]);
@@ -755,7 +763,7 @@ const Prescription = () => {
   });
 
   const [newLabReportFile, setNewLabReportFile] = useState(null);
-   const [oldDescriptions, setOldDescriptions] = useState([]);
+  const [oldDescriptions, setOldDescriptions] = useState([]);
 
   const diagnosisOptions = [
     "Abdominal Pain",
@@ -889,9 +897,9 @@ const Prescription = () => {
     }
     fetchData()
   }, [doctorId, patientId])
-  
+
   let urlParams = new URLSearchParams(window.location.search);
-   useEffect(() => {
+  useEffect(() => {
     if (availableDoctors.length > 0 && !doctorId) {
       const firstDoctor = availableDoctors[0];
       setDoctor(firstDoctor);
@@ -951,7 +959,7 @@ const Prescription = () => {
         if (prescId) {
           const prescriptionResponse = await axiosInstance.get(`/api/prescription/${prescId}`);
           const prescData = prescriptionResponse.data.data;
-          
+
           setPrescriptionId(prescData._id);
           setBookingNotes(prescData.bookingNotes)
           setDiagnosis(prescData.diagnosis || "");
@@ -1493,7 +1501,7 @@ const Prescription = () => {
 
       // Only fetch from API if we don't have data yet
       let bookingsToFilter = allBookings;
-    
+
       if (allBookings.length === 0) {
         const response = await axiosInstance.get("/api/booking");
         const freshBookings = response.data.data.filter(
@@ -1919,9 +1927,8 @@ const Prescription = () => {
                         ...vitals,
                         unit: e.target.value,
                         temp: vitals.temp
-                          ? `${vitals.temp.replace(/[°CF]/g, "")}${
-                              e.target.value
-                            }`
+                          ? `${vitals.temp.replace(/[°CF]/g, "")}${e.target.value
+                          }`
                           : "",
                       })
                     }
@@ -2053,11 +2060,10 @@ const Prescription = () => {
                               setDiagnosisSearchTerm(diagnosis.name);
                               setShowDiagnosisDropdown(false);
                             }}
-                            className={`px-3 py-1 cursor-pointer text-sm ${
-                              index === highlightedDiagnosisIndex
-                                ? "bg-blue-100 text-blue-900"
-                                : "hover:bg-gray-100"
-                            }`}
+                            className={`px-3 py-1 cursor-pointer text-sm ${index === highlightedDiagnosisIndex
+                              ? "bg-blue-100 text-blue-900"
+                              : "hover:bg-gray-100"
+                              }`}
                             onMouseEnter={() =>
                               setHighlightedDiagnosisIndex(index)
                             }
@@ -2221,11 +2227,10 @@ const Prescription = () => {
                         <div
                           key={medicine._id}
                           onClick={() => handleMedicineSelect(medicine)}
-                          className={`px-3 py-1 cursor-pointer text-sm ${
-                            index === highlightedMedicineIndex
-                              ? "bg-blue-100 text-blue-900"
-                              : "hover:bg-gray-100"
-                          }`}
+                          className={`px-3 py-1 cursor-pointer text-sm ${index === highlightedMedicineIndex
+                            ? "bg-blue-100 text-blue-900"
+                            : "hover:bg-gray-100"
+                            }`}
                           onMouseEnter={() =>
                             setHighlightedMedicineIndex(index)
                           }
@@ -2348,7 +2353,7 @@ const Prescription = () => {
                               index === highlightedDosageIndex
                                 ? "bg-blue-100 text-blue-900"
                                 : "hover:bg-gray-100"
-                            }`}
+                              }`}
                             onMouseEnter={() =>
                               setHighlightedDosageIndex(index)
                             } // Add this
@@ -2464,7 +2469,7 @@ const Prescription = () => {
                               index === highlightedFrequencyIndex
                                 ? "bg-blue-100 text-blue-900"
                                 : "hover:bg-gray-100"
-                            }`}
+                              }`}
                             onMouseEnter={() =>
                               setHighlightedFrequencyIndex(index)
                             } // Add this
@@ -2583,7 +2588,7 @@ const Prescription = () => {
                               index === highlightedDurationIndex
                                 ? "bg-blue-100 text-blue-900"
                                 : "hover:bg-gray-100"
-                            }`}
+                              }`}
                             onMouseEnter={() =>
                               setHighlightedDurationIndex(index)
                             } // Add this
@@ -2700,7 +2705,7 @@ const Prescription = () => {
                                 index === highlightedInstructionsIndex
                                   ? "bg-blue-100 text-blue-900"
                                   : "hover:bg-gray-100"
-                              }`}
+                                }`}
                               onMouseEnter={() =>
                                 setHighlightedInstructionsIndex(index)
                               } // Add this
@@ -2843,8 +2848,8 @@ const Prescription = () => {
                           getTaperingFilteredFrequencies(index).length > 0 && (
                             <div
                               ref={(el) =>
-                                (taperingFrequencyDropdownRefs.current[index] =
-                                  el)
+                              (taperingFrequencyDropdownRefs.current[index] =
+                                el)
                               } // Add this
                               className="absolute z-10 mt-1 w-full bg-white shadow-lg rounded-md max-h-40 overflow-auto"
                             >
@@ -2873,12 +2878,12 @@ const Prescription = () => {
                                     className={`px-3 py-1 cursor-pointer text-sm ${
                                       // Update className with highlight logic
                                       freqIndex ===
-                                      (highlightedTaperingFrequencyIndices[
-                                        index
-                                      ] || -1)
+                                        (highlightedTaperingFrequencyIndices[
+                                          index
+                                        ] || -1)
                                         ? "bg-blue-100 text-blue-900"
                                         : "hover:bg-gray-100"
-                                    }`}
+                                      }`}
                                     onMouseEnter={() =>
                                       setHighlightedTaperingFrequencyIndices(
                                         (prev) => ({
@@ -3042,11 +3047,11 @@ const Prescription = () => {
                                     className={`px-3 py-1 cursor-pointer text-sm ${
                                       // Update className with highlight logic
                                       dayIndex ===
-                                      (highlightedTaperingDaysIndices[index] ||
-                                        -1)
+                                        (highlightedTaperingDaysIndices[index] ||
+                                          -1)
                                         ? "bg-blue-100 text-blue-900"
                                         : "hover:bg-gray-100"
-                                    }`}
+                                      }`}
                                     onMouseEnter={() =>
                                       setHighlightedTaperingDaysIndices(
                                         (prev) => ({
@@ -3173,11 +3178,11 @@ const Prescription = () => {
                         <td className="px-3 py-2 whitespace-nowrap text-xs text-gray-500">
                           {medicine.isTapering && medicine.tapering?.length > 0
                             ? medicine.tapering
-                                .map(
-                                  (schedule) =>
-                                    `${schedule.dosage} for ${schedule.days}`
-                                )
-                                .join(", ")
+                              .map(
+                                (schedule) =>
+                                  `${schedule.dosage} for ${schedule.days}`
+                              )
+                              .join(", ")
                             : "No"}
                         </td>
                         <td className="px-3 py-2 whitespace-nowrap text-right text-xs font-medium space-x-1">
@@ -3290,11 +3295,10 @@ const Prescription = () => {
                 <button
                   onClick={handleAddLabReport}
                   disabled={labReportLoading}
-                  className={`w-full px-3 py-1 rounded-md flex items-center justify-center text-sm ${
-                    labReportLoading
-                      ? "bg-gray-400 cursor-not-allowed"
-                      : "bg-blue-600 hover:bg-blue-700"
-                  } text-white`}
+                  className={`w-full px-3 py-1 rounded-md flex items-center justify-center text-sm ${labReportLoading
+                    ? "bg-gray-400 cursor-not-allowed"
+                    : "bg-blue-600 hover:bg-blue-700"
+                    } text-white`}
                 >
                   {labReportLoading ? (
                     <>
@@ -3398,43 +3402,80 @@ const Prescription = () => {
           {/* Lab Test Advised */}
           <div className="p-2 md:p-4 border-t">
             <h2 className="text-sm font-semibold text-gray-700 mb-2">
-              Lab Tests On Next Visit
+              Investigation On Next Visit
             </h2>
 
-            {labTest.map((test, index) => (
-              <div key={index} className="flex items-center gap-2 mb-2">
-                <input
-                  type="text"
-                  value={test}
-                  onChange={(e) => {
-                    const updated = [...labTest];
-                    updated[index] = e.target.value;
-                    setLabTest(updated);
-                  }}
-                  placeholder={`Test ${index + 1}`}
-                  className="flex-1 px-2 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                />
-                <button
-                  onClick={() => {
-                    const updated = [...labTest];
-                    updated.splice(index, 1);
-                    setLabTest(updated);
-                  }}
-                  className="text-red-600 hover:text-red-800"
-                  title="Remove"
-                >
-                  <Trash2 size={14} />
-                </button>
-              </div>
-            ))}
+            {(() => {
+              // Normalize labTest to always be array of {name, price}
+              const normalizedTests = Array.isArray(labTest)
+                ? labTest.map(item => {
+                  if (typeof item === "string") {
+                    return { name: item, price: "" };
+                  }
+                  return { name: item.name || "", price: item.price || "" };
+                })
+                : [];
 
-            <button
-              onClick={() => setLabTest([...labTest, ""])}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded-md flex items-center text-sm"
-            >
-              <Plus size={14} className="mr-1" />
-              Add Test
-            </button>
+              return (
+                <>
+                  {normalizedTests.map((test, index) => (
+                    <div key={index} className="flex items-center gap-2 mb-2">
+                      <input
+                        type="text"
+                        value={test.name}
+                        onChange={(e) => {
+                          const updated = [...labTest];
+                          if (typeof updated[index] === "string") {
+                            updated[index] = { name: e.target.value, price: "" };
+                          } else {
+                            updated[index] = { ...updated[index], name: e.target.value };
+                          }
+                          setLabTest(updated);
+                        }}
+                        placeholder={`Test ${index + 1} Name`}
+                        className="flex-1 px-2 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                      />
+
+                      <input
+                        type="text"
+                        value={test.price}
+                        onChange={(e) => {
+                          const updated = [...labTest];
+                          if (typeof updated[index] === "string") {
+                            updated[index] = { name: updated[index], price: e.target.value };
+                          } else {
+                            updated[index] = { ...updated[index], price: e.target.value };
+                          }
+                          setLabTest(updated);
+                        }}
+                        placeholder="Price (optional)"
+                        className="w-64 px-2 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                      />
+
+                      <button
+                        onClick={() => {
+                          const updated = [...labTest];
+                          updated.splice(index, 1);
+                          setLabTest(updated);
+                        }}
+                        className="text-red-600 hover:text-red-800"
+                        title="Remove"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  ))}
+
+                  <button
+                    onClick={() => setLabTest([...labTest, { name: "", price: "" }])}
+                    className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded-md flex items-center text-sm"
+                  >
+                    <Plus size={14} className="mr-1" />
+                    Add Test
+                  </button>
+                </>
+              );
+            })()}
           </div>
 
           {/* Footer */}
@@ -3523,7 +3564,7 @@ const Prescription = () => {
                 </PDFDownloadLink>
                 <button
                   onClick={() => {
-                    if (urlParams.get("isOld")=='true') {
+                    if (urlParams.get("isOld") == 'true') {
                       setDiagnosis("");
                       setBookingNotes("");
                       setLabTest([""]);
@@ -3531,11 +3572,11 @@ const Prescription = () => {
                       setMedicines([]);
                     }
                     urlParams.set("isOld", "false");
-window.history.replaceState(
-  {},
-  "",
-  `${window.location.pathname}?${urlParams.toString()}`
-);
+                    window.history.replaceState(
+                      {},
+                      "",
+                      `${window.location.pathname}?${urlParams.toString()}`
+                    );
                     setShowPDFModal(false);
                   }}
                   className="px-3 py-1 bg-red-600 hover:bg-red-700 text-white rounded-md transition text-sm"
@@ -3556,7 +3597,7 @@ window.history.replaceState(
                   labTest={labTest}
                   vitals={vitals}
                   bookingNotes={bookingNotes}
-                  date = {selectedDate}
+                  date={selectedDate}
                 />
               </PDFViewer>
             </div>

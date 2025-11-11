@@ -1,6 +1,9 @@
 import React, { useEffect, useState } from "react";
 import { axiosInstance } from "../../API/axiosInstance";
-import { FaEye, FaEdit, FaTrash, FaFileAlt } from "react-icons/fa";
+import {
+  FaEye, FaEdit, FaTrash, FaFileAlt, FaChevronLeft, FaChevronRight,
+  FaSearch, FaFileMedicalAlt, FaInbox,
+} from "react-icons/fa";
 import PatientDetailsModal from "../../Components/doctor/models/PatientDetails";
 import PrescriptionModal from "../../Components/doctor/models/PrescriptionModal";
 import { useNavigate } from "react-router-dom";
@@ -8,70 +11,75 @@ import { toast, ToastContainer } from "react-toastify";
 
 function PatientHistoryPage() {
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [dashboardData, setDashboardData] = useState({
-    prescriptions: [],
-  });
-  const [filteredPrescriptions, setFilteredPrescriptions] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
+  const [prescriptions, setPrescriptions] = useState([]);
+  const [meta, setMeta] = useState(null);
+  const [page, setPage] = useState(1);
+  const limit = 20;
+
   const [selectedPrescription, setSelectedPrescription] = useState(null);
   const [showPatientModal, setShowPatientModal] = useState(false);
   const [showPrescriptionModal, setShowPrescriptionModal] = useState(false);
   const navigate = useNavigate();
 
+  // ---------- FETCH ----------
+  const fetchPrescriptions = async (resetPage = false) => {
+    try {
+      setLoading(true);
+      const currentPage = resetPage ? 1 : page;
+      const params = new URLSearchParams({
+        page: String(currentPage),
+        limit: String(limit),
+        search: searchQuery.trim(),
+        sort: "updatedAt",
+        order: "desc",
+      });
+
+      const res = await axiosInstance.get(`/api/prescription?${params}`);
+      setPrescriptions(res.data.data || []);
+      setMeta(res.data.meta || null);
+      if (resetPage) setPage(1);
+    } catch (err) {
+      toast.error(err?.response?.data?.message || "Failed to load prescriptions");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ONE EFFECT: mount + page + search
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        const response = await axiosInstance.get("/api/prescription");
-        const prescriptionsData =
-          response.data?.data.sort(
-            (a, b) => new Date(b.updatedAt) - new Date(a.updatedAt)
-          ) || [];
+    fetchPrescriptions(searchQuery ? true : false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, searchQuery]);
 
-        setDashboardData({
-          prescriptions: prescriptionsData,
-        });
-        setFilteredPrescriptions(prescriptionsData);
-        setLoading(false);
-      } catch (error) {
-        console.error("Error fetching prescription data", error);
-        setError("Failed to load prescription data. Please try again later.");
-        setLoading(false);
-      }
-    };
-    fetchData();
-  }, []);
-
-  useEffect(() => {
-    // Filter prescriptions based on search query
-    const filtered = dashboardData.prescriptions.filter((pres) => {
-      const patient = pres.patient;
-      if (!patient) return false;
-      const searchLower = searchQuery.toLowerCase();
-      return (
-        (patient.name && patient.name.toLowerCase().includes(searchLower)) ||
-        (patient.email && patient.email.toLowerCase().includes(searchLower)) ||
-        (patient.phone && patient.phone.includes(searchLower))
-      );
-    });
-    setFilteredPrescriptions(filtered);
-  }, [searchQuery, dashboardData.prescriptions]);
-
-  const handleViewDetails = (prescription) => {
-    setSelectedPrescription(prescription.patient);
+  // ---------- ACTIONS ----------
+  const handleViewDetails = (pres) => {
+    setSelectedPrescription(pres.patient);
     setShowPatientModal(true);
   };
 
-  const handleViewPrescription = (prescription) => {
-    setSelectedPrescription(prescription);
+  const handleViewPrescription = (pres) => {
+    console.log("Viewing prescription:", pres);
+    setSelectedPrescription(pres);
     setShowPrescriptionModal(true);
   };
 
-  const handleDeletePrescription = (prescriptionId) => {
+  const handleEditPrescription = (pres) => {
+    navigate(
+      `/doctor/prescription?patientId=${pres.patient._id}&doctorId=${pres.doctor._id}&id=${pres._id}`
+    );
+  };
+
+  const handleSaveAsTemplate = (pres) => {
+    navigate(
+      `/doctor/prescription?patientId=${pres.patient._id}&doctorId=${pres.doctor._id}&id=${pres._id}&saveAsTemplate=true`
+    );
+  };
+
+  const handleDeletePrescription = (id) => {
     const ConfirmToast = ({ closeToast }) => (
       <div>
-        <p>Are you sure you want to delete this prescription?</p>
+        <p>Delete this prescription?</p>
         <div className="mt-2 flex justify-end gap-2">
           <button
             className="px-3 py-1 bg-gray-300 rounded"
@@ -84,33 +92,21 @@ function PatientHistoryPage() {
             onClick={async () => {
               closeToast();
               try {
-                await axiosInstance.delete(`/api/prescription/${prescriptionId}`);
-                
-                // Update state after deletion
-                setDashboardData((prev) => ({
-                  ...prev,
-                  prescriptions: prev.prescriptions.filter(
-                    (pres) => pres._id !== prescriptionId
-                  ),
-                }));
-  
-                setFilteredPrescriptions((prev) =>
-                  prev.filter((pres) => pres._id !== prescriptionId)
-                );
-  
-                toast.success("Prescription deleted successfully!");
-              } catch (error) {
-                console.error("Error deleting prescription", error);
-                toast.error("Failed to delete prescription. Please try again later.");
+                await axiosInstance.delete(`/api/prescription/${id}`);
+                setPrescriptions((prev) => prev.filter((p) => p._id !== id));
+                toast.success("Deleted!");
+                fetchPrescriptions(); // refresh meta
+              } catch {
+                toast.error("Delete failed");
               }
             }}
           >
-            Yes, Delete
+            Yes
           </button>
         </div>
       </div>
     );
-  
+
     toast.info(<ConfirmToast />, {
       position: "top-center",
       autoClose: false,
@@ -119,165 +115,226 @@ function PatientHistoryPage() {
       draggable: false,
     });
   };
-  
 
-  const handleEditPrescription = (prescription) => {
-    if (prescription && prescription.patient && prescription.doctor && prescription._id) {
-      navigate(`/doctor/prescription?patientId=${prescription.patient._id}&doctorId=${prescription.doctor._id}&id=${prescription._id}`);
+  // ---------- PAGINATION ----------
+  const Pagination = () => {
+    if (!meta || meta.totalPages <= 1) return null;
+
+    const start = meta.page ? (meta.page - 1) * meta.limit + 1 : 0;
+    const end = meta.page ? Math.min(meta.page * meta.limit, meta.total) : 0;
+
+    const pages = [];
+    if (meta.totalPages <= 5) {
+      for (let i = 1; i <= meta.totalPages; i++) pages.push(i);
     } else {
-      console.log("Edit prescription: missing patient, doctor, or id", prescription);
+      pages.push(1);
+      if (meta.page > 3) pages.push("...");
+      if (meta.page > 2) pages.push(meta.page - 1);
+      if (meta.page !== 1 && meta.page !== meta.totalPages) pages.push(meta.page);
+      if (meta.page < meta.totalPages - 1) pages.push(meta.page + 1);
+      if (meta.page < meta.totalPages - 2) pages.push("...");
+      pages.push(meta.totalPages);
     }
+    const unique = [...new Set(pages)];
+
+    return (
+      <div className="flex items-center justify-between">
+        <div className="text-sm text-gray-600">
+          Showing {start} to {end} of {meta.total} entries
+        </div>
+
+        <div className="flex gap-1 items-center">
+          <button
+            onClick={() => setPage(p => p - 1)}
+            disabled={!meta.hasPrev}
+            className="p-2 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <FaChevronLeft className="h-4 w-4" />
+          </button>
+
+          {unique.map((pg, i) =>
+            pg === "..." ? (
+              <span key={`dot-${i}`} className="px-2 py-1">
+                ...
+              </span>
+            ) : (
+              <button
+                key={pg}
+                onClick={() => setPage(pg)}
+                className={`px-3 py-1 rounded text-sm ${
+                  pg === meta.page ? "bg-blue-600 text-white" : "hover:bg-gray-100"
+                }`}
+              >
+                {pg}
+              </button>
+            )
+          )}
+
+          <button
+            onClick={() => setPage(p => p + 1)}
+            disabled={!meta.hasNext}
+            className="p-2 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <FaChevronRight className="h-4 w-4" />
+          </button>
+        </div>
+      </div>
+    );
   };
 
-  const handleSaveAsTemplate = (prescription) => {
-    // Navigate to prescription page with template creation mode
-    if (prescription && prescription.patient && prescription.doctor && prescription._id) {
-      navigate(`/doctor/prescription?patientId=${prescription.patient._id}&doctorId=${prescription.doctor._id}&id=${prescription._id}&saveAsTemplate=true`);
-    }
-  };
-
-  const handleSearchChange = (e) => {
-    setSearchQuery(e.target.value);
-  };
-
-
-
+  // ---------- RENDER ----------
   return (
-    <>
+    <div className="min-h-screen p-8 bg-gray-50 space-y-6">
       <ToastContainer />
-      <div className="p-6">
-        <h1 className="text-2xl font-bold mb-6">Patients History</h1>
 
-        {/* Search Input */}
-        <div className="mb-4">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+        <h1 className="text-3xl font-bold text-gray-800">Patients History</h1>
+
+        <div className="relative w-full sm:w-80">
+          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <FaSearch className="text-gray-400" />
+          </div>
           <input
             type="text"
-            placeholder="Search by patient name, email, or phone"
+            placeholder="Search patient name / email / phone"
             value={searchQuery}
-            onChange={handleSearchChange}
-            className="w-full max-w-md p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full p-2 pl-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
+      </div>
 
-        <div className="bg-white p-4 rounded-lg shadow">
-          <div className="bg-white rounded-lg shadow p-4">
-            {loading ? (
-              <div className="flex justify-center p-4">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-700"></div>
-              </div>
-            ) : error ? (
-              <div className="bg-red-100 text-red-700 p-3 rounded">{error}</div>
-            ) : filteredPrescriptions.length > 0 ? (
-              <div className="overflow-x-auto">
-                <table className="min-w-full bg-white">
-                  <thead>
-                    <tr>
-                      <th className="py-3 px-3 text-left">Patient</th>
-                      <th className="py-3 px-3 text-left">Date</th>
-                      <th className="py-3 px-3 text-left">Diagnosis</th>
-                      <th className="py-3 px-3 text-left">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-200">
-                    {filteredPrescriptions.map((pres) => (
-                      <tr key={pres._id} className="hover:bg-gray-50">
-                        <td className="py-3 px-3">
-                          <div className="flex items-center">
-                            <div className="h-8 w-8 rounded-full bg-blue-500 text-white flex items-center justify-center mr-3">
-                              {pres.patient && pres.patient.name
-                                ? pres.patient.name[0]?.toUpperCase()
-                                : "P"}
-                            </div>
-                            <div>
-                              <div className="font-medium">
-                                {pres.patient && pres.patient.name
-                                  ? pres.patient.name
-                                  : "Unknown"}
-                              </div>
-                              <div className="text-xs text-gray-500">
-                                {pres.patient && pres.patient.phone
-                                  ? pres.patient.phone
-                                  : "-"}
-                              </div>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="py-3 px-3">
-                          {new Intl.DateTimeFormat("en-GB", {
-                            timeZone: "UTC",
-                          }).format(new Date(pres.updatedAt))}
-                        </td>
-
-                        <td className="py-3 px-3">{pres.diagnosis}</td>
-                        <td className="py-3 px-3">
-                          <div className="flex space-x-4">
-                            <button
-                              onClick={() => handleViewDetails(pres)}
-                              className="text-blue-600 hover:text-blue-800 cursor-pointer"
-                              title="View Details"
-                            >
-                              <FaEye />
-                            </button>
-                            <button
-                              onClick={() => handleViewPrescription(pres)}
-                              className="text-blue-600 hover:text-blue-800  cursor-pointer"
-                              title="View Prescription"
-                            >
-                              Prescription
-                            </button>
-                            <button
-                              onClick={() => handleEditPrescription(pres)}
-                              className="text-yellow-600 hover:text-yellow-800  cursor-pointer"
-                              title="Edit Prescription"
-                            >
-                              <FaEdit />
-                            </button>
-                            <button
-                              onClick={() => handleSaveAsTemplate(pres)}
-                              className="text-green-600 hover:text-green-800  cursor-pointer"
-                              title="Save as Template"
-                            >
-                              <FaFileAlt />
-                            </button>
-                            <button
-                              onClick={() => handleDeletePrescription(pres._id)}
-                              className="text-red-600 hover:text-red-800  cursor-pointer"
-                              title="Delete Prescription"
-                            >
-                              <FaTrash />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            ) : (
-              <div className="text-center py-4 text-gray-500">
-                No prescriptions found
-              </div>
-            )}
+      <div className="bg-white rounded-lg shadow-md overflow-hidden">
+        {loading ? (
+          <div className="flex justify-center items-center h-64">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600" />
           </div>
-        </div>
+        ) : prescriptions.length === 0 ? (
+          <div className="text-center py-20 text-gray-500">
+            <FaInbox className="mx-auto h-12 w-12 text-gray-400" />
+            <h3 className="mt-4 text-lg font-medium">No prescriptions found</h3>
+            <p className="mt-1 text-sm">
+              Try adjusting your search or create a new prescription.
+            </p>
+          </div>
+        ) : (
+          <>
+            <div className="overflow-x-auto">
+              <table className="min-w-full">
+                <thead className="bg-gray-100">
+                  <tr>
+                    <th className="py-3 px-6 text-left text-xs font-medium text-gray-600 uppercase tracking-wider whitespace-nowrap">
+                      Patient
+                    </th>
+                    <th className="py-3 px-6 text-left text-xs font-medium text-gray-600 uppercase tracking-wider whitespace-nowrap">
+                      Date
+                    </th>
+                    <th className="py-3 px-6 text-left text-xs font-medium text-gray-600 uppercase tracking-wider whitespace-nowrap">
+                      Diagnosis
+                    </th>
+                    <th className="py-3 px-6 text-center text-xs font-medium text-gray-600 uppercase tracking-wider whitespace-nowrap">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {prescriptions.map((pres) => (
+                    <tr key={pres._id} className="hover:bg-gray-50">
+                      <td className="py-4 px-6">
+                        <div className="flex items-center">
+                          <div className="h-9 w-9 rounded-full bg-blue-100 text-blue-800 flex items-center justify-center mr-3 text-sm font-semibold">
+                            {pres.patient?.name?.[0]?.toUpperCase() || "P"}
+                          </div>
+                          <div>
+                            <div className="font-medium text-sm text-gray-900">
+                              {pres.patient?.name || "Unknown"}
+                            </div>
+                            <div className="text-xs text-gray-500">
+                              {pres.patient?.phone || "No phone"}
+                            </div>
+                          </div>
+                        </div>
+                      </td>
 
-        {/* Patient Details Modal */}
-        {showPatientModal && (
-          <PatientDetailsModal
-            patient={selectedPrescription}
-            onClose={() => setShowPatientModal(false)}
-          />
-        )}
+                      <td className="py-4 px-6 text-sm text-gray-700">
+                        {new Intl.DateTimeFormat("en-GB").format(new Date(pres.updatedAt))}
+                      </td>
 
-        {/* Prescription Modal */}
-        {showPrescriptionModal && (
-          <PrescriptionModal
-            prescriptionId={selectedPrescription._id}
-            onClose={() => setShowPrescriptionModal(false)}
-          />
+                      <td className="py-4 px-6 text-sm text-gray-700">
+                        {pres.diagnosis ? (
+                          pres.diagnosis
+                        ) : (
+                          <span className="text-gray-400 italic">N/A</span>
+                        )}
+                      </td>
+
+                      <td className="py-4 px-4 text-center">
+                        <div className="flex justify-center items-center space-x-4 text-lg">
+                          <button
+                            onClick={() => handleViewDetails(pres)}
+                            title="View Patient Details"
+                            className="text-blue-600 cursor-pointer"
+                          >
+                            <FaEye />
+                          </button>
+                          <button
+                            onClick={() => handleViewPrescription(pres)}
+                            title="View Prescription"
+                            className="text-blue-600 cursor-pointer"
+                          >
+                            {/* <FaFileMedicalAlt /> */}
+                            Prescription
+                          </button>
+                          <button
+                            onClick={() => handleEditPrescription(pres)}
+                            title="Edit"
+                            className="text-gray-500 hover:text-yellow-600 transition-colors"
+                          >
+                            <FaEdit />
+                          </button>
+                          <button
+                            onClick={() => handleSaveAsTemplate(pres)}
+                            title="Save as Template"
+                            className="text-gray-500 hover:text-green-600 transition-colors"
+                          >
+                            <FaFileAlt />
+                          </button>
+                          <button
+                            onClick={() => handleDeletePrescription(pres._id)}
+                            title="Delete"
+                            className="text-gray-500 hover:text-red-600 transition-colors"
+                          >
+                            <FaTrash />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="px-6 py-4 border-t border-gray-200">
+              <Pagination />
+            </div>
+          </>
         )}
       </div>
-    </>
+
+      {/* Modals */}
+      {showPatientModal && (
+        <PatientDetailsModal
+          patient={selectedPrescription}
+          onClose={() => setShowPatientModal(false)}
+        />
+      )}
+      {showPrescriptionModal && (
+        <PrescriptionModal
+          prescriptionId={selectedPrescription._id}   // <-- pass whole object (adjust modal if needed)
+          onClose={() => setShowPrescriptionModal(false)}
+        />
+      )}
+    </div>
   );
 }
 

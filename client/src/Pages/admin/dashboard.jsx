@@ -36,10 +36,7 @@ function DashboardPage() {
         setLoading(true);
         const bookingResponse = await axiosInstance.get("/api/booking");
         const appointmentsData =
-          bookingResponse.data?.data?.filter(
-            (item) => item.status === "booked"
-          ) || [];
-      
+          bookingResponse.data?.data || [];
 
         if (!appointmentsData.length) {
           setDashboardData({
@@ -52,25 +49,15 @@ function DashboardPage() {
           return;
         }
 
-        const today = new Date().toISOString().split("T")[0];
-        const todayAppointmentsCount = appointmentsData.filter(
-          (appt) => appt.appointmentDate?.split("T")[0] === today
-        ).length;
 
-        const uniquePatients = new Set(
-          appointmentsData
-            .filter((appt) => appt.patientId && appt.patientId._id)
-            .map((appt) => appt.patientId._id)
-        ).size;
-        
-        const completedData = appointmentsData.filter(
-          (item) => item.status === "completed"
-        ) || [];
+        const todayAppointmentsCount = appointmentsData.todaysBookingsCount || 0;
+
+        const completedData = appointmentsData.todaysCompletedCount || 0;
 
         setDashboardData({
-          totalPatients: uniquePatients,
+          totalPatients: appointmentsData.length,
           todayAppointments: todayAppointmentsCount,
-          consultations: completedData.length,
+          consultations: completedData,
           appointments: appointmentsData,
         });
         setLoading(false);
@@ -91,7 +78,6 @@ function DashboardPage() {
   }, []);
 
   const handleViewDetails = (appointment) => {
-    console.log("View details for appointment:", appointment.patientId);
     setSelectedAppointment(appointment.patientId);
     setShowModal(true);
   };
