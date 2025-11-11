@@ -28,18 +28,45 @@ export class PrescriptionController {
         .json({ success: false, message: error.message });
     }
   }
-  static async getAll(req: Request, res: Response) {
-    try {
-      const prescription = await PrescriptionService.getAllPrescriptions();
-      return res
-        .status(HttpStatusCode.OK)
-        .json({ success: true, data: prescription });
-    } catch (error: any) {
-      return res
-        .status(HttpStatusCode.BAD_REQUEST)
-        .json({ success: false, message: error.message });
-    }
-  }
+  static getAll = asyncHandler(async (req: Request, res: Response) => {
+    const {
+      page = 1,
+      limit = 10,
+      search = "",
+      sort = "updatedAt",
+      order = "desc",
+      startDate,  // ← NEW
+      endDate,    // ← NEW
+      isLabTestOnly,
+    } = req.query;
+
+    const pageNum = Math.max(1, Number(page));
+    const limitNum = Math.min(100, Math.max(1, Number(limit)));
+
+    const result = await PrescriptionService.getAllPrescriptions({
+      page: pageNum,
+      limit: limitNum,
+      search: search as string,
+      sort: sort as string,
+      order: order as "asc" | "desc",
+      startDate: startDate as string,  // pass through
+      endDate: endDate as string,      // pass through
+      isLabTestOnly: isLabTestOnly === "true",  // convert to boolean
+    });
+
+    return res.status(HttpStatusCode.OK).json({
+      success: true,
+      data: result.docs,
+      meta: {
+        total: result.total,
+        page: result.page,
+        limit: result.limit,
+        totalPages: result.totalPages,
+        hasNext: result.hasNext,
+        hasPrev: result.hasPrev,
+      },
+    });
+  });
 
   static async getById(req: Request, res: Response) {
     try {
@@ -140,15 +167,15 @@ export class PrescriptionController {
       }
 
       const reportImageUrl = `https://res.cloudinary.com/dnxz7tkcb/${req.file.filename}`;
-      
+
       return res
         .status(HttpStatusCode.OK)
-        .json({ 
-          success: true, 
-          data: { 
+        .json({
+          success: true,
+          data: {
             reportImageUrl,
-            filename: req.file.filename 
-          } 
+            filename: req.file.filename
+          }
         });
     } catch (error: any) {
       return res

@@ -9,6 +9,8 @@ export interface IVitals {
 }
 
 export interface IPatient extends Document {
+  cardId: string;
+  cardUrl: string;
   name: string;
   email: string;
   phone: string;
@@ -30,6 +32,8 @@ const vitalsSchema = new Schema<IVitals>({
 
 const patientSchema = new Schema<IPatient>(
   {
+    cardId: { type: String, unique: true },
+    cardUrl: { type: String},
     name: { type: String, required: true },
     email: { type: String},
     phone: { type: String, required: true},

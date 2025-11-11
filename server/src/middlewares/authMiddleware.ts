@@ -8,10 +8,8 @@ export interface AuthenticatedRequest extends Request {
 export const authMiddleware = (req: AuthenticatedRequest, res: Response, next: NextFunction): void => {
     try {
         const token = req.headers.authorization || '';
-        console.log("token", token);
 
         const verifiedDetails = verifyToken(token);
-        console.log("verified details", verifiedDetails);
         
         if (!verifiedDetails) {
             res.status(401).json({ message: "Invalid or missing authorization token" });

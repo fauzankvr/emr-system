@@ -5,6 +5,7 @@ interface ILabReport {
   name?: string;
   values?: string;
   reportDate?: Date;
+  status?: string;
   reportImageUrl?: string;
 }
 
@@ -49,9 +50,10 @@ const LabReportSchema = new Schema<ILabReport>(
     name: { type: String },
     values: { type: String },
     reportDate: { type: Date, default: Date.now },
+    status: { type: String, enum: ['Pending', 'Completed', 'In Progress'], default: 'Pending' },
     reportImageUrl: { type: String },
   },
-  { _id: false }
+  { _id: true } // Enable _id for subdocuments
 );
 
 const PrescriptionSchema = new Schema<IPrescription>(
@@ -62,8 +64,8 @@ const PrescriptionSchema = new Schema<IPrescription>(
       {
         medicine: MedicineSchema,
         isTapering: { type: Boolean, default: false },
-        dosage: { type: String},
-        dosageAmount: { type: String},
+        dosage: { type: String },
+        dosageAmount: { type: String },
         duration: { type: String },
         instructions: { type: String },
         // timing: { type: String },
@@ -71,10 +73,18 @@ const PrescriptionSchema = new Schema<IPrescription>(
       },
     ],
     diagnosis: { type: String },
-    bookingNotes:{type:String},
+    bookingNotes: { type: String },
     notes: { type: String },
     labReports: [LabReportSchema],
-    labTest: { type: [String], default: [] },
+    labTest: {
+      type: [
+        {
+          name: { type: String, required: true },
+          price: { type: String, default: "" }
+        }
+      ],
+      default: []
+    }
   },
   { timestamps: true }
 );

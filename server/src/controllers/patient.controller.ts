@@ -91,4 +91,33 @@ export class PatientController {
       res.status(HttpStatusCode.INTERNAL_SERVER_ERROR).json({ message: error.message });
     }
   }
+
+  static async uploadIdCard(req: Request, res: Response) {
+    try {
+      if (!req.file) {
+        return res
+          .status(HttpStatusCode.BAD_REQUEST)
+          .json({ success: false, message: 'No file uploaded' });
+      }
+
+      const patientId = req.params.id;
+      const cardUrl = req.file.path;               
+
+      const updated = await PatientService.updatePatient(
+        patientId,
+        { cardUrl },
+      );
+
+      if (!updated) throw new Error('Patient not found');
+
+      return res.status(HttpStatusCode.OK).json({
+        success: true,
+        data: { cardUrl},
+      });
+    } catch (error: any) {
+      return res
+        .status(HttpStatusCode.BAD_REQUEST)
+        .json({ success: false, message: error.message });
+    }
+  }
 }

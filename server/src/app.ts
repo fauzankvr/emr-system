@@ -14,6 +14,7 @@ import instructionRoutes from "./routes/instruction.routes"
 import daysRoutes from "./routes/days.routes"
 import dosageRoutes from "./routes/dosage.routes"
 import refreshTokenRoutes from "./routes/refreshToken.routes"
+import labRoutes from "./routes/lab.routes"
 dotenv.config();
 
 const app = express();
@@ -22,6 +23,7 @@ const allowedOrigins = [
     'https://emr-system-seven.vercel.app',
     'https://www.clinicppm.site',
     'https://clinicppm.site' 
+    // '*'
   ];
 
 
@@ -70,5 +72,6 @@ app.use('/api/instruction', instructionRoutes);
 app.use('/api/days', daysRoutes);
 app.use('/api/dosage', dosageRoutes);
 app.use('/api/auth', refreshTokenRoutes);
+app.use('/api/lab', labRoutes);
 
 export default app;

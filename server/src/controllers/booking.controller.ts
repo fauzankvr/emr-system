@@ -6,7 +6,6 @@ import { AuthenticatedRequest } from '../middlewares/authMiddleware';
 export class BookingController {
   static async create(req: Request, res: Response) {
     try {
-      console.log("req.body : ", req.body);
       const booking = await BookingService.createBooking(req.body);
       res.status(HttpStatusCode.CREATED).json({ success: true, message: 'Booking created', data: booking });
     } catch (err: any) {
@@ -17,9 +16,11 @@ export class BookingController {
   static async getAll(req: AuthenticatedRequest, res: Response) {
     try {
       const userId = req.userId || '';
-      console.log("doctorId", userId)
       const bookings = await BookingService.getAllBookingsByDoctorId(userId);
-      res.json({ success: true, data: bookings });
+      const todaysCompletedCount = await BookingService.getTodaysCompletedCountByDoctorId(userId);
+      const todaysBookingsCount = await BookingService.getTodaysBookingsCountByDoctorId(userId);
+
+      res.json({ success: true, data: bookings, todaysCompletedCount, todaysBookingsCount });
     } catch (err: any) {
       res.status(HttpStatusCode.INTERNAL_SERVER_ERROR).json({ success: false, message: err.message });
     }

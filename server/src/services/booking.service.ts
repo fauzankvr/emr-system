@@ -27,41 +27,33 @@ function generateTimeSlots(startTime: string, endTime: string, interval: number 
 
 export class BookingService {
     static async getAvailableSlots(doctorId: string, date: string): Promise<string[]> {
-        console.log(`Fetching available slots for doctorId: ${doctorId} on date: ${date}`);
-        
+
         const doctor = await DoctorModel.findById(doctorId);
         if (!doctor) {
             console.error('Doctor not found');
             throw new Error('Doctor not found');
         }
-        console.log(`Doctor found: ${doctor.name}`);
     
         const dayOfWeek = new Date(date).toLocaleDateString('en-US', { weekday: 'long' });
-        console.log(`Day of week for date ${date}: ${dayOfWeek}`);
         
         const slotForDay = doctor.availableSlots.find(slot => slot.day === dayOfWeek);
         if (!slotForDay) {
             console.log('No available slots for the given day');
             return [];
         }
-        console.log(`Slot for day: ${JSON.stringify(slotForDay)}`);
     
         const allSlots = generateTimeSlots(slotForDay.startTime, slotForDay.endTime);
-        console.log(`Generated time slots: ${allSlots}`);
         
         const booked = await BookingModel.find({
           doctorId,
           appointmentDate: new Date(date),
           status: 'booked'
         });
-        console.log(`Booked slots: ${JSON.stringify(booked)}`);
     
         const bookedSlots = booked.map(b => b.timeSlot);
-        console.log(`Booked time slots: ${bookedSlots}`);
         
         const availableSlots = allSlots.filter(slot => !bookedSlots.includes(slot));
-        console.log(`Available slots: ${availableSlots}`);
-        
+      
         return availableSlots;
     }
     
@@ -86,8 +78,46 @@ export class BookingService {
     return await BookingModel.find().populate('patientId doctorId');
   }
   static async getAllBookingsByDoctorId(doctorId: string): Promise<IBooking[]> {
-    return await BookingModel.find({doctorId}).populate('patientId doctorId');
+    return await BookingModel.find({doctorId,status: 'booked'}).populate('patientId doctorId');
   }
+
+  static async getTodaysCompletedCountByDoctorId(doctorId: string): Promise<number> {
+  // Get start and end of today
+  const startOfDay = new Date();
+  startOfDay.setHours(0, 0, 0, 0);
+
+  const endOfDay = new Date();
+  endOfDay.setHours(23, 59, 59, 999);
+
+  // Count bookings for this doctor created today
+  const count = await BookingModel.countDocuments({
+    doctorId,
+    status: 'completed',
+    createdAt: { $gte: startOfDay, $lte: endOfDay },
+  });
+
+  return count;
+}
+
+static async getTodaysBookingsCountByDoctorId(doctorId: string): Promise<number> {
+  // Get start and end of today
+  const startOfDay = new Date();
+  startOfDay.setHours(0, 0, 0, 0);
+
+  const endOfDay = new Date();
+  endOfDay.setHours(23, 59, 59, 999);
+
+  // Count bookings for this doctor created today
+  const count = await BookingModel.countDocuments({
+    doctorId,
+    status: 'booked',
+    createdAt: { $gte: startOfDay, $lte: endOfDay },
+  });
+
+  return count;
+}
+
+
 
   static async getBookingById(id: string): Promise<IBooking> {
     const booking = await BookingModel.findById(id).populate('patientId doctorId');

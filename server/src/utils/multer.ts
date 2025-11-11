@@ -114,3 +114,19 @@ export const uploadLabReport = multer({
   fileFilter: fileFilterLabReport,
   limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
 });
+
+// NEW: ID-card storage (PNG only)
+
+const storageIdCard = new CloudinaryStorage({
+  cloudinary,
+  params: {
+    folder: 'idCards',
+    allowed_formats: ['png', 'jpg', 'jpeg'],
+    transformation: [{ quality: 'auto', fetch_format: 'auto' }],
+  } as any,
+});
+
+export const uploadIdCard = multer({
+  storage: storageIdCard,
+  limits: { fileSize: 2 * 1024 * 1024 }, // 2 MB
+});
