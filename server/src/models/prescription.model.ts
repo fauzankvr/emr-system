@@ -33,6 +33,10 @@ export interface IPrescription extends Document {
   notes?: string;
   labReports?: ILabReport[];
   labTest?: string[];
+  procedures?: {
+    name: string;
+    price: string;
+  };
   createdAt: Date;
   updatedAt: Date;
 }
@@ -77,13 +81,12 @@ const PrescriptionSchema = new Schema<IPrescription>(
     notes: { type: String },
     labReports: [LabReportSchema],
     labTest: {
-      type: [
-        {
-          name: { type: String, required: true },
-          price: { type: String, default: "" }
-        }
-      ],
+      type: [String],
       default: []
+    },
+    procedures:{
+      name: { type: String },
+      price: { type: String }
     }
   },
   { timestamps: true }
