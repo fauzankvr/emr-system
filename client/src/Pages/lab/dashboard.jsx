@@ -112,11 +112,11 @@ const UploadModal = ({ report, onClose, onSuccess }) => {
           }
         );
         const result = await axios.patch(`${backendUrl}/api/lab/status/${report._id}`, { status: "Completed", prescriptionId: report.prescriptionId });
-      if (result.data.success) {
-        setReports((prev) =>
-        prev.map((r) => (r._id === report._id ? { ...r, status: "Completed" } : r))
-      );
-    }
+        if (result.data.success) {
+          setReports((prev) =>
+            prev.map((r) => (r._id === report._id ? { ...r, status: "Completed" } : r))
+          );
+        }
         onSuccess(report._id, response.data.data.reportImageUrl);
         toast.success('Report uploaded successfully!');
       }
@@ -246,8 +246,8 @@ const LabReportTable = ({ reports, onStatusChange, onView, onUpload }) => {
                       value={report.status}
                       onChange={(e) => onStatusChange(report._id, e.target.value, report.prescriptionId)}
                       className={`px-3 py-1.5 text-xs font-bold rounded-full border-0 cursor-pointer transition ${report.status === 'Completed'
-                          ? 'bg-green-100 text-green-800 hover:bg-green-200'
-                          : 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200'
+                        ? 'bg-green-100 text-green-800 hover:bg-green-200'
+                        : 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200'
                         }`}
                     >
                       <option value="Pending">Pending</option>
@@ -334,6 +334,25 @@ export default function LabReportsDashboard() {
             <Loader2 size={16} className={loading ? 'animate-spin' : 'hidden'} />
             Refresh
           </button>
+          <button
+            onClick={() => {
+              // Clear localStorage if there are any tokens
+              localStorage.removeItem("labAccessToken");
+              localStorage.removeItem("labRefreshToken");
+
+              // Optionally, clear everything
+              // localStorage.clear();
+
+              // Redirect to home page
+              window.location.href = "/";
+            }}
+            className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition flex items-center gap-2"
+          >
+            <Loader2 size={16} className={loading ? 'animate-spin' : 'hidden'} />
+            Log Out
+          </button>
+
+
         </div>
 
         {loading ? (

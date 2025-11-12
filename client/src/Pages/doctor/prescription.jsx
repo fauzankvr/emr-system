@@ -219,17 +219,19 @@ const PrescriptionPDF = ({
                     <Text style={styles.label}>Value:</Text>{" "}
                     {report.values || "-"}
                   </Text>
+                  <Text style={styles.label}>Report Date: </Text>
                   <Text>
-                    <Text style={styles.label}>Report Date:</Text>{" "}
-                    {new Intl.DateTimeFormat("en-GB", {
-                      timeZone: "UTC",
-                      year: "numeric",
-                      month: "2-digit",
-                      day: "2-digit",
-                      hour: "2-digit",
-                      minute: "2-digit",
-                      hour12: true,
-                    }).format(new Date(report.reportDate)) || "-"}
+                    {report?.reportDate
+                      ? new Intl.DateTimeFormat("en-GB", {
+                        timeZone: "UTC",
+                        year: "numeric",
+                        month: "2-digit",
+                        day: "2-digit",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                        hour12: true,
+                      }).format(new Date(report.reportDate))
+                      : "-"}
                   </Text>
                 </View>
               ))
@@ -372,7 +374,7 @@ const PrescriptionPDF = ({
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Investigation On Next Visit</Text>
             {labTest.map((val) => (
-              <Text key={val}>{val.name}</Text>
+              <Text key={val}>{val}</Text>
             ))}
           </View>
         </View>
@@ -3405,78 +3407,44 @@ const Prescription = () => {
               Investigation On Next Visit
             </h2>
 
-            {(() => {
-              // Normalize labTest to always be array of {name, price}
-              const normalizedTests = Array.isArray(labTest)
-                ? labTest.map(item => {
-                  if (typeof item === "string") {
-                    return { name: item, price: "" };
-                  }
-                  return { name: item.name || "", price: item.price || "" };
-                })
-                : [];
-
-              return (
-                <>
-                  {normalizedTests.map((test, index) => (
-                    <div key={index} className="flex items-center gap-2 mb-2">
-                      <input
-                        type="text"
-                        value={test.name}
-                        onChange={(e) => {
-                          const updated = [...labTest];
-                          if (typeof updated[index] === "string") {
-                            updated[index] = { name: e.target.value, price: "" };
-                          } else {
-                            updated[index] = { ...updated[index], name: e.target.value };
-                          }
-                          setLabTest(updated);
-                        }}
-                        placeholder={`Test ${index + 1} Name`}
-                        className="flex-1 px-2 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                      />
-
-                      <input
-                        type="text"
-                        value={test.price}
-                        onChange={(e) => {
-                          const updated = [...labTest];
-                          if (typeof updated[index] === "string") {
-                            updated[index] = { name: updated[index], price: e.target.value };
-                          } else {
-                            updated[index] = { ...updated[index], price: e.target.value };
-                          }
-                          setLabTest(updated);
-                        }}
-                        placeholder="Price (optional)"
-                        className="w-64 px-2 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                      />
-
-                      <button
-                        onClick={() => {
-                          const updated = [...labTest];
-                          updated.splice(index, 1);
-                          setLabTest(updated);
-                        }}
-                        className="text-red-600 hover:text-red-800"
-                        title="Remove"
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    </div>
-                  ))}
+            {Array.isArray(labTest) &&
+              labTest.map((test, index) => (
+                <div key={index} className="flex items-center gap-2 mb-2">
+                  <input
+                    type="text"
+                    value={test}
+                    onChange={(e) => {
+                      const updated = [...labTest];
+                      updated[index] = e.target.value;
+                      setLabTest(updated);
+                    }}
+                    placeholder={`Test ${index + 1} Name`}
+                    className="flex-1 px-2 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                  />
 
                   <button
-                    onClick={() => setLabTest([...labTest, { name: "", price: "" }])}
-                    className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded-md flex items-center text-sm"
+                    onClick={() => {
+                      const updated = [...labTest];
+                      updated.splice(index, 1);
+                      setLabTest(updated);
+                    }}
+                    className="text-red-600 hover:text-red-800"
+                    title="Remove"
                   >
-                    <Plus size={14} className="mr-1" />
-                    Add Test
+                    <Trash2 size={14} />
                   </button>
-                </>
-              );
-            })()}
+                </div>
+              ))}
+
+            <button
+              onClick={() => setLabTest([...labTest, ""])}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded-md flex items-center text-sm"
+            >
+              <Plus size={14} className="mr-1" />
+              Add Test
+            </button>
           </div>
+
 
           {/* Footer */}
           <div className="bg-gray-50 px-2 py-2 sm:px-4 border-t flex justify-end">

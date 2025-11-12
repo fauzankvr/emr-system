@@ -487,7 +487,7 @@ export default function BookAppoiment() {
 
             {/* Header */}
             <h1 style={{ textAlign: "center", fontSize: "18px", fontWeight: "bold", letterSpacing: "2px", marginBottom: "12px" }}>
-              CLINIC ID CARD
+              ID CARD
             </h1>
 
             <div style={{ display: "flex", gap: "16px", marginBottom: "12px" }}>
@@ -507,10 +507,10 @@ export default function BookAppoiment() {
 
               <div style={{ flex: 1, fontSize: "13.5px", lineHeight: "1.6" }}>
                 <div style={{ display: "grid", gridTemplateColumns: "auto 1fr", gap: "4px 10px" }}>
-                  <span style={{ fontWeight: "bold", opacity: 0.9 }}>PATIENT NAME:</span>
-                  <span>: {selectedPatient.name}</span>
-                  <span style={{ fontWeight: "bold", opacity: 0.9 }}>ID NO:</span>
-                  <span>: {selectedPatient.cardId || selectedPatient._id?.slice(-8).toUpperCase()}</span>
+                  <span style={{ fontWeight: "bold", opacity: 0.9, fontSize: "15.5px", }}>PATIENT NAME:</span>
+                  <span style={{ fontWeight: "bold", opacity: 0.9 , fontSize: "15.5px",}}>: {selectedPatient.name}</span>
+                  <span style={{ fontWeight: "bold", opacity: 0.9, fontSize: "15.5px", }}>ID NO:</span>
+                  <span style={{ fontWeight: "bold", opacity: 0.9 , fontSize: "15.5px", }}>: {selectedPatient.cardId || selectedPatient._id?.slice(-8).toUpperCase()}</span>
                   <span style={{ fontWeight: "bold", opacity: 0.9 }}>AGE/GENDER:</span>
                   <span>: {selectedPatient.age || "?"} Yrs / {selectedPatient.gender?.charAt(0).toUpperCase() + selectedPatient.gender?.slice(1)}</span>
                   <span style={{ fontWeight: "bold", opacity: 0.9 }}>PHONE:</span>
@@ -527,7 +527,7 @@ export default function BookAppoiment() {
                 Dr. Mansoor Ali V. P.
               </h2>
               <p style={{ color: "#fbbf24", fontWeight: "bold", fontSize: "15px", margin: "4px 0 12px" }}>
-                PATHAPPIRIYAM CLINIC
+                PATHAPPIRIYAM
               </p>
             </div>
 
@@ -542,7 +542,7 @@ export default function BookAppoiment() {
               margin: "0 auto 8px",
               width: "fit-content",
             }}>
-              APPOINTMENT BOOKING: +918606344694
+              APPOINTMENT BOOKING: +91 8606344694
             </div>
 
             {/* <div style={{ textAlign: "center", fontSize: "11px" }}>

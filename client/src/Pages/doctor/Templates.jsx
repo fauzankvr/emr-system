@@ -198,15 +198,15 @@ function TemplatesPage() {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Description
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                {/* <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Medicines
-                </th>
+                </th> */}
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Diagnosis
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                {/* <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Lab Tests
-                </th>
+                </th> */}
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Created
                 </th>
@@ -229,21 +229,21 @@ function TemplatesPage() {
                   <td className="px-6 py-4 text-sm text-gray-600 hidden md:table-cell max-w-xs truncate">
                     {template.description || '—'}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 hidden md:table-cell">
+                  {/* <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 hidden md:table-cell">
                     <div className="flex items-center gap-1">
                       <FaPills className="text-gray-400" />
                       {template.medicines?.length ?? 0}
                     </div>
-                  </td>
+                  </td> */}
                   <td className="px-6 py-4 text-sm text-gray-600 hidden md:table-cell">
                     {template.diagnosis || '—'}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 hidden md:table-cell">
+                  {/* <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 hidden md:table-cell">
                     <div className="flex items-center gap-1">
                       <FaVial className="text-gray-400" />
                       {template.labTest?.length ?? 0}
                     </div>
-                  </td>
+                  </td> */}
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 hidden md:table-cell">
                     <div className="flex items-center gap-1">
                       {/* <FaCalendarAlt className="text-gray-400" /> */}
@@ -263,21 +263,21 @@ function TemplatesPage() {
                         className="text-blue-600 hover:text-blue-800"
                         title="Use Template"
                       >
-                        <FaEye size={16} />
+                        <FaEye size={20} />
                       </button>
                       <button
                         onClick={() => openEdit(template)}
                         className="text-yellow-600 hover:text-yellow-800"
                         title="Edit"
                       >
-                        <FaEdit size={16} />
+                        <FaEdit size={20} />
                       </button>
                       <button
                         onClick={() => handleDeleteTemplate(template._id)}
                         className="text-red-600 hover:text-red-800"
                         title="Delete"
                       >
-                        <FaTrash size={16} />
+                        <FaTrash size={20} />
                       </button>
                     </div>
                   </td>
