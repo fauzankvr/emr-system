@@ -9,6 +9,71 @@ import PrescriptionModal from "../../Components/doctor/models/PrescriptionModal"
 import { useNavigate } from "react-router-dom";
 import { toast, ToastContainer } from "react-toastify";
 
+ export const Pagination = ({meta, setPage}) => {
+    if (!meta || meta.totalPages <= 1) return null;
+
+    const start = meta.page ? (meta.page - 1) * meta.limit + 1 : 0;
+    const end = meta.page ? Math.min(meta.page * meta.limit, meta.total) : 0;
+
+    const pages = [];
+    if (meta.totalPages <= 5) {
+      for (let i = 1; i <= meta.totalPages; i++) pages.push(i);
+    } else {
+      pages.push(1);
+      if (meta.page > 3) pages.push("...");
+      if (meta.page > 2) pages.push(meta.page - 1);
+      if (meta.page !== 1 && meta.page !== meta.totalPages) pages.push(meta.page);
+      if (meta.page < meta.totalPages - 1) pages.push(meta.page + 1);
+      if (meta.page < meta.totalPages - 2) pages.push("...");
+      pages.push(meta.totalPages);
+    }
+    const unique = [...new Set(pages)];
+
+    return (
+      <div className="flex items-center justify-between">
+        <div className="text-sm text-gray-600">
+          Showing {start} to {end} of {meta.total} entries
+        </div>
+
+        <div className="flex gap-1 items-center">
+          <button
+            onClick={() => setPage(p => p - 1)}
+            disabled={!meta.hasPrev}
+            className="p-2 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <FaChevronLeft className="h-4 w-4" />
+          </button>
+
+          {unique.map((pg, i) =>
+            pg === "..." ? (
+              <span key={`dot-${i}`} className="px-2 py-1">
+                ...
+              </span>
+            ) : (
+              <button
+                key={pg}
+                onClick={() => setPage(pg)}
+                className={`px-3 py-1 rounded text-sm ${
+                  pg === meta.page ? "bg-blue-600 text-white" : "hover:bg-gray-100"
+                }`}
+              >
+                {pg}
+              </button>
+            )
+          )}
+
+          <button
+            onClick={() => setPage(p => p + 1)}
+            disabled={!meta.hasNext}
+            className="p-2 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <FaChevronRight className="h-4 w-4" />
+          </button>
+        </div>
+      </div>
+    );
+  };
+
 function PatientHistoryPage() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -21,6 +86,7 @@ function PatientHistoryPage() {
   const [showPatientModal, setShowPatientModal] = useState(false);
   const [showPrescriptionModal, setShowPrescriptionModal] = useState(false);
   const navigate = useNavigate();
+  
 
   // ---------- FETCH ----------
   const fetchPrescriptions = async (resetPage = false) => {
@@ -33,6 +99,7 @@ function PatientHistoryPage() {
         search: searchQuery.trim(),
         sort: "updatedAt",
         order: "desc",
+        historyOnly: "true",
       });
 
       const res = await axiosInstance.get(`/api/prescription?${params}`);
@@ -114,72 +181,6 @@ function PatientHistoryPage() {
       closeButton: false,
       draggable: false,
     });
-  };
-
-  // ---------- PAGINATION ----------
-  const Pagination = () => {
-    if (!meta || meta.totalPages <= 1) return null;
-
-    const start = meta.page ? (meta.page - 1) * meta.limit + 1 : 0;
-    const end = meta.page ? Math.min(meta.page * meta.limit, meta.total) : 0;
-
-    const pages = [];
-    if (meta.totalPages <= 5) {
-      for (let i = 1; i <= meta.totalPages; i++) pages.push(i);
-    } else {
-      pages.push(1);
-      if (meta.page > 3) pages.push("...");
-      if (meta.page > 2) pages.push(meta.page - 1);
-      if (meta.page !== 1 && meta.page !== meta.totalPages) pages.push(meta.page);
-      if (meta.page < meta.totalPages - 1) pages.push(meta.page + 1);
-      if (meta.page < meta.totalPages - 2) pages.push("...");
-      pages.push(meta.totalPages);
-    }
-    const unique = [...new Set(pages)];
-
-    return (
-      <div className="flex items-center justify-between">
-        <div className="text-sm text-gray-600">
-          Showing {start} to {end} of {meta.total} entries
-        </div>
-
-        <div className="flex gap-1 items-center">
-          <button
-            onClick={() => setPage(p => p - 1)}
-            disabled={!meta.hasPrev}
-            className="p-2 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <FaChevronLeft className="h-4 w-4" />
-          </button>
-
-          {unique.map((pg, i) =>
-            pg === "..." ? (
-              <span key={`dot-${i}`} className="px-2 py-1">
-                ...
-              </span>
-            ) : (
-              <button
-                key={pg}
-                onClick={() => setPage(pg)}
-                className={`px-3 py-1 rounded text-sm ${
-                  pg === meta.page ? "bg-blue-600 text-white" : "hover:bg-gray-100"
-                }`}
-              >
-                {pg}
-              </button>
-            )
-          )}
-
-          <button
-            onClick={() => setPage(p => p + 1)}
-            disabled={!meta.hasNext}
-            className="p-2 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <FaChevronRight className="h-4 w-4" />
-          </button>
-        </div>
-      </div>
-    );
   };
 
   // ---------- RENDER ----------
@@ -315,7 +316,7 @@ function PatientHistoryPage() {
             </div>
 
             <div className="px-6 py-4 border-t border-gray-200">
-              <Pagination />
+              <Pagination  meta={meta} setPage={setPage} />
             </div>
           </>
         )}

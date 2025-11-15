@@ -5,6 +5,19 @@ import { axiosInstance } from "../../../API/axiosInstance";
 import { toast } from "react-toastify";
 import { Download, MessageCircle, X, Phone } from "lucide-react";
 
+export function formatIndianDate(date) {
+  return new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Asia/Kolkata",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+  }).format(new Date(date));
+};
+
+
 // Enhanced Error Boundary Component
 class PDFErrorBoundary extends React.Component {
   state = { hasError: false, error: null };
@@ -250,11 +263,12 @@ const PrescriptionPDF = memo(
       weight: "-",
     },
     bookingNotes = "",
-    date = new Date()
+    date = new Date(),
+    procedures = [],
   }) => {
 
   const formattedDate = new Intl.DateTimeFormat("en-GB", {
-    timeZone: "UTC",
+    timeZone: "Asia/Kolkata",
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
@@ -341,12 +355,12 @@ const PrescriptionPDF = memo(
                       <Text style={styles.label}>Report Name:</Text> {report.name}
                     </Text>
                     <Text>
-                      <Text style={styles.label}>Value:</Text>{" "}
+                      <Text style={styles.label}>Note:</Text>{" "}
                       {report.values || "-"}
                     </Text>
                     <Text>
                       <Text style={styles.label}>Report Date:</Text>{" "}
-                      {report.reportDate || "-"}
+                      {formatIndianDate(report.reportDate) || "-"}
                     </Text>
                   </View>
                 ))
@@ -494,7 +508,7 @@ const PrescriptionPDF = memo(
 
             {/* Lab Tests for Next Visit */}
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Lab Tests On Next Visit</Text>
+              <Text style={styles.sectionTitle}>Investigation On Next Visit</Text>
               {Array.isArray(labTest) && labTest.length > 0 && labTest[0] !== "" ? (
                 labTest.map((val, idx) => (
                   <Text key={idx}>• {val}</Text>
@@ -502,6 +516,10 @@ const PrescriptionPDF = memo(
               ) : (
                 <Text>-</Text>
               )}
+               <Text style={styles.sectionTitle}>Procedures:</Text>
+                          {procedures.map((val) => (
+                            <Text key={val.name}>{val.name}</Text>
+                          ))}
             </View>
           </View>
 
@@ -825,6 +843,7 @@ const PrescriptionModal = ({ prescriptionId, onClose }) => {
                   vitals={prescription.patient.vitals}
                   bookingNotes={prescription.bookingNotes}
                   date={prescription.createdAt} // Pass the raw string
+                  procedures={prescription.procedures}
                 />
               </PDFViewer>
             </div>
@@ -864,6 +883,7 @@ const PrescriptionModal = ({ prescriptionId, onClose }) => {
                     vitals={prescription.patient.vitals}
                     bookingNotes={prescription.bookingNotes}
                     date={prescription.createdAt} // Pass the raw string
+                    procedures={prescription.procedures}
                   />
                 }
                 fileName={`${prescription.patient.name}-prescription.pdf`}

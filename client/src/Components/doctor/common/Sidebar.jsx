@@ -109,11 +109,11 @@ function Sidebar() {
           label="Patient List"
         />
 
-        {/* <NavLink
-          to="/doctor/investigations"
+        <NavLink
+          to="/doctor/labreport"
           icon={<FaFileMedicalAlt className="text-xl md:text-lg" />}
-          label="Investigations"
-        /> */}
+          label="Lab Reports"
+        />
 
         <button
           onClick={handleLogout}

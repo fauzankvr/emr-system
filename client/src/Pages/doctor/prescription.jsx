@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from "react";
-import { Search, Plus, Trash2, FileText, Download, Pencil, Send } from "lucide-react";
+import React, { useState, useEffect, use } from "react";
+import { Search, Plus, Trash2, FileText, Download, Pencil, Send, X } from "lucide-react";
 import { axiosInstance } from "../../API/axiosInstance";
 import { useLocation } from "react-router-dom";
 import { ToastContainer, toast } from "react-toastify";
@@ -10,6 +10,7 @@ import AddItemModal from "../../Components/doctor/models/AddItemModal";
 // const backendUrl = import.meta.env.VITE_BACKEND_URL;
 
 import { useRef } from 'react';
+import { formatIndianDate } from "../../Components/doctor/models/PrescriptionModal";
 
 const styles = StyleSheet.create({
   page: {
@@ -124,10 +125,11 @@ const PrescriptionPDF = ({
     weight: "-",
   },
   bookingNotes = "",
-  date = new Date()
+  date = new Date(),
+  procedures = [],
 }) => {
-  const formattedDate = new Intl.DateTimeFormat("en-GB", {
-    timeZone: "UTC",
+   const formattedDate = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Asia/Kolkata",
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
@@ -219,20 +221,10 @@ const PrescriptionPDF = ({
                     <Text style={styles.label}>Value:</Text>{" "}
                     {report.values || "-"}
                   </Text>
-                  <Text style={styles.label}>Report Date: </Text>
                   <Text>
-                    {report?.reportDate
-                      ? new Intl.DateTimeFormat("en-GB", {
-                        timeZone: "UTC",
-                        year: "numeric",
-                        month: "2-digit",
-                        day: "2-digit",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                        hour12: true,
-                      }).format(new Date(report.reportDate))
-                      : "-"}
+                    <Text style={styles.label}>Report Date: </Text> {formatIndianDate(report.reportDate) || "-"}  
                   </Text>
+      
                 </View>
               ))
             ) : (
@@ -372,9 +364,13 @@ const PrescriptionPDF = ({
 
           {/* Investigations for Next Visit */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Investigation On Next Visit</Text>
+            <Text style={styles.sectionTitle}>Investigation On Next Visit:</Text>
             {labTest.map((val) => (
               <Text key={val}>{val}</Text>
+            ))}
+            <Text style={styles.sectionTitle}>Procedures:</Text>
+            {procedures.map((val) => (
+              <Text key={val.name}>{val.name}</Text>
             ))}
           </View>
         </View>
@@ -426,6 +422,7 @@ const Prescription = () => {
   const [showPDFModal, setShowPDFModal] = useState(false);
   const location = useLocation();
   const [labTest, setLabTest] = useState([""])
+  const [procedures, setProcedures] = useState([])
   const [editMedicineIndex, setEditMedicineIndex] = useState(null);
   const [showTemplateModal, setShowTemplateModal] = useState(false);
   // const [showPatientModal, setShowPatientModal] = useState(false);
@@ -496,6 +493,10 @@ const Prescription = () => {
   const [highlightedTaperingFrequencyIndices, setHighlightedTaperingFrequencyIndices] = useState({});
   const [highlightedTaperingDaysIndices, setHighlightedTaperingDaysIndices] = useState({});
 
+  const [templates, setTemplates] = useState([]);
+  const [isOpenTemplate, setIsOpenTemplate] = useState(false);
+  const [searchTemplate, setSearchTemplate] = useState("");
+  const [filteredTemplates, setFilteredTemplates] = useState([]);
 
   const handleKeyDown = (e, items, highlightedIndex, setHighlightedIndex, onSelect, closeDropdown) => {
     switch (e.key) {
@@ -857,6 +858,44 @@ const Prescription = () => {
   const templateId = queryParams.get("templateId");
   const saveAsTemplate = queryParams.get("saveAsTemplate");
 
+  // Debounced search
+useEffect(() => {
+  const timeout = setTimeout(() => {
+    setFilteredTemplates(
+      templates.filter(tmpl =>
+        tmpl.name.toLowerCase().includes(searchTemplate.toLowerCase())
+      )
+    );
+  }, 200);
+  return () => clearTimeout(timeout);
+}, [searchTemplate, templates]);
+
+ function handleAddTemplate  (template) {
+    console.log("Template added:", template);
+    setDiagnosisSearchTerm(template.diagnosis);
+    setMedicines(template.medicines);
+    setNotes(template.notes);
+    setLabReports(template.labReports);
+    setLabTest(template.labTest);
+    setProcedures(template.procedures);
+    setShowTemplateModal(false);
+    toast.success("Template applied successfully");
+  };
+
+
+  useEffect(() => {
+    async function fetchTemplates() {
+      try {
+        const response = await axiosInstance.get("/api/template");
+        console.log("Templates fetched:", response.data.data);
+        setTemplates(response.data.data || []);
+      } catch (error) {
+        console.error("Error fetching templates:", error);
+      }
+    }
+    fetchTemplates();
+  }, []);
+
   useEffect(() => {
     async function fetchData() {
       if (doctorId) {
@@ -916,9 +955,10 @@ const Prescription = () => {
       "",
       `${window.location.pathname}?${urlParams.toString()}`
     );
-    setDiagnosis(data?.diagnoses)
+    setCustomDiagnosis(data?.diagnoses)
     setBookingNotes(data?.bookingNotes);
     setLabTest(data?.labTest)
+    setProcedures(data?.procedures)
     setLabReports(data?.labReports)
     setMedicines(data?.medicines);
     setSelectedDate(data?.createdAt)
@@ -926,10 +966,16 @@ const Prescription = () => {
   }
 
   function handleAddOldData(data) {
-    toast.success("Added successfully");
     setLabTest(data?.labTest);
-    setLabReports(data?.labReports);
+    // setProcedures(data?.procedures)
+    setLabReports(data?.labReports);setLabReports(
+      (data?.labReports || []).map(report => ({
+        ...report,
+        reportDate: report.reportDate ? new Date() : null
+      }))
+    );
     setMedicines(data?.medicines)
+    toast.success("Added successfully");
   }
   useEffect(() => {
     const fetchInitialData = async () => {
@@ -978,6 +1024,7 @@ const Prescription = () => {
           setMedicines(prescData.medicines || []);
           setLabReports(prescData.labReports || []);
           setLabTest(prescData.labTest || []);
+          setProcedures(prescData.procedures || []);
         }
 
         // Load template data if templateId is provided
@@ -998,6 +1045,7 @@ const Prescription = () => {
           setMedicines(templateData.medicines || []);
           setLabReports(templateData.labReports || []);
           setLabTest(templateData.labTest || []);
+          setProcedures(templateData.procedures || []);
         }
       } catch (error) {
         console.error("Error fetching initial data:", error);
@@ -1315,7 +1363,8 @@ const Prescription = () => {
         ...(med.isTapering && { tapering: med.tapering }),
       })),
       labReports: labReports.map(r => ({ ...r, values: r.values || r.value })),
-      labTest
+      labTest,
+      procedures: procedures || [],
     };
 
     try {
@@ -1441,7 +1490,8 @@ const Prescription = () => {
         ...(med.isTapering && { tapering: med.tapering }),
       })),
       labReports: labReports.map(r => ({ ...r, values: r.values || r.value })),
-      labTest
+      labTest,
+      procedures: procedures || [],
     };
 
     try {
@@ -1640,6 +1690,8 @@ const Prescription = () => {
     );
   }
 
+ 
+
   return (
     <>
       <ToastContainer />
@@ -1656,16 +1708,73 @@ const Prescription = () => {
                     : "Create New Prescription"}
                 </p>
               </div>
-              {/* <div className="flex space-x-1 mt-2 md:mt-0">
-              <button
-                className="bg-blue-700 hover:bg-blue-800 text-white px-3 py-1 rounded-md flex items-center text-sm"
-                onClick={prescriptionId ? handleUpdate : handleSave}
-                disabled={templateId && (!doctor || !patient)}
-              >
-                <FileText size={14} className="mr-1" />
-                {prescriptionId ? "Update" : "Save"}
-              </button>
-              <button
+
+              <div className="flex space-x-1 mt-2 md:mt-0 relative">
+                <button
+                  className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded-md flex items-center text-sm"
+                  onClick={() => setIsOpenTemplate(true)}
+                >
+                  <FileText size={14} className="mr-1" />
+                  Template
+                </button>
+
+                {isOpenTemplate && (
+                  <div
+                    // ref={modalRef}
+                    className="absolute left-[-190px] mt-1 w-80 z-50 border rounded-lg bg-white shadow-lg p-3"
+                    style={{ top: '100%' }}
+                  >
+                    {/* Header – Search + Close */}
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="relative flex-1 mr-2">
+                        <Search size={16} className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400" />
+                        <input
+                          type="text"
+                          placeholder="Search templates…"
+                          value={searchTemplate}
+                          onChange={e => setSearchTemplate(e.target.value)}
+                          className="w-full pl-9 pr-3 py-1.5 border rounded-md text-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                        />
+                      </div>
+                      <button
+                        onClick={() => setIsOpenTemplate(false)}
+                        className="text-gray-500 hover:text-gray-700"
+                      >
+                        <X size={18} />
+                      </button>
+                    </div>
+
+                    {/* List */}
+                    <div className="max-h-60 overflow-y-auto space-y-1">
+                      {filteredTemplates.length > 0 ? (
+                        filteredTemplates.map(tmpl => (
+                          <div
+                            key={tmpl._id}
+                            className="flex items-center justify-between p-2 border rounded bg-gray-50 hover:bg-gray-100 transition-colors"
+                          >
+                            {/* Name only */}
+                            <span className="text-sm font-medium text-gray-800 truncate">
+                              {tmpl.name}
+                            </span>
+
+                            {/* Add button */}
+                            <button
+                              onClick={() => handleAddTemplate(tmpl)}
+                              className="text-xs px-2 py-1 bg-green-600 text-white rounded hover:bg-green-700 transition-colors"
+                            >
+                              Add
+                            </button>
+                          </div>
+                        ))
+                      ) : (
+                        <p className="text-center text-gray-500 text-sm py-2">
+                          No templates found.
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
+                {/* <button
                 className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded-md flex items-center text-sm"
                 onClick={handleSend}
                 disabled={!prescriptionId && !localStorage.getItem("currentPrescriptionId")}
@@ -1686,8 +1795,8 @@ const Prescription = () => {
               >
                 <Download size={14} className="mr-1" />
                 PDF
-              </button>
-            </div> */}
+              </button> */}
+              </div>
             </div>
           </div>
 
@@ -2053,6 +2162,7 @@ const Prescription = () => {
                       >
                         {filteredDiagnoses.map((diagnosis, index) => (
                           <div
+                           onMouseDown={(e) => e.preventDefault()}
                             key={diagnosis._id}
                             onClick={() => {
                               setSelectedDiagnosis({
@@ -3240,7 +3350,7 @@ const Prescription = () => {
                     htmlFor="reportValue"
                     className="block text-xs font-medium text-gray-700 mb-1"
                   >
-                    Value
+                    Note
                   </label>
                   <input
                     type="text"
@@ -3445,6 +3555,63 @@ const Prescription = () => {
             </button>
           </div>
 
+          <div className="p-2 md:p-4 border-t">
+            <h2 className="text-sm font-semibold text-gray-700 mb-2">
+              Procedures
+            </h2>
+
+            {Array.isArray(procedures) &&
+              procedures.map((procedure, index) => (
+                <div key={index} className="flex items-center gap-2 mb-2">
+                  <input
+                    type="text"
+                    value={procedure.name}
+                    onChange={(e) => {
+                      const updated = [...procedures];
+                      updated[index].name = e.target.value;
+                      setProcedures(updated);
+                    }}
+                    placeholder={`Procedure ${index + 1} Name`}
+                    className="flex-1 px-2 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                  />
+
+                  <input
+                    type="text"
+                    value={procedure.price}
+                    onChange={(e) => {
+                      const updated = [...procedures];
+                      updated[index].price = e.target.value;
+                      setProcedures(updated);
+                    }}
+                    placeholder="Price"
+                    className="w-54 px-2 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                  />
+
+                  <button
+                    onClick={() => {
+                      const updated = [...procedures];
+                      updated.splice(index, 1);
+                      setProcedures(updated);
+                    }}
+                    className="text-red-600 hover:text-red-800"
+                    title="Remove"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                </div>
+              ))}
+
+            <button
+              onClick={() =>
+                setProcedures([...procedures, { name: "", price: "" }])
+              }
+              className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded-md flex items-center text-sm"
+            >
+              <Plus size={14} className="mr-1" />
+              Add Procedure
+            </button>
+
+          </div>
 
           {/* Footer */}
           <div className="bg-gray-50 px-2 py-2 sm:px-4 border-t flex justify-end">
@@ -3515,6 +3682,7 @@ const Prescription = () => {
                       labTest={labTest}
                       vitals={vitals}
                       bookingNotes={bookingNotes}
+                      procedures={procedures}
                     />
                   }
                   fileName={`${patient?.name || "patient"}-prescription.pdf`}
@@ -3566,6 +3734,7 @@ const Prescription = () => {
                   vitals={vitals}
                   bookingNotes={bookingNotes}
                   date={selectedDate}
+                  procedures={procedures}
                 />
               </PDFViewer>
             </div>
