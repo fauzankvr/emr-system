@@ -11,12 +11,31 @@ export class LabController {
     );
   });
 
-  static getAllLabs = asyncHandler(async (req: Request, res: Response) => {
-    const labs = await LabService.getAllLabs();
-    return res.status(200).json(
-      new ApiResponse(200, labs, "Labs fetched successfully")
-    );
+   static getAllLabs = asyncHandler(async (req: Request, res: Response) => {
+  const {
+    page,
+    limit,
+    search,
+    sort = "createdAt",
+    order = "desc",
+    startDate,
+    endDate,
+  } = req.query as any;
+
+  const { data, meta } = await LabService.getAllLabs({
+    page,
+    limit,
+    search,
+    sort,
+    order,
+    startDate,
+    endDate,
   });
+
+  return res.status(200).json(
+    new ApiResponse(200, { data, meta }, "Labs fetched successfully")
+  );
+});
 
   static loginLab = asyncHandler(async (req: Request, res: Response) => {
     const { email, password } = req.body;

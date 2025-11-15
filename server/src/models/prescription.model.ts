@@ -84,10 +84,10 @@ const PrescriptionSchema = new Schema<IPrescription>(
       type: [String],
       default: []
     },
-    procedures:{
+    procedures:[{
       name: { type: String },
       price: { type: String }
-    }
+    }],
   },
   { timestamps: true }
 );

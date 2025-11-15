@@ -5,6 +5,16 @@ import { ApiError } from "../utils/ApiError";
 import { generateToken } from "../utils/jwt";
 import { RefreshTokenService } from "./refreshToken.service";
 
+interface GetAllLabsQuery {
+  page?: string;
+  limit?: string;
+  search?: string;
+  sort?: "reportDate" | "name" | "createdAt";
+  order?: "asc" | "desc";
+  startDate?: string; // YYYY-MM-DD
+  endDate?: string;   // YYYY-MM-DD
+}
+
 export class LabService {
   // 🔍 Find lab user by email and password
   static async createLab(data: ILab): Promise<ILab> {
@@ -41,19 +51,132 @@ export class LabService {
 }
 
 
-  // 📋 Get all lab reports (formatted)
- static async getAllLabs(): Promise<ILabReport[]> {
-  try {
-    const prescriptions = await Prescription.find({
-      labReports: { $exists: true, $not: { $size: 0 } } // only those having lab reports
-    })
-      .populate("patient")
-      .sort({ createdAt: -1 });
-    return this.toLabReport(prescriptions);
-  } catch (error) {
-    throw new ApiError(500, "Failed to fetch labs");
+static async getAllLabs(query: GetAllLabsQuery): Promise<{
+    data: ILabReport[];
+    meta: {
+      page: number;
+      limit: number;
+      total: number;
+      totalPages: number;
+      hasPrev: boolean;
+      hasNext: boolean;
+    };
+  }> {
+    try {
+      const page = Math.max(1, parseInt(query.page || "1"));
+      const limit = Math.min(100, Math.max(1, parseInt(query.limit || "50")));
+      const skip = (page - 1) * limit;
+
+      const search = (query.search || "").trim();
+      const sortField = query.sort || "createdAt";
+      const sortOrder = query.order === "asc" ? 1 : -1;
+
+      // Build aggregation pipeline
+      const pipeline: any[] = [
+        {
+          $match: {
+            labReports: { $exists: true, $not: { $size: 0 } },
+          },
+        },
+        { $unwind: "$labReports" },
+        {
+          $lookup: {
+            from: "patients",
+            localField: "patient",
+            foreignField: "_id",
+            as: "patient",
+          },
+        },
+        { $unwind: { path: "$patient", preserveNullAndEmptyArrays: true } },
+      ];
+
+      // --- SEARCH: patient name, phone, email, report name ---
+      if (search) {
+        const searchRegex = { $regex: search, $options: "i" };
+        pipeline.push({
+          $match: {
+            $or: [
+              { "patient.name": searchRegex },
+              { "patient.phone": searchRegex },
+              { "patient.email": searchRegex },
+              { "labReports.name": searchRegex },
+            ],
+          },
+        });
+      }
+
+      // --- DATE FILTER: reportDate or createdAt ---
+      if (query.startDate || query.endDate) {
+        const dateFilter: any = {};
+        if (query.startDate) {
+          dateFilter.$gte = new Date(query.startDate);
+        }
+        if (query.endDate) {
+          const end = new Date(query.endDate);
+          end.setUTCHours(23, 59, 59, 999);
+          dateFilter.$lte = end;
+        }
+        pipeline.push({
+          $match: {
+            "labReports.reportDate": dateFilter,
+          },
+        });
+      }
+
+      // --- FACET: Count total + paginated results ---
+      pipeline.push({
+        $facet: {
+          metadata: [{ $count: "total" }],
+          data: [
+            { $sort: { [`labReports.${sortField}`]: sortOrder } },
+            { $skip: skip },
+            { $limit: limit },
+            {
+              $project: {
+                _id: "$labReports._id",
+                prescriptionId: "$_id",
+                patient: {
+                  name: "$patient.name",
+                  phone: "$patient.phone",
+                  email: "$patient.email",
+                  gender: "$patient.gender",
+                  age: "$patient.age",
+                  dob: "$patient.dob",
+                },
+                name: "$labReports.name",
+                reportDate: "$labReports.reportDate",
+                values: "$labReports.values",
+                status: "$labReports.status",
+                reportImageUrl: "$labReports.reportImageUrl",
+                createdAt: "$labReports.createdAt",
+                updatedAt: "$labReports.updatedAt",
+              },
+            },
+          ],
+        },
+      });
+
+      const result = await Prescription.aggregate(pipeline).exec();
+      const totalDocs = result[0].metadata[0]?.total || 0;
+      const data = result[0].data;
+
+      const totalPages = Math.ceil(totalDocs / limit);
+
+      return {
+        data,
+        meta: {
+          page,
+          limit,
+          total: totalDocs,
+          totalPages,
+          hasPrev: page > 1,
+          hasNext: page < totalPages,
+        },
+      };
+    } catch (error: any) {
+      throw new ApiError(500, error.message || "Failed to fetch labs");
+    }
   }
-}
 
 
   // 🔍 Get a single lab report by ID

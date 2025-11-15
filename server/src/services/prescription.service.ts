@@ -48,7 +48,7 @@ export class PrescriptionService {
         notes: data.notes || "",
         labReports: data.labReports || [],
         labTest: data.labTest || "",
-       
+        procedures: data.procedures || {},
       });
 
       await newPrescription.save();
@@ -328,7 +328,6 @@ if (isLabTestOnly) {
       if (!patient?.email) {
         throw new Error("Patient not found or email not registered.");
       }
-      console.log(prescription)
       const result = prescriptionEmitter.emit(
         "prescription:created",
         patient.email,
