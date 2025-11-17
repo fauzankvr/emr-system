@@ -5,6 +5,7 @@ import { uploadLabReport } from "../utils/multer";
 
 const router = Router();
 
+router.get("/procedures", asyncHandler(PrescriptionController.getProceduresList));
 router.post("/", asyncHandler(PrescriptionController.create));
 router.post("/save", asyncHandler(PrescriptionController.savePrescription));
 router.post("/:prescriptionId/send-email", asyncHandler(PrescriptionController.sendEmail));

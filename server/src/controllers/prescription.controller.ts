@@ -224,4 +224,26 @@ export class PrescriptionController {
         .json({ success: false, message: error.message });
     }
   }
+
+   static async getProceduresList(req: Request, res: Response) {
+  try {
+    console.log("Received request to get procedures list with query:", req.query);
+    const result = await PrescriptionService.getProceduresList({
+      page: Number(req.query.page) || 1,
+      limit: Number(req.query.limit) || 50,
+      search: (req.query.search as string) || '',
+      startDate: req.query.startDate as string,
+      endDate: req.query.endDate as string,
+      sort: (req.query.sort as any) || 'updatedAt',
+      order: (req.query.order as any) || 'desc',
+    });
+
+    return res.json(result); // { success, data: [...], meta: {...} }
+  } catch (error: any) {
+    return res.status(400).json({
+      success: false,
+      message: error.message || 'Failed to fetch procedures',
+    });
+  }
+}
 }
