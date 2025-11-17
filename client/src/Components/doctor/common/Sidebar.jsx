@@ -9,6 +9,7 @@ import {
   FaFileAlt,
   FaSync,
   FaFileMedicalAlt,
+  FaNotesMedical,
 } from "react-icons/fa";
 import NavLink from "./NavLink";
 import { axiosInstance } from "../../../API/axiosInstance";
@@ -113,6 +114,11 @@ function Sidebar() {
           to="/doctor/labreport"
           icon={<FaFileMedicalAlt className="text-xl md:text-lg" />}
           label="Lab Reports"
+        />
+         <NavLink
+          to="/doctor/procedures"
+          icon={<FaNotesMedical className="text-xl md:text-lg" />}
+          label="Procedures"
         />
 
         <button
