@@ -7,13 +7,13 @@ import { Download, MessageCircle, X, Phone } from "lucide-react";
 
 export function formatIndianDate(date) {
   return new Intl.DateTimeFormat("en-GB", {
-    timeZone: "Asia/Kolkata",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: true,
+    // timeZone: "Asia/Kolkata",
+    // year: "numeric",
+    // month: "2-digit",
+    // day: "2-digit",
+    // hour: "2-digit",
+    // minute: "2-digit",
+    // hour12: true,
   }).format(new Date(date));
 };
 
@@ -267,15 +267,15 @@ const PrescriptionPDF = memo(
     procedures = [],
   }) => {
 
-  const formattedDate = new Intl.DateTimeFormat("en-GB", {
-    timeZone: "Asia/Kolkata",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: true,
-  }).format(new Date(date));
+    // const formattedDate = new Intl.DateTimeFormat("en-GB", {
+    //   timeZone: "Asia/Kolkata",
+    //   year: "numeric",
+    //   month: "2-digit",
+    //   day: "2-digit",
+    //   hour: "2-digit",
+    //   minute: "2-digit",
+    //   hour12: true,
+    // }).format(new Date(date));
 
     return (
       <Document>
@@ -300,31 +300,42 @@ const PrescriptionPDF = memo(
               <Text style={styles.sectionTitle}>Patient Information</Text>
               <View style={styles.row}>
                 <View style={{ width: "60%" }}>
+
+                  {/* Row for Name, Age, Gender */}
+                  <View style={{ flexDirection: "row", gap: 10 }}>
+                    <Text>
+                      <Text style={styles.label}>Name:</Text> {patient.name}
+                    </Text>
+                    <Text>
+                      <Text style={styles.label}>Age:</Text> {patient.age}
+                    </Text>
+                    <Text>
+                      <Text style={styles.label}>Gender:</Text> {patient.gender}
+                    </Text>
+                    <Text>
+                      <Text style={styles.label}>Phone:</Text> {patient.mobile || patient.contact}
+                    </Text>
+                  </View>
+
+                  {bookingNotes && (
+                    <Text>
+                      <Text style={styles.label}>Booking Notes:</Text> {bookingNotes}
+                    </Text>
+                  )}
+
                   <Text>
-                    <Text style={styles.label}>Name:</Text> {patient.name}
+                    <Text style={styles.label}>Diagnosis:</Text> {diagnosis || "N/A"}
                   </Text>
+
                   <Text>
-                    <Text style={styles.label}>Phone:</Text>{" "}
-                    {patient.mobile || patient.contact}
+                    <Text style={styles.label}>Additional Notes:</Text> {notes || "N/A"}
                   </Text>
+
                   <Text>
-                    <Text style={styles.label}>Age:</Text> {patient.age}
-                  </Text>
-                  <Text>
-                    <Text style={styles.label}>Booking Notes:</Text> {bookingNotes}
-                  </Text>
-                  <Text>
-                    <Text style={styles.label}>Diagnosis:</Text>{" "}
-                    {diagnosis || "N/A"}
-                  </Text>
-                  <Text>
-                    <Text style={styles.label}>Additional Notes:</Text>{" "}
-                    {notes || "N/A"}
-                  </Text>
-                  <Text>
-                    <Text style={styles.label}>Date & Time:</Text> {formattedDate}
+                    <Text style={styles.label}>Date:</Text> {formatIndianDate(date)}
                   </Text>
                 </View>
+
                 <View style={{ width: "30%" }}>
                   <Text>
                     <Text style={styles.label}>SpO2:</Text> {vitals.spo2}
@@ -347,22 +358,28 @@ const PrescriptionPDF = memo(
 
             {/* Lab Report */}
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Lab Report</Text>
+              <Text style={styles.sectionTitle}>Lab Reports</Text>
               {labReports.length > 0 ? (
                 labReports.map((report, index) => (
-                  <View key={index} style={{ marginBottom: 10 }}>
-                    <Text>
+                  <View style={{
+                    flexDirection: "row",
+                    justifyContent: "space-between",
+                    width: "100%"
+                  }}>
+                    <Text style={{ width: "33%" }}>
                       <Text style={styles.label}>Report Name:</Text> {report.name}
                     </Text>
-                    <Text>
-                      <Text style={styles.label}>Note:</Text>{" "}
-                      {report.values || "-"}
+
+                    <Text style={{ width: "33%" }}>
+                      <Text style={styles.label}>Note:</Text> {report.values || "-"}
                     </Text>
-                    <Text>
+
+                    <Text style={{ width: "33%" }}>
                       <Text style={styles.label}>Report Date:</Text>{" "}
-                      {formatIndianDate(report.reportDate) || "-"}
+                      {report.reportDate ? formatIndianDate(report.reportDate) : "-"}
                     </Text>
                   </View>
+
                 ))
               ) : (
                 <Text>-</Text>
@@ -516,10 +533,10 @@ const PrescriptionPDF = memo(
               ) : (
                 <Text>-</Text>
               )}
-               <Text style={styles.sectionTitle}>Procedures:</Text>
-                          {procedures.map((val) => (
-                            <Text key={val.name}>{val.name}</Text>
-                          ))}
+              <Text style={styles.sectionTitle}>Procedures:</Text>
+              {procedures.map((val) => (
+                <Text key={val.name}>{val.name}</Text>
+              ))}
             </View>
           </View>
 
@@ -629,15 +646,13 @@ const PrescriptionModal = ({ prescriptionId, onClose }) => {
         return;
       }
       const pdfBlob = await generatePDFBlob();
-      const message = `Hi ${
-        prescription.patient.name
-      },\n\nYour prescription from Dr. ${
-        prescription.doctor.name
-      } is ready.\n\nDate: ${new Intl.DateTimeFormat("en-GB", {
-        timeZone: "UTC",
-      }).format(
-        new Date(prescription.createdAt)
-      )}\n\nPlease find your prescription attached.\n\nBest regards,\nClinic Management System`;
+      const message = `Hi ${prescription.patient.name
+        },\n\nYour prescription from Dr. ${prescription.doctor.name
+        } is ready.\n\nDate: ${new Intl.DateTimeFormat("en-GB", {
+          timeZone: "UTC",
+        }).format(
+          new Date(prescription.createdAt)
+        )}\n\nPlease find your prescription attached.\n\nBest regards,\nClinic Management System`;
       const canShare = navigator.share && navigator.canShare;
       if (canShare) {
         try {
@@ -670,13 +685,11 @@ const PrescriptionModal = ({ prescriptionId, onClose }) => {
           navigator.userAgent
         );
       const pdfUrl = URL.createObjectURL(pdfBlob);
-      const urlMessage = `Hi ${
-        prescription.patient.name
-      }, your prescription from Dr. ${
-        prescription.doctor.name
-      } is ready. Date: ${new Intl.DateTimeFormat("en-GB", {
-        timeZone: "UTC",
-      }).format(new Date(prescription.createdAt))}`;
+      const urlMessage = `Hi ${prescription.patient.name
+        }, your prescription from Dr. ${prescription.doctor.name
+        } is ready. Date: ${new Intl.DateTimeFormat("en-GB", {
+          timeZone: "UTC",
+        }).format(new Date(prescription.createdAt))}`;
       if (isMobile) {
         const whatsappUrls = [
           `whatsapp://send?phone=${formattedPhone}&text=${encodeURIComponent(

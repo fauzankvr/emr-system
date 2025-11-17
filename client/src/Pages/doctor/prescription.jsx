@@ -231,7 +231,7 @@ const PrescriptionPDF = ({
 
                   <Text style={{ width: "33%" }}>
                     <Text style={styles.label}>Report Date:</Text>{" "}
-                    {report.reportDate ? formattedDate(report.reportDate) : "-"}
+                    {report.reportDate ? formatIndianDate(report.reportDate) : "-"}
                   </Text>
                 </View>
 
@@ -3389,7 +3389,7 @@ const Prescription = () => {
                     onChange={(e) =>
                       setNewLabReport({
                         ...newLabReport,
-                        reportDate: e.target.value ? e.target.value : new Date(),
+                        reportDate: e.target.value,
                       })
                     }
                     className="w-full px-2 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
