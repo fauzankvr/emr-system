@@ -276,7 +276,12 @@ if (isLabTestOnly) {
       if (!data.patient || !Types.ObjectId.isValid(data.patient)) {
         throw new Error("Invalid or missing patient ID.");
       }
-
+       
+      data.labReports?.forEach(report => {
+        if (!report.reportDate) {
+          report.reportDate = new Date();
+        }  
+      });
       const newPrescription = new Prescription({
         doctor: data.doctor,
         patient: data.patient,

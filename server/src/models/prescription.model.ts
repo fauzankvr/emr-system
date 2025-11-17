@@ -53,7 +53,12 @@ const LabReportSchema = new Schema<ILabReport>(
   {
     name: { type: String },
     values: { type: String },
-    reportDate: { type: Date, default: Date.now },
+    reportDate: {
+      type: Date,
+      default: Date.now,
+      set: (v: any) => v === null ? Date.now() : v
+    },
+
     status: { type: String, enum: ['Pending', 'Completed', 'In Progress'], default: 'Pending' },
     reportImageUrl: { type: String },
   },
@@ -84,7 +89,7 @@ const PrescriptionSchema = new Schema<IPrescription>(
       type: [String],
       default: []
     },
-    procedures:[{
+    procedures: [{
       name: { type: String },
       price: { type: String }
     }],
