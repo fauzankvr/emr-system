@@ -36,8 +36,8 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   section: {
-    marginTop: 8,
-    marginBottom: 8,
+    marginTop: 6,
+    marginBottom: 6,
   },
   sectionTitle: {
     fontWeight: "bold",
@@ -128,14 +128,8 @@ const PrescriptionPDF = ({
   date = new Date(),
   procedures = [],
 }) => {
-   const formattedDate = new Intl.DateTimeFormat("en-GB", {
-    timeZone: "Asia/Kolkata",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: true,
+  const formattedDate = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Asia/Kolkata"
   }).format(new Date(date));
 
   return (
@@ -161,33 +155,42 @@ const PrescriptionPDF = ({
             <Text style={styles.sectionTitle}>Patient Information</Text>
             <View style={styles.row}>
               <View style={{ width: "60%" }}>
-                <Text>
-                  <Text style={styles.label}>Name:</Text> {patient.name}
-                </Text>
-                <Text>
-                  <Text style={styles.label}>Phone:</Text>{" "}
-                  {patient.mobile || patient.contact}
-                </Text>
-                <Text>
-                  <Text style={styles.label}>Age:</Text> {patient.age}
-                </Text>
+
+                {/* Row for Name, Age, Gender */}
+                <View style={{ flexDirection: "row", gap: 10 }}>
+                  <Text>
+                    <Text style={styles.label}>Name:</Text> {patient.name}
+                  </Text>
+                  <Text>
+                    <Text style={styles.label}>Age:</Text> {patient.age}
+                  </Text>
+                  <Text>
+                    <Text style={styles.label}>Gender:</Text> {patient.gender}
+                  </Text>
+                  <Text>
+                    <Text style={styles.label}>Phone:</Text> {patient.mobile || patient.contact}
+                  </Text>
+                </View>
+
                 {bookingNotes && (
                   <Text>
                     <Text style={styles.label}>Booking Notes:</Text> {bookingNotes}
                   </Text>
                 )}
+
                 <Text>
-                  <Text style={styles.label}>Diagnosis:</Text>{" "}
-                  {diagnosis || "N/A"}
+                  <Text style={styles.label}>Diagnosis:</Text> {diagnosis || "N/A"}
                 </Text>
+
                 <Text>
-                  <Text style={styles.label}>Additional Notes:</Text>{" "}
-                  {notes || "N/A"}
+                  <Text style={styles.label}>Additional Notes:</Text> {notes || "N/A"}
                 </Text>
+
                 <Text>
-                  <Text style={styles.label}>Date & Time:</Text> {formattedDate}
+                  <Text style={styles.label}>Date:</Text> {formattedDate}
                 </Text>
               </View>
+
               <View style={{ width: "30%" }}>
                 <Text>
                   <Text style={styles.label}>SpO2:</Text> {vitals.spo2}
@@ -210,22 +213,28 @@ const PrescriptionPDF = ({
 
           {/* Lab Report */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Lab Report</Text>
+            <Text style={styles.sectionTitle}>Lab Reports</Text>
             {labReports.length > 0 ? (
               labReports.map((report, index) => (
-                <View key={index} style={{ marginBottom: 10 }}>
-                  <Text>
+                <View style={{
+                  flexDirection: "row",
+                  justifyContent: "space-between",
+                  width: "100%"
+                }}>
+                  <Text style={{ width: "33%" }}>
                     <Text style={styles.label}>Report Name:</Text> {report.name}
                   </Text>
-                  <Text>
-                    <Text style={styles.label}>Value:</Text>{" "}
-                    {report.values || "-"}
+
+                  <Text style={{ width: "33%" }}>
+                    <Text style={styles.label}>Note:</Text> {report.values || "-"}
                   </Text>
-                  <Text>
-                    <Text style={styles.label}>Report Date: </Text> {formatIndianDate(report.reportDate) || "-"}  
+
+                  <Text style={{ width: "33%" }}>
+                    <Text style={styles.label}>Report Date:</Text>{" "}
+                    {report.reportDate ? formattedDate(report.reportDate) : "-"}
                   </Text>
-      
                 </View>
+
               ))
             ) : (
               <Text>-</Text>
@@ -249,7 +258,7 @@ const PrescriptionPDF = ({
                   <Text style={styles.tableCellHeader}>Dosage</Text>
                 </View>
                 <View style={[styles.tableColHeader, { width: "12%" }]}>
-                  <Text style={styles.tableCellHeader}>Type</Text>
+                  <Text style={styles.tableCellHeader}>Route</Text>
                 </View>
                 <View style={[styles.tableColHeader, { width: "12%" }]}>
                   <Text style={styles.tableCellHeader}>Frequency</Text>
@@ -392,6 +401,7 @@ const PrescriptionPDF = ({
     </Document>
   );
 };
+
 
 const Prescription = () => {
   const [loading, setLoading] = useState(false);
@@ -859,25 +869,24 @@ const Prescription = () => {
   const saveAsTemplate = queryParams.get("saveAsTemplate");
 
   // Debounced search
-useEffect(() => {
-  const timeout = setTimeout(() => {
-    setFilteredTemplates(
-      templates.filter(tmpl =>
-        tmpl.name.toLowerCase().includes(searchTemplate.toLowerCase())
-      )
-    );
-  }, 200);
-  return () => clearTimeout(timeout);
-}, [searchTemplate, templates]);
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      setFilteredTemplates(
+        templates.filter(tmpl =>
+          tmpl.name.toLowerCase().includes(searchTemplate.toLowerCase())
+        )
+      );
+    }, 200);
+    return () => clearTimeout(timeout);
+  }, [searchTemplate, templates]);
 
- function handleAddTemplate  (template) {
-    console.log("Template added:", template);
-    setDiagnosisSearchTerm(template.diagnosis);
+  function handleAddTemplate(template) {
+    // setDiagnosisSearchTerm(template.diagnosis);
     setMedicines(template.medicines);
     setNotes(template.notes);
-    setLabReports(template.labReports);
+    // setLabReports(template.labReports);
     setLabTest(template.labTest);
-    setProcedures(template.procedures);
+    // setProcedures(template.procedures);
     setShowTemplateModal(false);
     toast.success("Template applied successfully");
   };
@@ -968,7 +977,7 @@ useEffect(() => {
   function handleAddOldData(data) {
     setLabTest(data?.labTest);
     // setProcedures(data?.procedures)
-    setLabReports(data?.labReports);setLabReports(
+    setLabReports(data?.labReports); setLabReports(
       (data?.labReports || []).map(report => ({
         ...report,
         reportDate: report.reportDate ? new Date() : null
@@ -1690,7 +1699,7 @@ useEffect(() => {
     );
   }
 
- 
+
 
   return (
     <>
@@ -2162,7 +2171,7 @@ useEffect(() => {
                       >
                         {filteredDiagnoses.map((diagnosis, index) => (
                           <div
-                           onMouseDown={(e) => e.preventDefault()}
+                            onMouseDown={(e) => e.preventDefault()}
                             key={diagnosis._id}
                             onClick={() => {
                               setSelectedDiagnosis({
@@ -3380,7 +3389,7 @@ useEffect(() => {
                     onChange={(e) =>
                       setNewLabReport({
                         ...newLabReport,
-                        reportDate: e.target.value,
+                        reportDate: e.target.value ? e.target.value : new Date(),
                       })
                     }
                     className="w-full px-2 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"

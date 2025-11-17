@@ -347,7 +347,7 @@ export default function BookAppoiment() {
                 {searchResults.map(p => (
                   <li key={p._id} onClick={() => handlePatientSelect(p)}
                     className="px-4 py-3 hover:bg-[#ebf4ff] cursor-pointer transition">
-                    <div className="font-medium">{p.name}</div>
+                    <div className="font-medium">{p.name} <span>( Id : {p.cardId || p._id?.slice(-8).toUpperCase()})</span></div>
                     <div className="text-sm text-gray-600">Phone: {p.phone}</div>
                   </li>
                 ))}
@@ -358,7 +358,7 @@ export default function BookAppoiment() {
           {selectedPatient && (
             <div className="border-2 border-[#2563eb] rounded-lg p-4 bg-[#ebf4ff]/50 mb-4 flex justify-between items-center">
               <div>
-                <div className="font-bold text-lg text-[#2563eb]">{selectedPatient.name}</div>
+                <div className="font-bold text-lg text-[#2563eb]">{selectedPatient.name} <span>( Id : {selectedPatient.cardId || selectedPatient._id?.slice(-8).toUpperCase()})</span></div>
                 <div className="text-sm text-gray-700">Phone: {selectedPatient.phone}</div>
               </div>
               <button onClick={() => { setSelectedPatient(null); setShowIdCard(false); }}

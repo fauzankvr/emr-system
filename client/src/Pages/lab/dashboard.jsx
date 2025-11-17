@@ -1,20 +1,47 @@
-// src/pages/LabReportsDashboard.tsx
+// src/pages/LabReportsDashboard.jsx
 import React, { useState, useEffect } from 'react';
 import { FileUp, Eye, X, Loader2, Upload, ExternalLink } from 'lucide-react';
 import axios from 'axios';
 import { toast, ToastContainer } from 'react-toastify';
 import DatePicker from 'react-datepicker';
 import "react-datepicker/dist/react-datepicker.css";
-import { FaSearch, FaTimes, FaSortAmountDown } from "react-icons/fa";
+import { FaSearch, FaTimes } from "react-icons/fa";
 import { Pagination } from '../doctor/PatientHIstory';
 
 const backendUrl = import.meta.env.VITE_BACKEND_URL;
 
+// Axios instance with auth interceptor (works perfectly in JS)
+const api = axios.create({
+  baseURL: backendUrl,
+});
+
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem("labAccessToken");
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      localStorage.removeItem("labAccessToken");
+      localStorage.removeItem("labRefreshToken");
+      toast.error("Session expired. Redirecting to login...");
+      setTimeout(() => window.location.href = "/", 1500);
+    }
+    return Promise.reject(error);
+  }
+);
+
 // === View Modal ===
 const ViewModal = ({ report, onClose }) => {
   const fmt = (d) => new Date(d).toLocaleDateString('en-IN');
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-opacity-50 backdrop-blur-sm p-4">
       <div className="bg-white rounded-lg shadow-2xl max-w-3xl w-full max-h-screen overflow-y-auto">
         <div className="p-6">
           <div className="flex justify-between items-start mb-6">
@@ -24,7 +51,7 @@ const ViewModal = ({ report, onClose }) => {
             </button>
           </div>
 
-          {/* Patient */}
+          {/* Patient Info */}
           <div>
             <h3 className="text-lg font-semibold text-blue-600 mb-3">Patient Information</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm bg-gray-50 p-4 rounded-lg">
@@ -37,7 +64,7 @@ const ViewModal = ({ report, onClose }) => {
             </div>
           </div>
 
-          {/* Report */}
+          {/* Report Details */}
           <div className="mt-6">
             <h3 className="text-lg font-semibold text-blue-600 mb-3">Report Details</h3>
             <div className="space-y-3 text-sm bg-gray-50 p-4 rounded-lg">
@@ -53,7 +80,7 @@ const ViewModal = ({ report, onClose }) => {
             </div>
           </div>
 
-          {/* File */}
+          {/* Uploaded File */}
           {report.reportImageUrl ? (
             <div className="mt-6">
               <h3 className="text-lg font-semibold text-blue-600 mb-3">Uploaded Report</h3>
@@ -76,39 +103,41 @@ const ViewModal = ({ report, onClose }) => {
   );
 };
 
-// === Upload Modal ===
+// === Upload Modal (100% working in JS) ===
 const UploadModal = ({ report, onClose, onSuccess }) => {
-  const [file, setFile] = useState<File | null>(null);
+  const [file, setFile] = useState(null);
   const [uploading, setUploading] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!file) return;
+    if (!file) {
+      toast.error("Please select a file");
+      return;
+    }
 
     setUploading(true);
     try {
       const form = new FormData();
       form.append("reportFile", file);
-      const upRes = await axios.post(`${backendUrl}/api/prescription/upload-lab-report`, form, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
 
+      const upRes = await api.post("/api/prescription/upload-lab-report", form);
       const { reportImageUrl } = upRes.data.data;
 
-      await axios.patch(`${backendUrl}/api/lab/report-image/${report._id}`, {
+      await api.patch(`/api/lab/report-image/${report._id}`, {
         prescriptionId: report.prescriptionId,
         reportImageUrl,
         reportDate: new Date(),
       });
 
-      await axios.patch(`${backendUrl}/api/lab/status/${report._id}`, {
+      await api.patch(`/api/lab/status/${report._id}`, {
         status: "Completed",
         prescriptionId: report.prescriptionId,
       });
 
       onSuccess(report._id, reportImageUrl);
-      toast.success("Report uploaded!");
+      toast.success("Lab report uploaded successfully!");
     } catch (err) {
+      console.error(err);
       toast.error(err?.response?.data?.message || "Upload failed");
     } finally {
       setUploading(false);
@@ -117,7 +146,7 @@ const UploadModal = ({ report, onClose, onSuccess }) => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center  bg-opacity-50 backdrop-blur-sm p-4">
       <div className="bg-white rounded-lg shadow-2xl max-w-md w-full p-6">
         <div className="flex justify-between mb-4">
           <h3 className="text-lg font-semibold">Upload Lab Report</h3>
@@ -140,14 +169,19 @@ const UploadModal = ({ report, onClose, onSuccess }) => {
 
         <form onSubmit={handleSubmit}>
           <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-blue-400 transition">
-            <input type="file" id="file" className="hidden" accept=".pdf,.jpg,.jpeg,.png"
-              onChange={e => e.target.files?.[0] && setFile(e.target.files[0])} />
+            <input
+              type="file"
+              id="file"
+              className="hidden"
+              accept=".pdf,.jpg,.jpeg,.png"
+              onChange={(e) => e.target.files?.[0] && setFile(e.target.files[0])}
+            />
             <label htmlFor="file" className="cursor-pointer">
               {file ? (
                 <div>
                   <FileUp size={40} className="mx-auto text-blue-600 mb-2" />
                   <p className="text-sm font-medium text-blue-600">{file.name}</p>
-                  <p className="text-xs text-gray-500">({(file.size / 1024).toFixed(1)} KB)</p>
+                  <p className="text-xs text-gray-500">({(file.size / 1024 / 1024).toFixed(2)} MB)</p>
                 </div>
               ) : (
                 <div>
@@ -164,10 +198,13 @@ const UploadModal = ({ report, onClose, onSuccess }) => {
               className="px-4 py-2 bg-gray-100 rounded hover:bg-gray-200 transition">
               Cancel
             </button>
-            <button type="submit" disabled={!file || uploading}
-              className="px-5 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-400 flex items-center gap-2 transition shadow">
+            <button
+              type="submit"
+              disabled={!file || uploading}
+              className="px-5 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-400 flex items-center gap-2 transition shadow"
+            >
               {uploading ? <Loader2 size={16} className="animate-spin" /> : <Upload size={16} />}
-              {uploading ? "Uploading…" : "Upload"}
+              {uploading ? "Uploading…" : "Upload Report"}
             </button>
           </div>
         </form>
@@ -245,7 +282,7 @@ const LabReportTable = ({ reports, onStatusChange, onView, onUpload }) => {
   );
 };
 
-// === MAIN DASHBOARD ===
+// === MAIN COMPONENT ===
 export default function LabReportsDashboard() {
   const [reports, setReports] = useState([]);
   const [meta, setMeta] = useState(null);
@@ -277,7 +314,7 @@ export default function LabReportsDashboard() {
       if (startDate) params.append("startDate", startDate.toISOString().split("T")[0]);
       if (endDate) params.append("endDate", endDate.toISOString().split("T")[0]);
 
-      const res = await axios.get(`${backendUrl}/api/lab?${params}`);
+      const res = await api.get(`/api/lab?${params}`);
       setReports(res.data.data?.data || []);
       setMeta(res.data.data?.meta || null);
       if (resetPage) setPage(1);
@@ -290,18 +327,16 @@ export default function LabReportsDashboard() {
 
   useEffect(() => {
     fetchReports(false);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page]);
 
   useEffect(() => {
     setPage(1);
     fetchReports(true);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchQuery, sortBy, order, startDate, endDate]);
 
   const updateStatus = async (id, status, prescriptionId) => {
     try {
-      await axios.patch(`${backendUrl}/api/lab/status/${id}`, { status, prescriptionId });
+      await api.patch(`/api/lab/status/${id}`, { status, prescriptionId });
       setReports(prev => prev.map(r => (r._id === id ? { ...r, status } : r)));
       toast.success("Status updated");
     } catch (err) {
@@ -320,22 +355,24 @@ export default function LabReportsDashboard() {
 
   return (
     <div className="p-4 md:p-8 bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen">
-      <ToastContainer />
+      <ToastContainer position="top-right" />
       <div className="max-w-7xl mx-auto">
 
-        {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
           <h1 className="text-3xl font-bold text-gray-800">Lab Reports Dashboard</h1>
-          <div className="flex gap-2">
-            <button onClick={() => fetchReports()} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition flex items-center gap-2">
-              <Loader2 size={16} className={loading ? 'animate-spin' : 'hidden'} />
+          <div className="flex gap-3">
+            <button onClick={() => fetchReports()} className="px-5 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition flex items-center gap-2">
+              <Loader2 size={18} className={loading ? 'animate-spin' : 'hidden'} />
               Refresh
             </button>
-            <button onClick={() => {
-              localStorage.removeItem("labAccessToken");
-              localStorage.removeItem("labRefreshToken");
-              window.location.href = "/";
-            }} className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition">
+            <button
+              onClick={() => {
+                localStorage.removeItem("labAccessToken");
+                localStorage.removeItem("labRefreshToken");
+                window.location.href = "/";
+              }}
+              className="px-5 py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition"
+            >
               Log Out
             </button>
           </div>
@@ -343,7 +380,6 @@ export default function LabReportsDashboard() {
 
         {/* Filters */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          {/* Search */}
           <div className="relative">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
               <FaSearch className="text-gray-400" />
@@ -357,7 +393,6 @@ export default function LabReportsDashboard() {
             />
           </div>
 
-          {/* Sort */}
           <select
             value={`${sortBy}-${order}`}
             onChange={e => {
@@ -373,7 +408,6 @@ export default function LabReportsDashboard() {
             <option value="name-asc">Name: A to Z</option>
           </select>
 
-          {/* Date Range */}
           <div className="flex gap-2">
             <DatePicker selected={startDate} onChange={setStartDate} selectsStart startDate={startDate} endDate={endDate}
               maxDate={new Date()} placeholderText="From" dateFormat="dd/MM/yyyy"
@@ -389,10 +423,10 @@ export default function LabReportsDashboard() {
           </div>
         </div>
 
-        {/* Table + Pagination */}
+        {/* Table or Loader */}
         {loading ? (
           <div className="flex justify-center py-20">
-            <Loader2 size={48} className="animate-spin text-blue-600" />
+            <Loader2 size={56} className="animate-spin text-blue-600" />
           </div>
         ) : (
           <>
@@ -402,9 +436,7 @@ export default function LabReportsDashboard() {
               onView={setViewReport}
               onUpload={setUploadReport}
             />
-            <div className="px-6 py-4 bg-white border-t">
-              {meta && <Pagination meta={meta} setPage={setPage} />}
-            </div>
+            {meta && <div className="mt-6"><Pagination meta={meta} setPage={setPage} /></div>}
           </>
         )}
       </div>
