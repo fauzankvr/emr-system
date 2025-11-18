@@ -249,7 +249,7 @@ const PrescriptionPDF = memo(
       regNo: "35083",
       contact: "9895353078",
     },
-    patient = { name: "-", mobile: "-", age: "-" },
+    patient = { name: "-", mobile: "-", age: "-", phone: "-", gender: "-" },
     diagnosis = "-",
     notes = "-",
     medicines = [],
@@ -299,22 +299,35 @@ const PrescriptionPDF = memo(
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>Patient Information</Text>
               <View style={styles.row}>
-                <View style={{ width: "60%" }}>
+                <View style={{ width: "80%" }}>
 
                   {/* Row for Name, Age, Gender */}
                   <View style={{ flexDirection: "row", gap: 10 }}>
-                    <Text>
-                      <Text style={styles.label}>Name:</Text> {patient.name}
-                    </Text>
-                    <Text>
-                      <Text style={styles.label}>Age:</Text> {patient.age}
-                    </Text>
-                    <Text>
-                      <Text style={styles.label}>Gender:</Text> {patient.gender}
-                    </Text>
-                    <Text>
-                      <Text style={styles.label}>Phone:</Text> {patient.mobile || patient.contact}
-                    </Text>
+
+                    <View style={{ width: "35%" }}>
+                      <Text>
+                        <Text style={styles.label}>Name:</Text> {patient.name}
+                      </Text>
+                    </View>
+
+                    <View style={{ width: "10%" }}>
+                      <Text>
+                        <Text style={styles.label}>Age:</Text> {patient.age}
+                      </Text>
+                    </View>
+
+                    <View style={{ width: "20%" }}>
+                      <Text>
+                        <Text style={styles.label}>Gender:</Text> {patient.gender}
+                      </Text>
+                    </View>
+
+                    <View style={{ width: "25%" }}>
+                      <Text>
+                        <Text style={styles.label}>Phone:</Text> {patient.phone || patient.contact}
+                      </Text>
+                    </View>
+
                   </View>
 
                   {bookingNotes && (
@@ -336,7 +349,7 @@ const PrescriptionPDF = memo(
                   </Text>
                 </View>
 
-                <View style={{ width: "30%" }}>
+                <View style={{ width: "20%" }}>
                   <Text>
                     <Text style={styles.label}>SpO2:</Text> {vitals.spo2}
                   </Text>
@@ -358,29 +371,41 @@ const PrescriptionPDF = memo(
 
             {/* Lab Report */}
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Lab Reports</Text>
+
               {labReports.length > 0 ? (
-                labReports.map((report, index) => (
+                <View style={{ width: "100%", marginTop: 5 }}>
+
+                  {/* ------ Headings ------ */}
                   <View style={{
                     flexDirection: "row",
                     justifyContent: "space-between",
-                    width: "100%"
+                    paddingVertical: 4
                   }}>
-                    <Text style={{ width: "33%" }}>
-                      <Text style={styles.label}>Report Name:</Text> {report.name}
-                    </Text>
-
-                    <Text style={{ width: "33%" }}>
-                      <Text style={styles.label}>Note:</Text> {report.values || "-"}
-                    </Text>
-
-                    <Text style={{ width: "33%" }}>
-                      <Text style={styles.label}>Report Date:</Text>{" "}
-                      {report.reportDate ? formatIndianDate(report.reportDate) : "-"}
-                    </Text>
+                    <Text style={[styles.label, { width: "50%" }]}>Lab Reports</Text>
+                    <Text style={[styles.label, { width: "50%" }]}>Lab Notes</Text>
                   </View>
 
-                ))
+                  {/* ------ Rows ------ */}
+                  {labReports.map((report, index) => (
+                    <View
+                      key={index}
+                      style={{
+                        flexDirection: "row",
+                        justifyContent: "space-between",
+                        paddingVertical: 3
+                      }}
+                    >
+                      <Text style={{ width: "50%" }}>
+                        {report.name}
+                      </Text>
+
+                      <Text style={{ width: "50%" }}>
+                        {report.values || "-"}
+                      </Text>
+                    </View>
+                  ))}
+
+                </View>
               ) : (
                 <Text>-</Text>
               )}
@@ -525,21 +550,30 @@ const PrescriptionPDF = memo(
 
             {/* Lab Tests for Next Visit */}
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Investigation On Next Visit</Text>
-              {Array.isArray(labTest) && labTest.length > 0 && labTest[0] !== "" ? (
-                labTest.map((val, idx) => (
-                  <Text key={idx}>• {val}</Text>
-                ))
-              ) : (
-                <Text>-</Text>
-              )}
-              <Text style={styles.sectionTitle}>Procedures:</Text>
-              {procedures.map((val) => (
-                <Text key={val.name}>{val.name}</Text>
-              ))}
-            </View>
-          </View>
 
+              {/* Procedures */}
+              {procedures.length > 0 && (
+                <>
+                  <Text style={styles.sectionTitle}>Procedures:</Text>
+                  {procedures.map((val, index) => (
+                    <Text key={index}>{val.name}</Text>
+                  ))}
+                </>
+              )}
+
+              {/* Investigation On Next Visit */}
+              {labTest.length > 0 && (
+                <>
+                  <Text style={styles.sectionTitle}>Investigation On Next Visit:</Text>
+                  {labTest.map((val, index) => (
+                    <Text key={index}>{val}</Text>
+                  ))}
+                </>
+              )}
+
+            </View>
+
+          </View>
           {/* Signature Placeholder */}
           <View style={styles.signature}>
             <Text style={{ fontStyle: "italic" }}>Signed by</Text>
@@ -616,8 +650,9 @@ const PrescriptionModal = ({ prescriptionId, onClose }) => {
           }}
           patient={{
             name: prescription.patient.name,
-            mobile: prescription.patient.phone,
+            phone: prescription.patient.phone,
             age: prescription.patient.age,
+            gender: prescription.patient.gender,
           }}
           diagnosis={prescription.diagnosis}
           notes={prescription.notes}
@@ -845,8 +880,9 @@ const PrescriptionModal = ({ prescriptionId, onClose }) => {
                   }}
                   patient={{
                     name: prescription.patient.name,
-                    mobile: prescription.patient.phone,
+                    phone: prescription.patient.phone,
                     age: prescription.patient.age,
+                    gender: prescription.patient.gender,
                   }}
                   diagnosis={prescription.diagnosis}
                   notes={prescription.notes}
@@ -885,8 +921,9 @@ const PrescriptionModal = ({ prescriptionId, onClose }) => {
                     }}
                     patient={{
                       name: prescription.patient.name,
-                      mobile: prescription.patient.phone,
+                      phone: prescription.patient.phone,
                       age: prescription.patient.age,
+                      gender: prescription.patient.gender,
                     }}
                     diagnosis={prescription.diagnosis}
                     notes={prescription.notes}

@@ -154,22 +154,35 @@ const PrescriptionPDF = ({
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Patient Information</Text>
             <View style={styles.row}>
-              <View style={{ width: "60%" }}>
+              <View style={{ width: "80%" }}>
 
                 {/* Row for Name, Age, Gender */}
                 <View style={{ flexDirection: "row", gap: 10 }}>
-                  <Text>
-                    <Text style={styles.label}>Name:</Text> {patient.name}
-                  </Text>
-                  <Text>
-                    <Text style={styles.label}>Age:</Text> {patient.age}
-                  </Text>
-                  <Text>
-                    <Text style={styles.label}>Gender:</Text> {patient.gender}
-                  </Text>
-                  <Text>
-                    <Text style={styles.label}>Phone:</Text> {patient.mobile || patient.contact}
-                  </Text>
+
+                  <View style={{ width: "35%" }}>
+                    <Text>
+                      <Text style={styles.label}>Name:</Text> {patient.name}
+                    </Text>
+                  </View>
+
+                  <View style={{ width: "10%" }}>
+                    <Text>
+                      <Text style={styles.label}>Age:</Text> {patient.age}
+                    </Text>
+                  </View>
+
+                  <View style={{ width: "20%" }}>
+                    <Text>
+                      <Text style={styles.label}>Gender:</Text> {patient.gender}
+                    </Text>
+                  </View>
+
+                  <View style={{ width: "25%" }}>
+                    <Text>
+                      <Text style={styles.label}>Phone:</Text> {patient.phone || patient.contact}
+                    </Text>
+                  </View>
+
                 </View>
 
                 {bookingNotes && (
@@ -191,7 +204,7 @@ const PrescriptionPDF = ({
                 </Text>
               </View>
 
-              <View style={{ width: "30%" }}>
+              <View style={{ width: "20%" }}>
                 <Text>
                   <Text style={styles.label}>SpO2:</Text> {vitals.spo2}
                 </Text>
@@ -213,33 +226,46 @@ const PrescriptionPDF = ({
 
           {/* Lab Report */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Lab Reports</Text>
+
             {labReports.length > 0 ? (
-              labReports.map((report, index) => (
+              <View style={{ width: "100%", marginTop: 5 }}>
+
+                {/* ------ Headings ------ */}
                 <View style={{
                   flexDirection: "row",
                   justifyContent: "space-between",
-                  width: "100%"
+                  paddingVertical: 4
                 }}>
-                  <Text style={{ width: "33%" }}>
-                    <Text style={styles.label}>Report Name:</Text> {report.name}
-                  </Text>
-
-                  <Text style={{ width: "33%" }}>
-                    <Text style={styles.label}>Note:</Text> {report.values || "-"}
-                  </Text>
-
-                  <Text style={{ width: "33%" }}>
-                    <Text style={styles.label}>Report Date:</Text>{" "}
-                    {report.reportDate ? formatIndianDate(report.reportDate) : "-"}
-                  </Text>
+                  <Text style={[styles.label, { width: "50%" }]}>Lab Reports</Text>
+                  <Text style={[styles.label, { width: "50%" }]}>Lab Notes</Text>
                 </View>
 
-              ))
+                {/* ------ Rows ------ */}
+                {labReports.map((report, index) => (
+                  <View
+                    key={index}
+                    style={{
+                      flexDirection: "row",
+                      justifyContent: "space-between",
+                      paddingVertical: 3
+                    }}
+                  >
+                    <Text style={{ width: "50%" }}>
+                      {report.name}
+                    </Text>
+
+                    <Text style={{ width: "50%" }}>
+                      {report.values || "-"}
+                    </Text>
+                  </View>
+                ))}
+
+              </View>
             ) : (
               <Text>-</Text>
             )}
           </View>
+
 
           <View style={styles.hr} />
 
@@ -373,15 +399,29 @@ const PrescriptionPDF = ({
 
           {/* Investigations for Next Visit */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Investigation On Next Visit:</Text>
-            {labTest.map((val) => (
-              <Text key={val}>{val}</Text>
-            ))}
-            <Text style={styles.sectionTitle}>Procedures:</Text>
-            {procedures.map((val) => (
-              <Text key={val.name}>{val.name}</Text>
-            ))}
-          </View>
+
+  {/* Procedures */}
+  {procedures.length > 0 && (
+    <>
+      <Text style={styles.sectionTitle}>Procedures:</Text>
+      {procedures.map((val, index) => (
+        <Text key={index}>{val.name}</Text>
+      ))}
+    </>
+  )}
+
+  {/* Investigation On Next Visit */}
+  {labTest.length > 0 && (
+    <>
+      <Text style={styles.sectionTitle}>Investigation On Next Visit:</Text>
+      {labTest.map((val, index) => (
+        <Text key={index}>{val}</Text>
+      ))}
+    </>
+  )}
+
+</View>
+
         </View>
 
         {/* Signature Placeholder */}
@@ -406,6 +446,7 @@ const PrescriptionPDF = ({
 const Prescription = () => {
   const [loading, setLoading] = useState(false);
   const [labReportLoading, setLabReportLoading] = useState(false);
+  const [saveLoading, setSaveLoading] = useState(false);
   const [prescriptionId, setPrescriptionId] = useState(null);
   const [doctor, setDoctor] = useState(null);
   const [patient, setPatient] = useState(null);
@@ -1404,7 +1445,7 @@ const Prescription = () => {
       toast.error("Doctor or Patient ID is missing");
       return;
     }
-
+    setSaveLoading(true);
     const diagnosisValue = diagnosis;
 
     try {
@@ -1431,7 +1472,8 @@ const Prescription = () => {
         ...(med.isTapering && { tapering: med.tapering }),
       })),
       labReports: labReports.map(r => ({ ...r, values: r.values || r.value })),
-      labTest
+      labTest,
+      procedures: procedures || [],
     };
 
     try {
@@ -1455,10 +1497,12 @@ const Prescription = () => {
         localStorage.setItem("currentPrescriptionId", response.data.data._id);
         setPrescriptionId(response.data.data._id);
         toast.success("Prescription saved successfully");
+        setSaveLoading(false);
       }
     } catch (error) {
       console.error("Error saving prescription:", error);
       toast.error("Failed to save prescription");
+      setSaveLoading(false);
     }
   };
 
@@ -3359,7 +3403,7 @@ const Prescription = () => {
                     htmlFor="reportValue"
                     className="block text-xs font-medium text-gray-700 mb-1"
                   >
-                    Note
+                    Lab Note
                   </label>
                   <input
                     type="text"
@@ -3444,7 +3488,7 @@ const Prescription = () => {
                       Report Name
                     </th>
                     <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Value
+                      Lab Note
                     </th>
                     <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Report Date
@@ -3631,7 +3675,7 @@ const Prescription = () => {
                 disabled={templateId && (!doctor || !patient)}
               >
                 <FileText size={14} className="mr-1" />
-                {prescriptionId ? "Update" : "Save"}
+                {saveLoading ? "Saving..." : (prescriptionId ? "Update" : "Save")}
               </button>
               <button
                 className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded-md flex items-center text-sm"
