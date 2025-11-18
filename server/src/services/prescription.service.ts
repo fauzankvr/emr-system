@@ -285,6 +285,7 @@ export class PrescriptionService {
       if (!data.patient || !Types.ObjectId.isValid(data.patient)) {
         throw new Error("Invalid or missing patient ID.");
       }
+      console.log("Saving Prescription Data:", data);
 
       data.labReports?.forEach(report => {
         if (!report.reportDate) {
@@ -300,6 +301,7 @@ export class PrescriptionService {
         notes: data.notes || "",
         labReports: data.labReports || [],
         labTest: data.labTest || "",
+        procedures: data.procedures || [],
       });
 
       await newPrescription.save();
