@@ -5,8 +5,8 @@ import { asyncHandler } from '../utils/asyncHandler';
 
 const router = express.Router();
 
-router.post('', PatientController.create);
-router.get('', PatientController.getAll);
+router.post('/', PatientController.create);
+router.get('/', PatientController.getAll);
 router.get('/search', PatientController.search);
 router.get('/:id', PatientController.getById);
 router.put('/:id', PatientController.update);
