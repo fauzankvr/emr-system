@@ -19,10 +19,10 @@ dotenv.config();
 
 const app = express();
 const allowedOrigins = [
-    'http://localhost:5173', 
-    'https://emr-system-seven.vercel.app',
-    'https://www.clinicppm.site',
-    'https://clinicppm.site' ,
+    // 'http://localhost:5173', 
+    // 'https://emr-system-seven.vercel.app',
+    // 'https://www.clinicppm.site',
+    // 'https://clinicppm.site' ,
     '*'
   ];
 
