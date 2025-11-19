@@ -70,7 +70,7 @@ const ViewModal = ({ report, onClose }) => {
             <div className="space-y-3 text-sm bg-gray-50 p-4 rounded-lg">
               <div><span className="font-medium">Report Name:</span> <strong>{report.name || '—'}</strong></div>
               <div><span className="font-medium">Report Date:</span> {fmt(report.reportDate)}</div>
-              <div><span className="font-medium">Values:</span> {report.values || '—'}</div>
+              {/* <div><span className="font-medium">Values:</span> {report.values || '—'}</div> */}
               <div>
                 <span className="font-medium">Status:</span>
                 <span className={`ml-2 px-3 py-1 rounded-full text-xs font-bold ${report.status === 'Completed' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>

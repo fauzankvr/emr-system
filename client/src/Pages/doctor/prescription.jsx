@@ -2126,167 +2126,140 @@ const Prescription = () => {
 
           {/* Diagnosis and Notes */}
           <div className="p-2 md:p-4 border-t">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                {/* Diagnosis Input */}
-                <div className="relative">
-                  <div className="flex items-center justify-between mb-1">
-                    <label
-                      htmlFor="diagnosis"
-                      className="block text-xs font-medium text-gray-700"
-                    >
-                      Diagnosis
-                    </label>
-                    <button
-                      type="button"
-                      onClick={() => handleOpenAddModal("diagnosis")}
-                      className="text-blue-600 hover:text-blue-800 text-xs flex items-center"
-                    >
-                      <Plus size={12} className="mr-1" />
-                      Add New
-                    </button>
-                  </div>
-                  <div className="relative">
-                    <input
-                      type="text"
-                      id="diagnosis"
-                      autoComplete="off"
-                      value={diagnosisSearchTerm}
-                      onChange={(e) => {
-                        setDiagnosisSearchTerm(e.target.value);
-                        setSelectedDiagnosis({
-                          ...selectedDiagnosis,
-                          name: e.target.value,
-                        });
-                        setShowDiagnosisDropdown(true);
-                        setHighlightedDiagnosisIndex(-1);
-                      }}
-                      onFocus={() => {
-                        setShowDiagnosisDropdown(true);
-                        setHighlightedDiagnosisIndex(-1);
-                      }}
-                      onBlur={() =>
-                        setTimeout(() => setShowDiagnosisDropdown(false), 200)
-                      }
-                      onKeyDown={(e) =>
-                        handleKeyDown(
-                          e,
-                          filteredDiagnoses,
-                          highlightedDiagnosisIndex,
-                          setHighlightedDiagnosisIndex,
-                          (diagnosis) => {
-                            setSelectedDiagnosis({
-                              ...selectedDiagnosis,
-                              name: diagnosis.name,
-                            });
-                            setDiagnosisSearchTerm(diagnosis.name);
-                            setShowDiagnosisDropdown(false);
-                          },
-                          () => setShowDiagnosisDropdown(false)
-                        )
-                      }
-                      className="w-full pl-8 pr-8 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                      placeholder="Search diagnosis"
-                    />
-                    <Search
-                      size={14}
-                      className="absolute left-2 top-2 text-gray-400"
-                    />
-                    <div className="absolute right-1 top-1.5 flex space-x-1">
-                      <button
-                        type="button"
-                        className="text-xs px-1 py-1 bg-blue-200 rounded hover:bg-blue-300"
-                        onClick={() => {
-                          const selectedDiag = diagnoses.find(
-                            (d) => d.name === selectedDiagnosis.name
-                          );
-                          if (selectedDiag) {
-                            handleEditItem(selectedDiag, "diagnosis");
-                          }
-                        }}
-                      >
-                        <Pencil size={10} />
-                      </button>
-                    </div>
-                    {showDiagnosisDropdown && filteredDiagnoses.length > 0 && (
-                      <div
-                        ref={diagnosisDropdownRef}
-                        className="absolute z-10 mt-1 w-full bg-white shadow-lg rounded-md max-h-40 overflow-auto"
-                      >
-                        {filteredDiagnoses.map((diagnosis, index) => (
-                          <div
-                            onMouseDown={(e) => e.preventDefault()}
-                            key={diagnosis._id}
-                            onClick={() => {
-                              setSelectedDiagnosis({
-                                ...selectedDiagnosis,
-                                name: diagnosis.name,
-                              });
-                              setDiagnosisSearchTerm(diagnosis.name);
-                              setShowDiagnosisDropdown(false);
-                            }}
-                            className={`px-3 py-1 cursor-pointer text-sm ${index === highlightedDiagnosisIndex
-                              ? "bg-blue-100 text-blue-900"
-                              : "hover:bg-gray-100"
-                              }`}
-                            onMouseEnter={() =>
-                              setHighlightedDiagnosisIndex(index)
-                            }
-                          >
-                            <div className="font-medium">{diagnosis.name}</div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
-                {/* Booking Note Input - Moved to Left Column */}
-                <div>
-                  <label
-                    htmlFor="bookingNote"
-                    className="block text-xs font-medium text-gray-700 mb-1"
-                  >
-                    Booking Note
-                  </label>
-                  <div className="relative">
-                    <input
-                      type="text"
-                      id="bookingNote"
-                      autoComplete="off"
-                      value={bookingNotes || ""}
-                      onChange={(e) => setBookingNotes(e.target.value)} // Note: Consider using setSelectedDiagnosis if bookingNote should be stored there
-                      placeholder="Enter Booking Note"
-                      className="w-full px-2 py-1 border border-gray-300 rounded-md text-sm"
-                    />
-                  </div>
-                </div>
+            <div className="mb-6">
+  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-start">
+    
+    {/* 1. Diagnosis Search (with dropdown + Add/Edit buttons) */}
+    <div className="relative">
+      <div className="flex items-center justify-between mb-1">
+        <label htmlFor="diagnosis" className="block text-xs font-medium text-gray-700">
+          Diagnosis
+        </label>
+        <button
+          type="button"
+          onClick={() => handleOpenAddModal("diagnosis")}
+          className="text-blue-600 hover:text-blue-800 text-xs flex items-center"
+        >
+          <Plus size={12} className="mr-1" />
+          Add New
+        </button>
+      </div>
+
+      <div className="relative">
+        <input
+          type="text"
+          id="diagnosis"
+          autoComplete="off"
+          value={diagnosisSearchTerm}
+          onChange={(e) => {
+            setDiagnosisSearchTerm(e.target.value);
+            setSelectedDiagnosis({ ...selectedDiagnosis, name: e.target.value });
+            setShowDiagnosisDropdown(true);
+            setHighlightedDiagnosisIndex(-1);
+          }}
+          onFocus={() => {
+            setShowDiagnosisDropdown(true);
+            setHighlightedDiagnosisIndex(-1);
+          }}
+          onBlur={() => setTimeout(() => setShowDiagnosisDropdown(false), 200)}
+          onKeyDown={(e) =>
+            handleKeyDown(
+              e,
+              filteredDiagnoses,
+              highlightedDiagnosisIndex,
+              setHighlightedDiagnosisIndex,
+              (diagnosis) => {
+                setSelectedDiagnosis({ ...selectedDiagnosis, name: diagnosis.name });
+                setDiagnosisSearchTerm(diagnosis.name);
+                setShowDiagnosisDropdown(false);
+              },
+              () => setShowDiagnosisDropdown(false)
+            )
+          }
+          className="w-full pl-8 pr-10 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+          placeholder="Search diagnosis"
+        />
+
+        <Search size={15} className="absolute left-2.5 top-2.5 text-gray-400" />
+
+        {/* Edit Pencil Button */}
+        <div className="absolute right-2 top-2">
+          <button
+            type="button"
+            onClick={() => {
+              const selectedDiag = diagnoses.find(d => d.name === selectedDiagnosis.name);
+              if (selectedDiag) handleEditItem(selectedDiag, "diagnosis");
+            }}
+            className="p-1.5 bg-blue-100 hover:bg-blue-200 rounded transition"
+          >
+            <Pencil size={12} className="text-blue-700" />
+          </button>
+        </div>
+
+        {/* Dropdown */}
+        {showDiagnosisDropdown && filteredDiagnoses.length > 0 && (
+          <div
+            ref={diagnosisDropdownRef}
+            className="absolute z-20 mt-1 w-full bg-white shadow-xl border border-gray-200 rounded-md max-h-60 overflow-auto"
+          >
+            {filteredDiagnoses.map((diagnosis, index) => (
+              <div
+                key={diagnosis._id}
+                onMouseDown={(e) => e.preventDefault()} // Prevents input blur
+                onClick={() => {
+                  setSelectedDiagnosis({ ...selectedDiagnosis, name: diagnosis.name });
+                  setDiagnosisSearchTerm(diagnosis.name);
+                  setShowDiagnosisDropdown(false);
+                }}
+                className={`px-4 py-2.5 cursor-pointer text-sm transition ${
+                  index === highlightedDiagnosisIndex
+                    ? "bg-blue-100 text-blue-900 font-medium"
+                    : "hover:bg-gray-50"
+                }`}
+                onMouseEnter={() => setHighlightedDiagnosisIndex(index)}
+              >
+                {diagnosis.name}
               </div>
-              <div>
-                {/* Additional Notes Input */}
-                <div className="mb-2">
-                  <label
-                    htmlFor="symptom"
-                    className="block text-xs font-medium text-gray-700 mb-1"
-                  >
-                    Additional Notes
-                  </label>
-                  <div className="relative">
-                    <input
-                      type="text"
-                      value={selectedDiagnosis.notes || ""}
-                      onChange={(e) =>
-                        setSelectedDiagnosis({
-                          ...selectedDiagnosis,
-                          notes: e.target.value,
-                        })
-                      }
-                      placeholder="Enter Additional Notes"
-                      className="w-full px-2 py-1 border border-gray-300 rounded-md text-sm"
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+
+    {/* 2. Booking Note */}
+    <div>
+      <label htmlFor="bookingNote" className="block text-xs font-medium text-gray-700 mb-1">
+        Booking Note
+      </label>
+      <input
+        type="text"
+        id="bookingNote"
+        value={bookingNotes || ""}
+        onChange={(e) => setBookingNotes(e.target.value)}
+        placeholder="Enter booking note"
+        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm placeholder-gray-400"
+      />
+    </div>
+
+    {/* 3. Additional Notes */}
+    <div>
+      <label htmlFor="additionalNotes" className="block text-xs font-medium text-gray-700 mb-1">
+        Additional Notes
+      </label>
+      <input
+        type="text"
+        id="additionalNotes"
+        value={selectedDiagnosis.notes || ""}
+        onChange={(e) =>
+          setSelectedDiagnosis({ ...selectedDiagnosis, notes: e.target.value })
+        }
+        placeholder="Enter additional notes"
+        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm placeholder-gray-400"
+      />
+    </div>
+
+  </div>
+</div>
           </div>
 
           {/* Medicines */}
@@ -2312,7 +2285,7 @@ const Prescription = () => {
             </div>
 
             {/* First Div: Medicine, Dosage, Frequency */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-2 mb-2">
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-2 mb-2">
               {/* Medicine Search */}
               {/* Medicine Search - Updated with keyboard navigation */}
               <div className="relative">
@@ -2647,10 +2620,7 @@ const Prescription = () => {
                   )}
                 </div>
               </div>
-            </div>
 
-            {/* Second Div: Duration, Instructions */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mb-2">
               {/* Duration Search */}
               <div>
                 <div className="flex items-center justify-between mb-1">
@@ -2885,8 +2855,10 @@ const Prescription = () => {
                     )}
                 </div>
               </div>
+          
             </div>
 
+           
             {/* Tapering Schedule Section */}
             {newMedicine.isTapering && (
               <div className="mt-2">
@@ -3379,7 +3351,7 @@ const Prescription = () => {
               Lab Reports
             </h2>
             <div className="mb-4">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-2 mb-2">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-2 mb-2">
                 <div>
                   <label
                     htmlFor="reportName"
@@ -3439,7 +3411,7 @@ const Prescription = () => {
                     className="w-full px-2 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                   />
                 </div>
-                <div className="md:col-span-3">
+                <div >
                   <label className="block text-xs font-medium text-gray-700 mb-1">
                     Report File (Image or PDF)
                   </label>
