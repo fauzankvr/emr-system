@@ -37,6 +37,7 @@ export interface IPrescription extends Document {
     name: string;
     price: string;
   };
+  referral?: string[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -93,6 +94,10 @@ const PrescriptionSchema = new Schema<IPrescription>(
       name: { type: String },
       price: { type: String }
     }],
+     referral: {
+      type: [String],
+      default: []
+    },
   },
   { timestamps: true }
 );

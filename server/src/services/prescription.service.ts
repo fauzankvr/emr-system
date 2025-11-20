@@ -58,6 +58,7 @@ export class PrescriptionService {
         labReports: data.labReports || [],
         labTest: data.labTest || "",
         procedures: data.procedures || {},
+        referral: data.referral || [],
       });
 
       await newPrescription.save();
@@ -302,6 +303,7 @@ export class PrescriptionService {
         labReports: data.labReports || [],
         labTest: data.labTest || "",
         procedures: data.procedures || [],
+        referral: data.referral || [],
       });
 
       await newPrescription.save();
