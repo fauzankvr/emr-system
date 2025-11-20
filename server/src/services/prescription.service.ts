@@ -360,139 +360,136 @@ export class PrescriptionService {
   }
 
 
-static async getProceduresList(params: GetProceduresParams = {}) {
-  console.log("Get Procedures List Params:", params);
+  static async getProceduresList(params: GetProceduresParams = {}) {
+    console.log("Get Procedures List Params:", params);
 
-  const {
-    page = 1,
-    limit = 50,
-    search = '',
-    startDate,
-    endDate,
-    sort = 'updatedAt',
-    order = 'desc',
-  } = params;
+    const {
+      page = 1,
+      limit = 50,
+      search = '',
+      startDate,
+      endDate,
+      sort = 'updatedAt',
+      order = 'desc',
+    } = params;
 
-  const skip = (page - 1) * limit;
+    const skip = (page - 1) * limit;
 
-  const matchStage: any = {
-    'procedures.0': { $exists: true }, // At least one procedure
-  };
+    const matchStage: any = {
+      'procedures.0': { $exists: true }, // At least one procedure
+    };
 
-  if (search.trim()) {
-    const regex = { $regex: search.trim(), $options: 'i' };
-    matchStage.$or = [
-      { 'patient.name': regex },
-      { 'patient.phone': regex },
-      { 'procedures.name': regex },
-    ];
-  }
-
-  if (startDate || endDate) {
-    matchStage.updatedAt = {};
-    if (startDate) matchStage.updatedAt.$gte = new Date(startDate);
-    if (endDate) {
-      const end = new Date(endDate);
-      end.setHours(23, 59, 59, 999);
-      matchStage.updatedAt.$lte = end;
+    if (search.trim()) {
+      const regex = { $regex: search.trim(), $options: 'i' };
+      matchStage.$or = [
+        { 'patient.name': regex },
+        { 'patient.phone': regex },
+        { 'procedures.name': regex },
+      ];
     }
-  }
 
-  const aggregation = [
-    {
-      $lookup: {
-        from: 'patients',
-        localField: 'patient',
-        foreignField: '_id',
-        as: 'patient',
-      },
-    },
-    { $unwind: { path: '$patient', preserveNullAndEmptyArrays: true } },
+    if (startDate || endDate) {
+      matchStage.updatedAt = {};
+      if (startDate) matchStage.updatedAt.$gte = new Date(startDate);
+      if (endDate) {
+        const end = new Date(endDate);
+        end.setHours(23, 59, 59, 999);
+        matchStage.updatedAt.$lte = end;
+      }
+    }
 
-    { $match: matchStage },
-
-    // CRITICAL FIX: Safely convert price to number even if it's "", " ", "N/A", null, etc.
-    {
-      $addFields: {
-        totalAmount: {
-          $sum: {
-            $map: {
-              input: '$procedures',
-              as: 'proc',
-              in: {
-                $cond: {
-                  if: {
-                    $and: [
-                      { $ne: ['$$proc.price', null] },
-                      { $ne: ['$$proc.price', undefined] },
-                      { $ne: ['$$proc.price', ''] },
-                      { $ne: [{ $trim: { input: '$$proc.price' } }, ''] },
-                    ],
-                  },
-                  then: {
-                    $toDouble: '$$proc.price',
-                  },
-                  else: 0,
-                },
-              },
-            },
-          },
+    const aggregation = [
+      {
+        $lookup: {
+          from: 'patients',
+          localField: 'patient',
+          foreignField: '_id',
+          as: 'patient',
         },
       },
-    },
+      { $unwind: { path: '$patient', preserveNullAndEmptyArrays: true } },
 
-    { $sort: sort === 'totalAmount' 
-        ? { totalAmount: order === 'desc' ? -1 : 1 }
-        : { updatedAt: order === 'desc' ? -1 : 1 }
-    },
+      { $match: matchStage },
 
-    {
-      $facet: {
-        metadata: [{ $count: 'total' }],
-        data: [
-          { $skip: skip },
-          { $limit: limit },
-          {
-            $project: {
-              _id: 1,
-              patient: {
-                name: '$patient.name',
-                phone: '$patient.phone',
+      // CRITICAL FIX: Safely convert price to number even if it's "", " ", "N/A", null, etc.
+      {
+        $addFields: {
+          totalAmount: {
+            $sum: {
+              $map: {
+                input: "$procedures",
+                as: "proc",
+                in: {
+                  $cond: {
+                    if: {
+                      $regexMatch: {
+                        input: { $trim: { input: "$$proc.price" } },
+                        regex: /^[0-9.]+$/  // only numbers & decimal allowed
+                      }
+                    },
+                    then: { $toDouble: "$$proc.price" },
+                    else: 0
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+
+      {
+        $sort: sort === 'totalAmount'
+          ? { totalAmount: order === 'desc' ? -1 : 1 }
+          : { updatedAt: order === 'desc' ? -1 : 1 }
+      },
+
+      {
+        $facet: {
+          metadata: [{ $count: 'total' }],
+          data: [
+            { $skip: skip },
+            { $limit: limit },
+            {
+              $project: {
+                _id: 1,
+                patient: {
+                  name: '$patient.name',
+                  phone: '$patient.phone',
+                },
+                procedures: 1,
+                updatedAt: 1,
+                totalAmount: 1,
               },
-              procedures: 1,
-              updatedAt: 1,
-              totalAmount: 1,
             },
-          },
-        ],
+          ],
+        },
       },
-    },
-  ];
+    ];
 
-  try {
-    const result = await Prescription.aggregate(aggregation as any).exec();
+    try {
+      const result = await Prescription.aggregate(aggregation as any).exec();
 
-    const total = result[0]?.metadata[0]?.total || 0;
-    const prescriptions = result[0]?.data || [];
+      const total = result[0]?.metadata[0]?.total || 0;
+      const prescriptions = result[0]?.data || [];
 
-    const totalPages = Math.ceil(total / limit);
+      const totalPages = Math.ceil(total / limit);
 
-    return {
-      success: true,
-      data: prescriptions,
-      meta: {
-        page: Number(page),
-        limit: Number(limit),
-        total,
-        totalPages,
-        hasPrev: page > 1,
-        hasNext: page < totalPages,
-      },
-    };
-  } catch (error: any) {
-    console.error("Aggregation Error:", error);
-    throw new Error(`Failed to fetch procedures: ${error.message}`);
+      return {
+        success: true,
+        data: prescriptions,
+        meta: {
+          page: Number(page),
+          limit: Number(limit),
+          total,
+          totalPages,
+          hasPrev: page > 1,
+          hasNext: page < totalPages,
+        },
+      };
+    } catch (error: any) {
+      console.error("Aggregation Error:", error);
+      throw new Error(`Failed to fetch procedures: ${error.message}`);
+    }
   }
-}
 
 }

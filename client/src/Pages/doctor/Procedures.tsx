@@ -67,12 +67,14 @@ function ProceduresPage() {
                 order: order,
             });
 
-            if (startDate) {
-                params.append("startDate", startDate.toISOString().split("T")[0]);
-            }
-            if (endDate) {
-                params.append("endDate", endDate.toISOString().split("T")[0]);
-            }
+            const formatDate = (d: Date) =>
+                new Date(d.getTime() - d.getTimezoneOffset() * 60000)
+                    .toISOString()
+                    .split("T")[0];
+
+            if (startDate) params.append("startDate", formatDate(startDate));
+            if (endDate) params.append("endDate", formatDate(endDate));
+
 
             const res = await axiosInstance.get(`/api/prescription/procedures?${params}`);
             setPrescriptions(res.data.data || []);

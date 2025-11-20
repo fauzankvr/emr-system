@@ -252,11 +252,10 @@ const LabReportTable = ({ reports, onStatusChange, onView, onUpload }) => {
                     <select
                       value={r.status}
                       onChange={(e) => onStatusChange(r._id, e.target.value, r.prescriptionId)}
-                      className={`px-3 py-1.5 text-xs font-bold rounded-full border-0 cursor-pointer transition ${
-                        r.status === 'Completed'
+                      className={`px-3 py-1.5 text-xs font-bold rounded-full border-0 cursor-pointer transition ${r.status === 'Completed'
                           ? 'bg-green-100 text-green-800 hover:bg-green-200'
                           : 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200'
-                      }`}
+                        }`}
                     >
                       <option value="Pending">Pending</option>
                       <option value="Completed">Completed</option>
@@ -311,8 +310,15 @@ export default function LabReportsDashboard() {
         order,
       });
 
-      if (startDate) params.append("startDate", startDate.toISOString().split("T")[0]);
-      if (endDate) params.append("endDate", endDate.toISOString().split("T")[0]);
+      const formatLocalDate = (dt) => {
+        const offset = dt.getTimezoneOffset();
+        const local = new Date(dt.getTime() - offset * 60000);
+        return local.toISOString().split("T")[0];
+      };
+
+      if (startDate) params.append("startDate", formatLocalDate(startDate));
+      if (endDate) params.append("endDate", formatLocalDate(endDate));
+
 
       const res = await api.get(`/api/lab?${params}`);
       setReports(res.data.data?.data || []);

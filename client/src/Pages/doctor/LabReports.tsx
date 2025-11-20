@@ -97,11 +97,10 @@ const ViewModal = ({ report, onClose }: { report: LabReport; onClose: () => void
               <div>
                 <span className="font-medium">Status:</span>
                 <span
-                  className={`ml-2 px-3 py-1 rounded-full text-xs font-bold ${
-                    report.status === "Completed"
+                  className={`ml-2 px-3 py-1 rounded-full text-xs font-bold ${report.status === "Completed"
                       ? "bg-green-100 text-green-800"
                       : "bg-yellow-100 text-yellow-800"
-                  }`}
+                    }`}
                 >
                   {report.status}
                 </span>
@@ -304,8 +303,15 @@ export default function LabReports() {
         order,
       });
 
-      if (startDate) params.append("startDate", startDate.toISOString().split("T")[0]);
-      if (endDate) params.append("endDate", endDate.toISOString().split("T")[0]);
+      const formatLocalDate = (dt: Date) => {
+        const offset = dt.getTimezoneOffset();
+        const local = new Date(dt.getTime() - offset * 60000);
+        return local.toISOString().split("T")[0];
+      };
+
+
+      if (startDate) params.append("startDate", formatLocalDate(startDate));
+      if (endDate) params.append("endDate", formatLocalDate(endDate));
 
       const res = await axiosInstance.get(`/api/lab?${params}`);
       setReports(res.data.data.data || []);
@@ -486,11 +492,10 @@ export default function LabReports() {
                           onChange={(e) =>
                             updateStatus(r._id, e.target.value as "Pending" | "Completed", r.prescriptionId)
                           }
-                          className={`px-3 py-1.5 text-xs font-bold rounded-full border-0 cursor-pointer transition ${
-                            r.status === "Completed"
+                          className={`px-3 py-1.5 text-xs font-bold rounded-full border-0 cursor-pointer transition ${r.status === "Completed"
                               ? "bg-green-100 text-green-800 hover:bg-green-200"
                               : "bg-yellow-100 text-yellow-800 hover:bg-yellow-200"
-                          }`}
+                            }`}
                         >
                           <option value="Pending">Pending</option>
                           <option value="Completed">Completed</option>
