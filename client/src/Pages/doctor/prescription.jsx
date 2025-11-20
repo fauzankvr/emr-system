@@ -116,12 +116,13 @@ const styles = StyleSheet.create({
 
 const PrescriptionPDF = ({
   doctor = { name: "Dr MANSOOR ALI.VP", regNo: "35083", contact: "9895353078" },
-  patient = { name: "-", mobile: "-", age: "-" },
+  patient = { name: "-", mobile: "-", age: "-", gender: "-", cardId: "-", _id: "-" },
   diagnosis = "-",
   notes = "-",
   medicines = [],
   labReports = [],
   labTest = [],
+  referral = [],
   vitals = {
     spo2: "-",
     bp: "-",
@@ -146,10 +147,10 @@ const PrescriptionPDF = ({
             Dr.{doctor.name}, MD (PHYSICIAN)
           </Text>
           <Text style={styles.subHeaderText}>
-            General Practitioner | Reg No: 35083 | +91 9895353078 | Pathappiriyam 
+            General Practitioner | Reg No: 35083 | +91 9895353078 | Pathappiriyam
           </Text>
           <Text style={styles.subHeaderText2}>
-             BOOKING NO: +918606344694
+            BOOKING NO: +918606344694
           </Text>
         </View>
 
@@ -157,7 +158,13 @@ const PrescriptionPDF = ({
         <View style={styles.container}>
           {/* Patient Information */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Patient Information</Text>
+            <Text>
+              <Text style={styles.sectionTitle}>Patient Information:  </Text>
+              <Text style={{ marginLeft: 15, fontSize: 12 }}>
+                ID NO: {patient.cardId || patient._id?.toString().slice(-8).toUpperCase()}
+              </Text>
+            </Text>
+
             <View style={styles.row}>
               <View style={{ width: "80%" }}>
 
@@ -405,27 +412,37 @@ const PrescriptionPDF = ({
           {/* Investigations for Next Visit */}
           <View style={styles.section}>
 
-  {/* Procedures */}
-  {procedures.length > 0 && (
-    <>
-      <Text style={styles.sectionTitle}>Procedures:</Text>
-      {procedures.map((val, index) => (
-        <Text key={index}>{val.name}</Text>
-      ))}
-    </>
-  )}
+            {/* Procedures */}
+            {procedures.length > 0 && (
+              <>
+                <Text style={styles.sectionTitle}>Procedures:</Text>
+                {procedures.map((val, index) => (
+                  <Text key={index}>{val.name}</Text>
+                ))}
+              </>
+            )}
 
-  {/* Investigation On Next Visit */}
-  {labTest.length > 0 && (
-    <>
-      <Text style={styles.sectionTitle}>Investigation On Next Visit:</Text>
-      {labTest.map((val, index) => (
-        <Text key={index}>{val}</Text>
-      ))}
-    </>
-  )}
+            {/* Investigation On Next Visit */}
+            {labTest.length > 0 && (
+              <>
+                <Text style={styles.sectionTitle}>Investigation On Next Visit:</Text>
+                {labTest.map((val, index) => (
+                  <Text key={index}>{val}</Text>
+                ))}
+              </>
+            )}
 
-</View>
+            {/* Referral */}
+            {referral.length > 0 && (
+              <>
+                <Text style={styles.sectionTitle}>Referral:</Text>
+                {referral.map((val, index) => (
+                  <Text key={index}>{val}</Text>
+                ))}
+              </>
+            )}
+
+          </View>
 
         </View>
 
@@ -477,7 +494,8 @@ const Prescription = () => {
   const [showMedicineDropdown, setShowMedicineDropdown] = useState(false);
   const [showPDFModal, setShowPDFModal] = useState(false);
   const location = useLocation();
-  const [labTest, setLabTest] = useState([""])
+  const [labTest, setLabTest] = useState([]);
+  const [referral, setReferral] = useState([]);
   const [procedures, setProcedures] = useState([])
   const [editMedicineIndex, setEditMedicineIndex] = useState(null);
   const [showTemplateModal, setShowTemplateModal] = useState(false);
@@ -1080,6 +1098,7 @@ const Prescription = () => {
           setLabReports(prescData.labReports || []);
           setLabTest(prescData.labTest || []);
           setProcedures(prescData.procedures || []);
+          setReferral(prescData.referral || []);
         }
 
         // Load template data if templateId is provided
@@ -1245,10 +1264,9 @@ const Prescription = () => {
   };
 
   const handleAddLabReport = async () => {
-    // if (!newLabReport.name || !newLabReport.values) {
-    //   toast.error("Please provide both report name and value");
-    //   return;
-    // }
+    if (!newLabReport.reportDate) {
+      newLabReport.reportDate = new Date();
+    }
 
     setLabReportLoading(true);
     try {
@@ -1420,6 +1438,7 @@ const Prescription = () => {
       labReports: labReports.map(r => ({ ...r, values: r.values || r.value })),
       labTest,
       procedures: procedures || [],
+      referral: referral || null,
     };
 
     try {
@@ -1479,6 +1498,7 @@ const Prescription = () => {
       labReports: labReports.map(r => ({ ...r, values: r.values || r.value })),
       labTest,
       procedures: procedures || [],
+      referral: referral || null,
     };
 
     try {
@@ -1550,6 +1570,7 @@ const Prescription = () => {
       labReports: labReports.map(r => ({ ...r, values: r.values || r.value })),
       labTest,
       procedures: procedures || [],
+      referral: referral || null,
     };
 
     try {
@@ -1739,6 +1760,24 @@ const Prescription = () => {
       fetchPatients();
     }
   }, [templateId]);
+
+
+
+  function toLocalDatetime(value) {
+    if (!value) return "";
+
+    const date = new Date(value);
+
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+
+    const hours = String(date.getHours()).padStart(2, "0");
+    const minutes = String(date.getMinutes()).padStart(2, "0");
+
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
+  }
+
 
   if (loading) {
     return (
@@ -1967,7 +2006,7 @@ const Prescription = () => {
                     <span className="font-medium">Name:</span> {patient.name}
                   </p>
                   <p className="text-gray-800 text-sm">
-                    <span className="font-medium">ID:</span> {patient._id}
+                    <span className="font-medium">ID NO:</span> {patient.cardId || patient._id?.slice(-8).toUpperCase()}
                   </p>
                   {patient.age && (
                     <p className="text-gray-800 text-sm">
@@ -2132,139 +2171,140 @@ const Prescription = () => {
           {/* Diagnosis and Notes */}
           <div className="p-2 md:p-4 border-t">
             <div className="mb-6">
-  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-start">
-    
-    {/* 1. Diagnosis Search (with dropdown + Add/Edit buttons) */}
-    <div className="relative">
-      <div className="flex items-center justify-between mb-1">
-        <label htmlFor="diagnosis" className="block text-xs font-medium text-gray-700">
-          Diagnosis
-        </label>
-        <button
-          type="button"
-          onClick={() => handleOpenAddModal("diagnosis")}
-          className="text-blue-600 hover:text-blue-800 text-xs flex items-center"
-        >
-          <Plus size={12} className="mr-1" />
-          Add New
-        </button>
-      </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-start">
 
-      <div className="relative">
-        <input
-          type="text"
-          id="diagnosis"
-          autoComplete="off"
-          value={diagnosisSearchTerm}
-          onChange={(e) => {
-            setDiagnosisSearchTerm(e.target.value);
-            setSelectedDiagnosis({ ...selectedDiagnosis, name: e.target.value });
-            setShowDiagnosisDropdown(true);
-            setHighlightedDiagnosisIndex(-1);
-          }}
-          onFocus={() => {
-            setShowDiagnosisDropdown(true);
-            setHighlightedDiagnosisIndex(-1);
-          }}
-          onBlur={() => setTimeout(() => setShowDiagnosisDropdown(false), 200)}
-          onKeyDown={(e) =>
-            handleKeyDown(
-              e,
-              filteredDiagnoses,
-              highlightedDiagnosisIndex,
-              setHighlightedDiagnosisIndex,
-              (diagnosis) => {
-                setSelectedDiagnosis({ ...selectedDiagnosis, name: diagnosis.name });
-                setDiagnosisSearchTerm(diagnosis.name);
-                setShowDiagnosisDropdown(false);
-              },
-              () => setShowDiagnosisDropdown(false)
-            )
-          }
-          className="w-full pl-8 pr-10 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-          placeholder="Search diagnosis"
-        />
+                {/* 1. Booking Note */}
+                <div>
+                  <label htmlFor="bookingNote" className="block text-xs font-medium text-gray-700 mb-1">
+                    Booking Note
+                  </label>
+                  <input
+                    type="text"
+                    id="bookingNote"
+                    value={bookingNotes || ""}
+                    onChange={(e) => setBookingNotes(e.target.value)}
+                    placeholder="Enter booking note"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm placeholder-gray-400"
+                  />
+                </div>
 
-        <Search size={15} className="absolute left-2.5 top-2.5 text-gray-400" />
+                {/* 2. Diagnosis Search (with dropdown + Add/Edit buttons) */}
+                <div className="relative">
+                  <div className="flex items-center justify-between mb-1">
+                    <label htmlFor="diagnosis" className="block text-xs font-medium text-gray-700">
+                      Diagnosis
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => handleOpenAddModal("diagnosis")}
+                      className="text-blue-600 hover:text-blue-800 text-xs flex items-center"
+                    >
+                      <Plus size={12} className="mr-1" />
+                      Add New
+                    </button>
+                  </div>
 
-        {/* Edit Pencil Button */}
-        <div className="absolute right-2 top-2">
-          <button
-            type="button"
-            onClick={() => {
-              const selectedDiag = diagnoses.find(d => d.name === selectedDiagnosis.name);
-              if (selectedDiag) handleEditItem(selectedDiag, "diagnosis");
-            }}
-            className="p-1.5 bg-blue-100 hover:bg-blue-200 rounded transition"
-          >
-            <Pencil size={12} className="text-blue-700" />
-          </button>
-        </div>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      id="diagnosis"
+                      autoComplete="off"
+                      value={diagnosisSearchTerm}
+                      onChange={(e) => {
+                        setDiagnosisSearchTerm(e.target.value);
+                        setSelectedDiagnosis({ ...selectedDiagnosis, name: e.target.value });
+                        setShowDiagnosisDropdown(true);
+                        setHighlightedDiagnosisIndex(-1);
+                      }}
+                      onFocus={() => {
+                        setShowDiagnosisDropdown(true);
+                        setHighlightedDiagnosisIndex(-1);
+                      }}
+                      onBlur={() => setTimeout(() => setShowDiagnosisDropdown(false), 200)}
+                      onKeyDown={(e) =>
+                        handleKeyDown(
+                          e,
+                          filteredDiagnoses,
+                          highlightedDiagnosisIndex,
+                          setHighlightedDiagnosisIndex,
+                          (diagnosis) => {
+                            setSelectedDiagnosis({ ...selectedDiagnosis, name: diagnosis.name });
+                            setDiagnosisSearchTerm(diagnosis.name);
+                            setShowDiagnosisDropdown(false);
+                          },
+                          () => setShowDiagnosisDropdown(false)
+                        )
+                      }
+                      className="w-full pl-8 pr-10 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                      placeholder="Search diagnosis"
+                    />
 
-        {/* Dropdown */}
-        {showDiagnosisDropdown && filteredDiagnoses.length > 0 && (
-          <div
-            ref={diagnosisDropdownRef}
-            className="absolute z-20 mt-1 w-full bg-white shadow-xl border border-gray-200 rounded-md max-h-60 overflow-auto"
-          >
-            {filteredDiagnoses.map((diagnosis, index) => (
-              <div
-                key={diagnosis._id}
-                onMouseDown={(e) => e.preventDefault()} // Prevents input blur
-                onClick={() => {
-                  setSelectedDiagnosis({ ...selectedDiagnosis, name: diagnosis.name });
-                  setDiagnosisSearchTerm(diagnosis.name);
-                  setShowDiagnosisDropdown(false);
-                }}
-                className={`px-4 py-2.5 cursor-pointer text-sm transition ${
-                  index === highlightedDiagnosisIndex
-                    ? "bg-blue-100 text-blue-900 font-medium"
-                    : "hover:bg-gray-50"
-                }`}
-                onMouseEnter={() => setHighlightedDiagnosisIndex(index)}
-              >
-                {diagnosis.name}
+                    <Search size={15} className="absolute left-2.5 top-2.5 text-gray-400" />
+
+                    {/* Edit Pencil Button */}
+                    <div className="absolute right-2 top-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const selectedDiag = diagnoses.find(d => d.name === selectedDiagnosis.name);
+                          if (selectedDiag) handleEditItem(selectedDiag, "diagnosis");
+                        }}
+                        className="p-1.5 bg-blue-100 hover:bg-blue-200 rounded transition"
+                      >
+                        <Pencil size={12} className="text-blue-700" />
+                      </button>
+                    </div>
+
+                    {/* Dropdown */}
+                    {showDiagnosisDropdown && filteredDiagnoses.length > 0 && (
+                      <div
+                        ref={diagnosisDropdownRef}
+                        className="absolute z-20 mt-1 w-full bg-white shadow-xl border border-gray-200 rounded-md max-h-60 overflow-auto"
+                      >
+                        {filteredDiagnoses.map((diagnosis, index) => (
+                          <div
+                            key={diagnosis._id}
+                            onMouseDown={(e) => e.preventDefault()} // Prevents input blur
+                            onClick={() => {
+                              setSelectedDiagnosis({ ...selectedDiagnosis, name: diagnosis.name });
+                              setDiagnosisSearchTerm(diagnosis.name);
+                              setShowDiagnosisDropdown(false);
+                            }}
+                            className={`px-4 py-2.5 cursor-pointer text-sm transition ${index === highlightedDiagnosisIndex
+                              ? "bg-blue-100 text-blue-900 font-medium"
+                              : "hover:bg-gray-50"
+                              }`}
+                            onMouseEnter={() => setHighlightedDiagnosisIndex(index)}
+                          >
+                            {diagnosis.name}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+
+
+                {/* 3. Additional Notes */}
+                <div>
+                  <label htmlFor="additionalNotes" className="block text-xs font-medium text-gray-700 mb-1">
+                    Additional Notes
+                  </label>
+                  <input
+                    type="text"
+                    id="additionalNotes"
+                    value={selectedDiagnosis.notes || ""}
+                    onChange={(e) =>
+                      setSelectedDiagnosis({ ...selectedDiagnosis, notes: e.target.value })
+                    }
+                    placeholder="Enter additional notes"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm placeholder-gray-400"
+                  />
+                </div>
+
               </div>
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
-
-    {/* 2. Booking Note */}
-    <div>
-      <label htmlFor="bookingNote" className="block text-xs font-medium text-gray-700 mb-1">
-        Booking Note
-      </label>
-      <input
-        type="text"
-        id="bookingNote"
-        value={bookingNotes || ""}
-        onChange={(e) => setBookingNotes(e.target.value)}
-        placeholder="Enter booking note"
-        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm placeholder-gray-400"
-      />
-    </div>
-
-    {/* 3. Additional Notes */}
-    <div>
-      <label htmlFor="additionalNotes" className="block text-xs font-medium text-gray-700 mb-1">
-        Additional Notes
-      </label>
-      <input
-        type="text"
-        id="additionalNotes"
-        value={selectedDiagnosis.notes || ""}
-        onChange={(e) =>
-          setSelectedDiagnosis({ ...selectedDiagnosis, notes: e.target.value })
-        }
-        placeholder="Enter additional notes"
-        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm placeholder-gray-400"
-      />
-    </div>
-
-  </div>
-</div>
+            </div>
           </div>
 
           {/* Medicines */}
@@ -2860,10 +2900,10 @@ const Prescription = () => {
                     )}
                 </div>
               </div>
-          
+
             </div>
 
-           
+
             {/* Tapering Schedule Section */}
             {newMedicine.isTapering && (
               <div className="mt-2">
@@ -3404,17 +3444,22 @@ const Prescription = () => {
                     Report Date
                   </label>
                   <input
-                    type="date"
+                    type="datetime-local"
                     id="reportDate"
-                    value={newLabReport.reportDate}
+                    value={
+                      newLabReport.reportDate
+                        ? toLocalDatetime(newLabReport.reportDate)
+                        : toLocalDatetime(new Date())
+                    }
                     onChange={(e) =>
                       setNewLabReport({
                         ...newLabReport,
-                        reportDate: e.target.value,
+                        reportDate: new Date(e.target.value).toISOString(),
                       })
                     }
-                    className="w-full px-2 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                    className="w-full px-2 py-1 border border-gray-300 rounded-md"
                   />
+
                 </div>
                 <div >
                   <label className="block text-xs font-medium text-gray-700 mb-1">
@@ -3643,7 +3688,51 @@ const Prescription = () => {
             </button>
           </div>
 
-          
+          {/* Referral */}
+          <div className="p-2 md:p-4 border-t">
+            <h2 className="text-sm font-semibold text-gray-700 mb-2">
+              Referral
+            </h2>
+
+            {Array.isArray(referral) &&
+              referral.map((ref, index) => (
+                <div key={index} className="flex items-center gap-2 mb-2">
+                  <input
+                    type="text"
+                    value={ref}
+                    onChange={(e) => {
+                      const updated = [...referral];
+                      updated[index] = e.target.value;
+                      setReferral(updated);
+                    }}
+                    placeholder={`Test ${index + 1} Name`}
+                    className="flex-1 px-2 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                  />
+
+                  <button
+                    onClick={() => {
+                      const updated = [...referral];
+                      updated.splice(index, 1);
+                      setReferral(updated);
+                    }}
+                    className="text-red-600 hover:text-red-800"
+                    title="Remove"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                </div>
+              ))}
+
+            <button
+              onClick={() => setReferral([...referral, ""])}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded-md flex items-center text-sm"
+            >
+              <Plus size={14} className="mr-1" />
+              Add Referral
+            </button>
+          </div>
+
+
 
           {/* Footer */}
           <div className="bg-gray-50 px-2 py-2 sm:px-4 border-t flex justify-end">
@@ -3715,6 +3804,7 @@ const Prescription = () => {
                       vitals={vitals}
                       bookingNotes={bookingNotes}
                       procedures={procedures}
+                      referral={referral}
                     />
                   }
                   fileName={`${patient?.name || "patient"}-prescription.pdf`}
@@ -3767,6 +3857,7 @@ const Prescription = () => {
                   bookingNotes={bookingNotes}
                   date={selectedDate}
                   procedures={procedures}
+                  referral={referral}
                 />
               </PDFViewer>
             </div>

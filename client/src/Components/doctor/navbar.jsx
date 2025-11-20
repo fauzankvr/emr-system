@@ -132,7 +132,7 @@ const Navbar = ({ theme, setTheme }) => {
               role="menuitem"
               aria-label="Doctor login"
             >
-              Login
+             Doctor Login
             </Link>
           </li>
         </ul>

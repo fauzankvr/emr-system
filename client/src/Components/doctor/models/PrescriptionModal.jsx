@@ -168,7 +168,7 @@ const styles = StyleSheet.create({
     fontSize: 10,
     marginTop: 2,
   },
-   subHeaderText2: {
+  subHeaderText2: {
     fontSize: 12, // increased from 8
     marginTop: 2,
     fontWeight: "bold",
@@ -254,7 +254,7 @@ const PrescriptionPDF = memo(
       regNo: "35083",
       contact: "9895353078",
     },
-    patient = { name: "-", mobile: "-", age: "-", phone: "-", gender: "-" },
+    patient = { name: "-", mobile: "-", age: "-", phone: "-", gender: "-", cardId: "-", _id: "-" },
     diagnosis = "-",
     notes = "-",
     medicines = [],
@@ -270,6 +270,7 @@ const PrescriptionPDF = memo(
     bookingNotes = "",
     date = new Date(),
     procedures = [],
+    referral = [],
   }) => {
 
     // const formattedDate = new Intl.DateTimeFormat("en-GB", {
@@ -281,7 +282,6 @@ const PrescriptionPDF = memo(
     //   minute: "2-digit",
     //   hour12: true,
     // }).format(new Date(date));
-
     return (
       <Document>
         <Page size="A4" style={styles.page}>
@@ -294,7 +294,7 @@ const PrescriptionPDF = memo(
               General Practitioner | Reg No: 35083 | +91 9895353078 | Pathappiriyam
             </Text>
             <Text style={styles.subHeaderText2}>
-               BOOKING NO: +918606344694
+              BOOKING NO: +918606344694
             </Text>
           </View>
 
@@ -302,7 +302,12 @@ const PrescriptionPDF = memo(
           <View style={styles.container}>
             {/* Patient Information */}
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Patient Information</Text>
+              <Text>
+                <Text style={styles.sectionTitle}>Patient Information:  </Text>
+                <Text style={{ marginLeft: 15, fontSize: 12 }}>
+                  ID NO: {patient.cardId || patient._id?.toString().slice(-8).toUpperCase()}
+                </Text>
+              </Text>
               <View style={styles.row}>
                 <View style={{ width: "80%" }}>
 
@@ -576,6 +581,16 @@ const PrescriptionPDF = memo(
                 </>
               )}
 
+              {/* Referral */}
+              {referral.length > 0 && (
+                <>
+                  <Text style={styles.sectionTitle}>Referral:</Text>
+                  {referral.map((val, index) => (
+                    <Text key={index}>{val}</Text>
+                  ))}
+                </>
+              )}
+
             </View>
 
           </View>
@@ -658,6 +673,8 @@ const PrescriptionModal = ({ prescriptionId, onClose }) => {
             phone: prescription.patient.phone,
             age: prescription.patient.age,
             gender: prescription.patient.gender,
+            cardId: prescription.patient.cardId,
+            _id: prescription.patient._id,
           }}
           diagnosis={prescription.diagnosis}
           notes={prescription.notes}
@@ -667,6 +684,8 @@ const PrescriptionModal = ({ prescriptionId, onClose }) => {
           vitals={prescription.patient.vitals}
           bookingNotes={prescription.bookingNotes}
           date={prescription.createdAt} // Pass the raw string
+          procedures={prescription.procedures}
+          referral={prescription.referral}
         />
       );
       const blob = await pdf(doc).toBlob();
@@ -888,6 +907,8 @@ const PrescriptionModal = ({ prescriptionId, onClose }) => {
                     phone: prescription.patient.phone,
                     age: prescription.patient.age,
                     gender: prescription.patient.gender,
+                    cardId: prescription.patient.cardId,
+                    _id: prescription.patient._id,
                   }}
                   diagnosis={prescription.diagnosis}
                   notes={prescription.notes}
@@ -898,6 +919,7 @@ const PrescriptionModal = ({ prescriptionId, onClose }) => {
                   bookingNotes={prescription.bookingNotes}
                   date={prescription.createdAt} // Pass the raw string
                   procedures={prescription.procedures}
+                  referral={prescription.referral}
                 />
               </PDFViewer>
             </div>
@@ -929,6 +951,8 @@ const PrescriptionModal = ({ prescriptionId, onClose }) => {
                       phone: prescription.patient.phone,
                       age: prescription.patient.age,
                       gender: prescription.patient.gender,
+                      cardId: prescription.patient.cardId,
+                      _id: prescription.patient._id,
                     }}
                     diagnosis={prescription.diagnosis}
                     notes={prescription.notes}
@@ -939,6 +963,7 @@ const PrescriptionModal = ({ prescriptionId, onClose }) => {
                     bookingNotes={prescription.bookingNotes}
                     date={prescription.createdAt} // Pass the raw string
                     procedures={prescription.procedures}
+                    referral={prescription.referral}
                   />
                 }
                 fileName={`${prescription.patient.name}-prescription.pdf`}
