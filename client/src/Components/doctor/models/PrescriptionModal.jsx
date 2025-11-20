@@ -168,6 +168,11 @@ const styles = StyleSheet.create({
     fontSize: 10,
     marginTop: 2,
   },
+   subHeaderText2: {
+    fontSize: 12, // increased from 8
+    marginTop: 2,
+    fontWeight: "bold",
+  },
   section: {
     marginTop: 8,
     marginBottom: 8,
@@ -286,10 +291,10 @@ const PrescriptionPDF = memo(
               Dr.{doctor.name}, MD (PHYSICIAN)
             </Text>
             <Text style={styles.subHeaderText}>
-              General Practitioner | Reg No: 35083 | +91 9895353078
+              General Practitioner | Reg No: 35083 | +91 9895353078 | Pathappiriyam
             </Text>
-            <Text style={styles.subHeaderText}>
-              Pathappiriyam | BOOKING NO: +918606344694
+            <Text style={styles.subHeaderText2}>
+               BOOKING NO: +918606344694
             </Text>
           </View>
 

@@ -35,6 +35,11 @@ const styles = StyleSheet.create({
     fontSize: 10, // increased from 8
     marginTop: 2,
   },
+  subHeaderText2: {
+    fontSize: 12, // increased from 8
+    marginTop: 2,
+    fontWeight: "bold",
+  },
   section: {
     marginTop: 6,
     marginBottom: 6,
@@ -141,10 +146,10 @@ const PrescriptionPDF = ({
             Dr.{doctor.name}, MD (PHYSICIAN)
           </Text>
           <Text style={styles.subHeaderText}>
-            General Practitioner | Reg No: 35083 | +91 9895353078
+            General Practitioner | Reg No: 35083 | +91 9895353078 | Pathappiriyam 
           </Text>
-          <Text style={styles.subHeaderText}>
-            Pathappiriyam | BOOKING NO: +918606344694
+          <Text style={styles.subHeaderText2}>
+             BOOKING NO: +918606344694
           </Text>
         </View>
 
@@ -3536,50 +3541,6 @@ const Prescription = () => {
             </div>
           </div>
 
-          {/* Lab Test Advised */}
-          <div className="p-2 md:p-4 border-t">
-            <h2 className="text-sm font-semibold text-gray-700 mb-2">
-              Investigation On Next Visit
-            </h2>
-
-            {Array.isArray(labTest) &&
-              labTest.map((test, index) => (
-                <div key={index} className="flex items-center gap-2 mb-2">
-                  <input
-                    type="text"
-                    value={test}
-                    onChange={(e) => {
-                      const updated = [...labTest];
-                      updated[index] = e.target.value;
-                      setLabTest(updated);
-                    }}
-                    placeholder={`Test ${index + 1} Name`}
-                    className="flex-1 px-2 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                  />
-
-                  <button
-                    onClick={() => {
-                      const updated = [...labTest];
-                      updated.splice(index, 1);
-                      setLabTest(updated);
-                    }}
-                    className="text-red-600 hover:text-red-800"
-                    title="Remove"
-                  >
-                    <Trash2 size={14} />
-                  </button>
-                </div>
-              ))}
-
-            <button
-              onClick={() => setLabTest([...labTest, ""])}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded-md flex items-center text-sm"
-            >
-              <Plus size={14} className="mr-1" />
-              Add Test
-            </button>
-          </div>
-
           <div className="p-2 md:p-4 border-t">
             <h2 className="text-sm font-semibold text-gray-700 mb-2">
               Procedures
@@ -3637,6 +3598,52 @@ const Prescription = () => {
             </button>
 
           </div>
+
+          {/* Lab Test Advised */}
+          <div className="p-2 md:p-4 border-t">
+            <h2 className="text-sm font-semibold text-gray-700 mb-2">
+              Investigation On Next Visit
+            </h2>
+
+            {Array.isArray(labTest) &&
+              labTest.map((test, index) => (
+                <div key={index} className="flex items-center gap-2 mb-2">
+                  <input
+                    type="text"
+                    value={test}
+                    onChange={(e) => {
+                      const updated = [...labTest];
+                      updated[index] = e.target.value;
+                      setLabTest(updated);
+                    }}
+                    placeholder={`Test ${index + 1} Name`}
+                    className="flex-1 px-2 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                  />
+
+                  <button
+                    onClick={() => {
+                      const updated = [...labTest];
+                      updated.splice(index, 1);
+                      setLabTest(updated);
+                    }}
+                    className="text-red-600 hover:text-red-800"
+                    title="Remove"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                </div>
+              ))}
+
+            <button
+              onClick={() => setLabTest([...labTest, ""])}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded-md flex items-center text-sm"
+            >
+              <Plus size={14} className="mr-1" />
+              Add Test
+            </button>
+          </div>
+
+          
 
           {/* Footer */}
           <div className="bg-gray-50 px-2 py-2 sm:px-4 border-t flex justify-end">
