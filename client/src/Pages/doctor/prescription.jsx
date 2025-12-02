@@ -1028,7 +1028,9 @@ const Prescription = () => {
       "",
       `${window.location.pathname}?${urlParams.toString()}`
     );
-    setCustomDiagnosis(data?.diagnoses)
+    // setCustomDiagnosis(data?.diagnoses)
+    console.log("Old data diagnosis:", data.diagnosis);
+    setDiagnosis(data?.diagnosis ? data.diagnosis : "");
     setBookingNotes(data?.bookingNotes);
     setLabTest(data?.labTest)
     setProcedures(data?.procedures)
@@ -1088,11 +1090,14 @@ const Prescription = () => {
             setCustomDiagnosis(prescData.diagnosis);
             setDiagnosis("Custom");
           }
-          setSelectedDiagnosis({
-            name: prescData.diagnosis || "",
-            notes: prescData.notes || ""
-          });
-          setDiagnosisSearchTerm(prescData.diagnosis || "");
+
+          if (urlParams.get("isOld") == 'true') {
+            setSelectedDiagnosis({
+              name: prescData.diagnosis || "",
+              notes: prescData.notes || ""
+            });
+            setDiagnosisSearchTerm(prescData.diagnosis || "");
+          }
           setNotes(prescData.notes || "");
           setMedicines(prescData.medicines || []);
           setLabReports(prescData.labReports || []);
@@ -1604,13 +1609,50 @@ const Prescription = () => {
     }
   };
 
-  const handleSaveAsTemplate = () => {
+  const handleSaveOrUpdate = () => {
     if (medicines.length === 0) {
-      toast.error("At least one medicine is required to save as template");
+      toast.error("At least one medicine is required");
       return;
     }
-    setShowTemplateModal(true);
+
+    if (templateId) {
+      updateTemplate(templateId);  // Update existing
+    } else {
+      setShowTemplateModal(true);  // Save new
+    }
   };
+
+
+  const updateTemplate = async (id) => {
+    try {
+      const prescriptionData = {
+      doctor: doctorId,
+      patient: patientId,
+      diagnosis: diagnosis,
+      notes,
+      medicines: medicines.map((med) => ({
+        medicine: med.medicine,
+        dosageAmount: med.dosageAmount,
+        dosage: med.dosage,
+        duration: med.duration,
+        instructions: med.instructions,
+        isTapering: med.isTapering,
+        ...(med.isTapering && { tapering: med.tapering }),
+      })),
+      labReports: labReports.map(r => ({ ...r, values: r.values || r.value })),
+      labTest,
+      procedures: procedures || [],
+      referral: referral || null,
+    };
+
+      await axiosInstance.put(`/api/template/${id}`, prescriptionData);
+      toast.success("Template updated successfully");
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to update template");
+    }
+  };
+
 
   const fetchDoctors = async (query = '') => {
     try {
@@ -3758,11 +3800,12 @@ const Prescription = () => {
               </button>
               <button
                 className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded-md flex items-center text-sm"
-                onClick={handleSaveAsTemplate}
+                onClick={handleSaveOrUpdate}
               >
                 <Plus size={14} className="mr-1" />
-                Save as Template
+                {templateId ? "Update Template" : "Save as Template"}
               </button>
+
               {/* <button
                 className="bg-blue-700 hover:bg-blue-800 text-white px-3 py-1 rounded-md flex items-center text-sm"
                 onClick={() => setShowPDFModal(true)}
@@ -3824,8 +3867,11 @@ const Prescription = () => {
                   onClick={() => {
                     if (urlParams.get("isOld") == 'true') {
                       setDiagnosis("");
+                      setCustomDiagnosis("");
+                      setDiagnosisSearchTerm("");
+                      setNotes("");
                       setBookingNotes("");
-                      setLabTest([""]);
+                      setLabTest([]);
                       setLabReports([]);
                       setMedicines([]);
                     }

@@ -1,4 +1,4 @@
-// ProceduresPage.tsx (Final Working Version)
+// ProceduresPage.tsx (Full Final Version with Excel Export)
 import React, { useEffect, useState, useMemo } from "react";
 import { axiosInstance } from "../../API/axiosInstance";
 import {
@@ -8,10 +8,15 @@ import {
     FaInbox,
     FaRupeeSign,
     FaTimes,
+    FaFileExcel,
 } from "react-icons/fa";
 import { toast, ToastContainer } from "react-toastify";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
+
+// Excel Export Libraries
+import * as XLSX from "xlsx";
+import { saveAs } from "file-saver";
 
 interface ProcedureItem {
     name: string;
@@ -53,6 +58,85 @@ function ProceduresPage() {
 
     const limit = 50;
 
+    // Excel Export Function
+    const exportToExcel = () => {
+        if (prescriptions.length === 0) {
+            toast.warning("No data to export");
+            return;
+        }
+
+        const exportData: any[] = [];
+
+        prescriptions.forEach((pres) => {
+            const patientName = pres.patient?.name || "Unknown Patient";
+            const procedures = pres.procedures || [];
+
+            procedures.forEach((proc, idx) => {
+                exportData.push({
+                    "Patient Name": idx === 0 ? patientName : "",
+                    "Procedure": proc.name,
+                    "Price": parseFloat(proc.price as string) || 0,
+                });
+            });
+        });
+
+        // Add Total Row
+        exportData.push({
+            "Patient Name": "TOTAL",
+            "Procedure": "",
+            "Price": totalAmount,
+        });
+
+        // Create worksheet
+        const ws = XLSX.utils.json_to_sheet(exportData);
+
+        // Column widths
+        ws["!cols"] = [
+            { wch: 28 },
+            { wch: 45 },
+            { wch: 18 },
+        ];
+
+        // Format Price column as Indian Rupee
+        const range = XLSX.utils.decode_range(ws["!ref"] || "A1:C1");
+        for (let R = range.s.r; R <= range.e.r; ++R) {
+            const priceCell = ws[XLSX.utils.encode_cell({ c: 2, r: R })];
+            if (priceCell && typeof priceCell.v === "number") {
+                priceCell.z = "₹#,##0.00";
+            }
+        }
+
+        // Style Total Row (Bold + Yellow Background)
+        const totalRowIndex = exportData.length;
+        const totalRowCells = ["A", "B", "C"];
+        totalRowCells.forEach((col) => {
+            const cellRef = `${col}${totalRowIndex}`;
+            if (ws[cellRef]) {
+                ws[cellRef].s = {
+                    font: { bold: true, color: { rgb: "000000" } },
+                    fill: { fgColor: { rgb: "FFFF00" } },
+                    alignment: { horizontal: col === "C" ? "right" : "left" },
+                };
+            }
+        });
+
+        // Create workbook
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Procedures");
+
+        // Generate file
+        const excelBuffer = XLSX.write(wb, { bookType: "xlsx", type: "array" });
+        const fileName = `Procedures_Report_${new Date().toISOString().slice(0, 10)}.xlsx`;
+
+        // Download
+        saveAs(
+            new Blob([excelBuffer], { type: "application/octet-stream" }),
+            fileName
+        );
+
+        toast.success("Excel report exported successfully!");
+    };
+
     // Fetch Procedures
     const fetchProcedures = async (resetPage = false) => {
         try {
@@ -75,7 +159,6 @@ function ProceduresPage() {
             if (startDate) params.append("startDate", formatDate(startDate));
             if (endDate) params.append("endDate", formatDate(endDate));
 
-
             const res = await axiosInstance.get(`/api/prescription/procedures?${params}`);
             setPrescriptions(res.data.data || []);
             setMeta(res.data.meta || null);
@@ -97,12 +180,10 @@ function ProceduresPage() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [searchQuery, sortBy, order, startDate, endDate]);
 
-    // Normalize procedures
     const normalizeProcedures = (pres: Prescription): ProcedureItem[] => {
         return pres.procedures || [];
     };
 
-    // CORRECT TOTAL AMOUNT CALCULATION
     const totalAmount = useMemo(() => {
         return prescriptions.reduce((sum, pres) => {
             const presTotal = normalizeProcedures(pres).reduce((acc, proc) => {
@@ -157,22 +238,23 @@ function ProceduresPage() {
                         <FaChevronLeft className="h-4 w-4" />
                     </button>
 
-                    {pages.map((pg, i) => (
+                    {pages.map((pg, i) =>
                         pg === "..." ? (
                             <span key={i} className="px-3 py-1">...</span>
                         ) : (
                             <button
                                 key={pg}
                                 onClick={() => setPage(pg as number)}
-                                className={`px-3 py-1 rounded text-sm font-medium ${pg === meta.page
-                                    ? "bg-blue-600 text-white"
-                                    : "hover:bg-gray-100 text-gray-700"
-                                    }`}
+                                className={`px-3 py-1 rounded text-sm font-medium ${
+                                    pg === meta.page
+                                        ? "bg-blue-600 text-white"
+                                        : "hover:bg-gray-100 text-gray-700"
+                                }`}
                             >
                                 {pg}
                             </button>
                         )
-                    ))}
+                    )}
 
                     <button
                         onClick={() => setPage(p => p + 1)}
@@ -190,12 +272,23 @@ function ProceduresPage() {
         <div className="min-h-screen p-4 sm:p-8 bg-gray-50">
             <ToastContainer />
 
-            {/* Header */}
-            <div className="mb-8">
-                <h1 className="text-3xl font-bold text-gray-800 mb-2">
-                    Procedures History
-                </h1>
-                <p className="text-gray-600">View all procedures performed with pricing</p>
+            {/* Header with Export Button */}
+            <div className="mb-8 flex flex-col sm:flex-row justify-between items-start gap-4">
+                <div>
+                    <h1 className="text-3xl font-bold text-gray-800 mb-2">
+                        Procedures History
+                    </h1>
+                    <p className="text-gray-600">View all procedures performed with pricing</p>
+                </div>
+
+                <button
+                    onClick={exportToExcel}
+                    disabled={loading || prescriptions.length === 0}
+                    className="flex items-center gap-3 px-6 py-3 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 transition shadow-lg disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                    <FaFileExcel className="text-xl" />
+                    Export to Excel
+                </button>
             </div>
 
             {/* Total Amount Card */}
@@ -219,7 +312,6 @@ function ProceduresPage() {
 
             {/* Filters */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                {/* Search */}
                 <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                         <FaSearch className="text-gray-400" />
@@ -233,7 +325,6 @@ function ProceduresPage() {
                     />
                 </div>
 
-                {/* Sort */}
                 <select
                     value={`${sortBy}-${order}`}
                     onChange={(e) => {
@@ -250,7 +341,6 @@ function ProceduresPage() {
                     ))}
                 </select>
 
-                {/* Date Range */}
                 <div className="flex gap-2">
                     <DatePicker
                         selected={startDate}
@@ -261,7 +351,7 @@ function ProceduresPage() {
                         maxDate={new Date()}
                         placeholderText="From Date"
                         dateFormat="dd/MM/yyyy"
-                        className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-center bg-gray-50"
+                        className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-center bg-white"
                     />
                     <DatePicker
                         selected={endDate}
@@ -273,7 +363,7 @@ function ProceduresPage() {
                         maxDate={new Date()}
                         placeholderText="To Date"
                         dateFormat="dd/MM/yyyy"
-                        className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-center bg-gray-50"
+                        className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-center bg-white"
                     />
                     {(startDate || endDate) && (
                         <button
